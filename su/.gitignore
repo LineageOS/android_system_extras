@@ -1,0 +1,9 @@
+bin
+armeabi
+x86
+obj
+local.properties
+gen
+.DS_Store
+.settings
+libs
