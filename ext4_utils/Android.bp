@@ -68,4 +68,11 @@ cc_library {
             },
         },
     },
+    product_variables: {
+        lineage: {
+            no_secure_discard: {
+                cflags: ["-DNO_SECURE_DISCARD"],
+            },
+        },
+    },
 }
