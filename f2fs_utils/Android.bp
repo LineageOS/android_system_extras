@@ -128,6 +128,26 @@ cc_library_static {
     },
 }
 
+cc_library_static {
+    name: "libf2fs_sparseblock_static",
+
+    srcs: ["f2fs_sparseblock.c"],
+
+    shared_libs: [
+        "liblog",
+        "libcutils",
+    ],
+
+    include_dirs: [
+        "external/f2fs-tools/include",
+        "system/core/include/log",
+    ],
+
+    cflags: ["-DSTATIC_LIB"],
+
+    export_include_dirs: ["."]
+}
+
 cc_library_shared {
     name: "libf2fs_sparseblock",
 
