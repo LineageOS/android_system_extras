@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a89bdaa_fe563805",
+        "filename": "ext4_utils/wipe.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 45,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2015-05-11T06:27:43Z",
+      "side": 1,
+      "message": "Can\u0027t you just use NO_SECURE_DISCARD?",
+      "revId": "054468a7e56232efb6553ebbdf33b0c98c7a400d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
