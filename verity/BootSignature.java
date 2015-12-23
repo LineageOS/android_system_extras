@@ -239,6 +239,9 @@ public class BootSignature extends ASN1Object
                         "Invalid image header: invalid header length");
             }
         }
+        if (headerVersion > 4) {
+            length = length + ((headerVersion + pageSize - 1) / pageSize) * pageSize;
+        }
 
         length = ((length + pageSize - 1) / pageSize) * pageSize;
 
