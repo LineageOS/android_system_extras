@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_117e1619",
+        "filename": "f2fs_utils/f2fs_sparseblock.h",
+        "patchSetId": 4
+      },
+      "lineNbr": 49,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 0,
+      "message": "I wonder if this is what actually fixed this.",
+      "range": {
+        "startLine": 49,
+        "startChar": 4,
+        "endLine": 49,
+        "endChar": 33
+      },
+      "revId": "95085beeace4cc3c67ca7b66d74c3f1a5c2e678b",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}

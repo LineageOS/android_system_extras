@@ -1,0 +1,119 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7faddb67_71874a11",
+        "filename": "f2fs_utils/f2fs_sparseblock.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 142,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 1,
+      "message": "This appears to be equivalent to the previous code.",
+      "range": {
+        "startLine": 142,
+        "startChar": 42,
+        "endLine": 142,
+        "endChar": 57
+      },
+      "revId": "722dc950a3f02f35de13e3340b14f8254a97d9ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_b18dc232",
+        "filename": "f2fs_utils/f2fs_sparseblock.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 1,
+      "message": "Same here.",
+      "range": {
+        "startLine": 144,
+        "startChar": 32,
+        "endLine": 144,
+        "endChar": 47
+      },
+      "revId": "722dc950a3f02f35de13e3340b14f8254a97d9ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_d19e3e62",
+        "filename": "f2fs_utils/f2fs_sparseblock.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 509,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 1,
+      "message": "This seems to be equivalent to the same thing.",
+      "range": {
+        "startLine": 509,
+        "startChar": 39,
+        "endLine": 509,
+        "endChar": 54
+      },
+      "revId": "722dc950a3f02f35de13e3340b14f8254a97d9ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_f199fa78",
+        "filename": "f2fs_utils/f2fs_sparseblock.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 510,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 1,
+      "message": "Looks like this is referring to info-\u003esit_sums-\u003ejournal instead of info-\u003ejournal now?",
+      "range": {
+        "startLine": 510,
+        "startChar": 49,
+        "endLine": 510,
+        "endChar": 56
+      },
+      "revId": "722dc950a3f02f35de13e3340b14f8254a97d9ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7faddb67_918a0619",
+        "filename": "f2fs_utils/f2fs_sparseblock.c",
+        "patchSetId": 4
+      },
+      "lineNbr": 511,
+      "author": {
+        "id": 2936
+      },
+      "writtenOn": "2016-04-11T17:01:48Z",
+      "side": 1,
+      "message": "Same here.",
+      "range": {
+        "startLine": 511,
+        "startChar": 48,
+        "endLine": 511,
+        "endChar": 55
+      },
+      "revId": "722dc950a3f02f35de13e3340b14f8254a97d9ad",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
