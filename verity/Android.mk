@@ -58,6 +58,7 @@ LOCAL_STATIC_LIBRARIES := \
     libfec_rs_host \
     libmincrypt \
     libcrypto_static \
+    libcrypto_utils_static \
     libext4_utils_host \
     libsparse_host \
     libsquashfs_utils_host \
