@@ -17,7 +17,7 @@ common_src_files := \
     fec_process.cpp
 
 common_static_libraries := \
-    libcrypto_utils_static \
+    libmincrypt \
     libcrypto_static \
     libcutils \
     libbase

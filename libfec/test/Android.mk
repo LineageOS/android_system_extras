@@ -11,7 +11,6 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_STATIC_LIBRARIES := \
     libfec_host \
     libfec_rs_host \
-    libcrypto_utils_static \
     libcrypto_static \
     libext4_utils_host \
     libsquashfs_utils_host \
