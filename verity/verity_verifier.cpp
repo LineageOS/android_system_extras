@@ -24,50 +24,46 @@
 #include <android-base/file.h>
 #include <android-base/test_utils.h>
 #include <android-base/unique_fd.h>
+#include <crypto_utils/android_pubkey.h>
 #include <fec/io.h>
-#include <mincrypt/rsa.h>
-#include <mincrypt/sha.h>
-#include <mincrypt/sha256.h>
+#include <openssl/obj_mac.h>
+#include <openssl/rsa.h>
+#include <openssl/sha.h>
 #include <sparse/sparse.h>
 
-static RSAPublicKey* load_key(const char* path) {
+static RSA* load_key(const char* path) {
   std::string content;
-  if (!android::base::ReadFileToString(path, &content)) {
+  if (!android::base::ReadFileToString(path, &content) ||
+      content.size() < ANDROID_PUBKEY_ENCODED_SIZE) {
     fprintf(stderr, "Failed to load key from %s\n", path);
     return nullptr;
   }
 
-  std::unique_ptr<RSAPublicKey> key(new RSAPublicKey);
-  if (!key) {
-    fprintf(stderr, "Failed to malloc key\n");
+  RSA* key = nullptr;
+  if (!android_pubkey_decode(reinterpret_cast<const uint8_t*>(content.c_str()),
+                             ANDROID_PUBKEY_ENCODED_SIZE, &key)) {
+    fprintf(stderr, "Failed to parse key!\n");
     return nullptr;
   }
 
-  memcpy(key.get(), content.data(), sizeof(RSAPublicKey));
-
-  if (key->len != RSANUMWORDS) {
-    fprintf(stderr, "Invalid key length %d\n", key->len);
-    return nullptr;
-  }
-
-  return key.release();
+  return key;
 }
 
-static int verify_table(const char* key_path, const uint8_t* signature,
+static int verify_table(const char* key_path, const uint8_t* signature, size_t signature_size,
                         const char* table, uint32_t table_length) {
   // Hash the table
   uint8_t hash_buf[SHA256_DIGEST_LENGTH];
-  SHA256_hash(reinterpret_cast<const void*>(table), table_length, hash_buf);
+  SHA256(const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(table)), table_length, hash_buf);
 
   // Now get the public key from the keyfile
-  std::unique_ptr<RSAPublicKey> key(load_key(key_path));
+  std::unique_ptr<RSA, decltype(&RSA_free)> key(load_key(key_path), RSA_free);
   if (!key) {
     fprintf(stderr, "Couldn't load verity keys\n");
     return -1;
   }
 
   // Verify the result
-  if (!RSA_verify(key.get(), signature, RSANUMBYTES, hash_buf, SHA256_DIGEST_SIZE)) {
+  if (!RSA_verify(NID_sha256, hash_buf, sizeof(hash_buf), signature, signature_size, key.get())) {
     fprintf(stderr, "Couldn't verify table\n");
     return -1;
   }
@@ -115,7 +111,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  int ret = verify_table(argv[3], verity.signature, verity.table, verity.table_length);
+  int ret = verify_table(argv[3], verity.signature, sizeof(verity.signature),
+                         verity.table, verity.table_length);
   printf("%s\n", ret == 0 ? "VERIFIED" : "FAILED");
   return ret;
 }

@@ -56,7 +56,6 @@ LOCAL_SANITIZE := integer
 LOCAL_STATIC_LIBRARIES := \
     libfec_host \
     libfec_rs_host \
-    libmincrypt \
     libcrypto_static \
     libcrypto_utils_static \
     libext4_utils_host \
