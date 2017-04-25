@@ -72,6 +72,13 @@ static int do_get_number_slots(boot_control_module_t *module)
     return EX_OK;
 }
 
+static int do_get_next_slot(boot_control_module_t *module)
+{
+    int next_slot = module->getNextSlot(module);
+    fprintf(stdout, "%d\n", next_slot);
+    return EX_OK;
+}
+
 static int do_get_current_slot(boot_control_module_t *module)
 {
     int cur_slot = module->getCurrentSlot(module);
@@ -189,6 +196,8 @@ int main(int argc, char *argv[])
         return do_hal_info(hw_module);
     } else if (strcmp(argv[1], "get-number-slots") == 0) {
         return do_get_number_slots(module);
+    } else if (strcmp(argv[1], "get-next-slot") == 0) {
+        return do_get_next_slot(module);
     } else if (strcmp(argv[1], "get-current-slot") == 0) {
         return do_get_current_slot(module);
     } else if (strcmp(argv[1], "mark-boot-successful") == 0) {
