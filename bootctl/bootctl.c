@@ -39,6 +39,7 @@ static void usage(FILE* where, int argc, char* argv[])
             "Commands:\n"
             "  %s hal-info                       - Show info about boot_control HAL used.\n"
             "  %s get-number-slots               - Prints number of slots.\n"
+            "  %s get-next-slot                  - Prints next slot to be used.\n"
             "  %s get-current-slot               - Prints currently running SLOT.\n"
             "  %s mark-boot-successful           - Mark current slot as GOOD.\n"
             "  %s set-active-boot-slot SLOT      - On next boot, load and execute SLOT.\n"
@@ -69,6 +70,13 @@ static int do_get_number_slots(boot_control_module_t *module)
 {
     int num_slots = module->getNumberSlots(module);
     fprintf(stdout, "%d\n", num_slots);
+    return EX_OK;
+}
+
+static int do_get_next_slot(boot_control_module_t *module)
+{
+    int next_slot = module->getNextSlot(module);
+    fprintf(stdout, "%d\n", next_slot);
     return EX_OK;
 }
 
@@ -189,6 +197,8 @@ int main(int argc, char *argv[])
         return do_hal_info(hw_module);
     } else if (strcmp(argv[1], "get-number-slots") == 0) {
         return do_get_number_slots(module);
+    } else if (strcmp(argv[1], "get-next-slot") == 0) {
+        return do_get_next_slot(module);
     } else if (strcmp(argv[1], "get-current-slot") == 0) {
         return do_get_current_slot(module);
     } else if (strcmp(argv[1], "mark-boot-successful") == 0) {
