@@ -11,6 +11,6 @@ LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT_SBIN)
 LOCAL_UNSTRIPPED_PATH := $(TARGET_ROOT_OUT_SBIN_UNSTRIPPED)
 
 LOCAL_CFLAGS := -D__STDC_LIMIT_MACROS -Werror
-LOCAL_C_INCLUDES := bootable/recovery
+LOCAL_C_INCLUDES := $(call project-path-for,recovery)
 LOCAL_STATIC_LIBRARIES := libminui libpng libz libutils libstdc++ libcutils liblog libm libc
 include $(BUILD_EXECUTABLE)
