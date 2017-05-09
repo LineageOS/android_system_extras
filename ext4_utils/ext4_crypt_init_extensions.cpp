@@ -126,6 +126,8 @@ int e4crypt_set_directory_policy(const char* dir)
         "misc_ce", "misc_de",
         "media",
         "data", "user", "user_de",
+        /* Don't encrypt stache directories with the default key */
+        "stache",
     };
     std::string prefix = "/data/";
     for (auto d: directories_to_exclude) {
