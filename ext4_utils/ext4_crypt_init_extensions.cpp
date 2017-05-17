@@ -31,10 +31,10 @@
 #include <android-base/strings.h>
 #include <cutils/properties.h>
 #include <cutils/sockets.h>
+#include <keyutils.h>
 #include <logwrap/logwrap.h>
 
 #include "ext4_utils/ext4_crypt.h"
-#include "ext4_utils/key_control.h"
 
 #define TAG "ext4_utils"
 
@@ -54,15 +54,6 @@ int e4crypt_install_keyring()
     LOG(INFO) << "Keyring created with id " << device_keyring << " in process " << getpid();
 
     return 0;
-}
-
-int e4crypt_do_init_user0()
-{
-    const char* argv[] = { "/system/bin/vdc", "--wait", "cryptfs", "init_user0" };
-    int rc = android_fork_execvp_ext(arraysize(argv), (char**) argv, NULL, false,
-                                     LOG_KLOG, false, NULL, NULL, 0);
-    LOG(INFO) << "init_user0 result: " << rc;
-    return rc;
 }
 
 int e4crypt_set_directory_policy(const char* dir)

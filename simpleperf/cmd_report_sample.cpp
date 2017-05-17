@@ -184,7 +184,6 @@ bool ReportSampleCommand::Run(const std::vector<std::string>& args) {
       return false;
     }
     protobuf_coded_os.reset(nullptr);
-    google::protobuf::ShutdownProtobufLibrary();
   } else {
     PrintLostSituation();
     fflush(report_fp_);
@@ -274,6 +273,7 @@ bool ReportSampleCommand::DumpProtobufReport(const std::string& filename) {
       static size_t sample_count = 0;
       FprintIndented(report_fp_, 0, "sample %zu:\n", ++sample_count);
       FprintIndented(report_fp_, 1, "time: %" PRIu64 "\n", sample.time());
+      FprintIndented(report_fp_, 1, "event_count: %" PRIu64 "\n", sample.event_count());
       FprintIndented(report_fp_, 1, "thread_id: %d\n", sample.thread_id());
       FprintIndented(report_fp_, 1, "callchain:\n");
       for (int i = 0; i < sample.callchain_size(); ++i) {
@@ -330,7 +330,6 @@ bool ReportSampleCommand::DumpProtobufReport(const std::string& filename) {
       return false;
     }
   }
-  google::protobuf::ShutdownProtobufLibrary();
   return true;
 }
 
@@ -357,6 +356,7 @@ bool ReportSampleCommand::PrintSampleRecordInProtobuf(const SampleRecord& r) {
   proto::Record proto_record;
   proto::Sample* sample = proto_record.mutable_sample();
   sample->set_time(r.time_data.time);
+  sample->set_event_count(r.period_data.period);
   sample->set_thread_id(r.tid_data.tid);
 
   bool in_kernel = r.InKernel();
@@ -516,6 +516,7 @@ bool ReportSampleCommand::PrintSampleRecord(const SampleRecord& r) {
 
   FprintIndented(report_fp_, 0, "sample:\n");
   FprintIndented(report_fp_, 1, "time: %" PRIu64 "\n", r.time_data.time);
+  FprintIndented(report_fp_, 1, "event_count: %" PRIu64 "\n", r.period_data.period);
   FprintIndented(report_fp_, 1, "thread_id: %d\n", r.tid_data.tid);
   bool in_kernel = r.InKernel();
   const ThreadEntry* thread =
