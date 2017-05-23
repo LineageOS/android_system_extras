@@ -29,6 +29,7 @@
 #include <android-base/parsedouble.h>
 #include <android-base/parseint.h>
 #include <android-base/strings.h>
+#include <android-base/test_utils.h>
 
 #include "command.h"
 #include "dwarf_unwind.h"
@@ -227,12 +228,14 @@ class RecordCommand : public Command {
 };
 
 bool RecordCommand::Run(const std::vector<std::string>& args) {
+  // 0. Do some environment preparation.
   if (!CheckPerfEventLimit()) {
     return false;
   }
   if (!InitPerfClock()) {
     return false;
   }
+  PrepareVdsoFile();
 
   // 1. Parse options, and use default measured event type if not given.
   std::vector<std::string> workload_args;
@@ -931,7 +934,9 @@ bool RecordCommand::DumpAdditionalFeatures(
     const std::vector<std::string>& args) {
   // Read data section of perf.data to collect hit file information.
   thread_tree_.ClearThreadAndMap();
-  Dso::ReadKernelSymbolsFromProc();
+  if (CheckKernelSymbolAddresses()) {
+    Dso::ReadKernelSymbolsFromProc();
+  }
   auto callback = [&](const Record* r) {
     thread_tree_.Update(*r);
     if (r->type() == PERF_RECORD_SAMPLE) {
