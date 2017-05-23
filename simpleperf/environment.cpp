@@ -451,10 +451,16 @@ bool CheckKernelSymbolAddresses() {
     LOG(ERROR) << "failed to parse " << kptr_restrict_file << ": " << s;
     return false;
   }
+  // Accessible to everyone?
   if (value == 0) {
     return true;
   }
+  // Accessible to root?
   if (value == 1 && IsRoot()) {
+    return true;
+  }
+  // Can we make it accessible to us?
+  if (IsRoot() && android::base::WriteStringToFile("1", kptr_restrict_file)) {
     return true;
   }
   LOG(WARNING) << "Access to kernel symbol addresses is restricted. If "
@@ -474,4 +480,32 @@ ArchType GetMachineArch() {
     return arch;
   }
   return GetBuildArch();
+}
+
+void PrepareVdsoFile() {
+  // vdso is an elf file in memory loaded in each process's user space by the kernel. To read
+  // symbols from it and unwind through it, we need to dump it into a file in storage.
+  // It doesn't affect much when failed to prepare vdso file, so there is no need to return values.
+  std::vector<ThreadMmap> thread_mmaps;
+  if (!GetThreadMmapsInProcess(getpid(), &thread_mmaps)) {
+    return;
+  }
+  const ThreadMmap* vdso_map = nullptr;
+  for (const auto& map : thread_mmaps) {
+    if (map.name == "[vdso]") {
+      vdso_map = &map;
+      break;
+    }
+  }
+  if (vdso_map == nullptr) {
+    return;
+  }
+  std::string s(vdso_map->len, '\0');
+  memcpy(&s[0], reinterpret_cast<void*>(static_cast<uintptr_t>(vdso_map->start_addr)),
+         vdso_map->len);
+  std::unique_ptr<TemporaryFile> tmpfile(new TemporaryFile);
+  if (!android::base::WriteStringToFile(s, tmpfile->path)) {
+    return;
+  }
+  Dso::SetVdsoFile(std::move(tmpfile), sizeof(size_t) == sizeof(uint64_t));
 }
