@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Minimal network initialization.
 ip link set eth0 up
@@ -13,4 +13,4 @@ udhcpc -i eth0
 wait
 
 # Run the test.
-$(dirname $0)/ping6_test.py
+"$(dirname $0)"/ping6_test.py

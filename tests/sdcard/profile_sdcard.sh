@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Copyright 2009, The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,16 +30,16 @@ block_level() {
 # Time to run a test vs number of processes
 scalability() {
   local file="/tmp/sdcard-scalability.txt"
-  rm -f ${file}
-  echo "# Scalability tests" | tee -a ${file}
-  echo "# Kernel: $(print_kernel)" | tee -a ${file}
-  echo "# Sched features: $(print_sched_features)" | tee -a ${file}
-  echo "# StopWatch scalability total/cumulative duration 0.0 Samples: 1" | tee -a ${file}
-  echo "# Process Time" | tee -a ${file}
+  rm -f "${file}"
+  echo "# Scalability tests" | tee -a "${file}"
+  echo "# Kernel: $(print_kernel)" | tee -a "${file}"
+  echo "# Sched features: $(print_sched_features)" | tee -a "${file}"
+  echo "# StopWatch scalability total/cumulative duration 0.0 Samples: 1" | tee -a "${file}"
+  echo "# Process Time" | tee -a "${file}"
   for p in $(seq 1 8); do
     adb shell sdcard_perf_test --test=write --procnb=${p} --size=1000 --chunk-size=100 --iterations=50 >/tmp/tmp-sdcard.txt
     local t=$(grep 'write_total' /tmp/tmp-sdcard.txt | tail -n 1 | cut -f 6 -d ' ')
-    echo "$p $t" | tee -a ${file}
+    echo "$p $t" | tee -a "${file}"
   done
 
 }
