@@ -35,7 +35,13 @@
 
 #include <f2fs_fs.h>
 #include <f2fs_format_utils.h>
+#if defined(__linux__)
 #define F2FS_DYN_LIB "libf2fs_fmt_host_dyn.so"
+#elif defined(__APPLE__) && defined(__MACH__)
+#define F2FS_DYN_LIB "libf2fs_fmt_host_dyn.dylib"
+#else
+#error "Not supported OS"
+#endif
 
 int (*f2fs_format_device_dl)(void);
 void (*f2fs_init_configuration_dl)(void);

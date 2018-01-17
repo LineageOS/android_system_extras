@@ -29,11 +29,13 @@
 #define _LARGEFILE64_SOURCE
 
 #include <assert.h>
-#include <asm/types.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifdef __linux__
+#include <asm/types.h>
 #include <linux/fs.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>  /* memset() */
