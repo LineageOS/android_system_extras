@@ -250,7 +250,8 @@ int fscrypt_policy_ensure(const char *directory, const char *policy,
         contents_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
     } else if (!strcmp(contents_encryption_mode, "adiantum")) {
         contents_mode = FS_ENCRYPTION_MODE_ADIANTUM;
-    } else if (!strcmp(contents_encryption_mode, "ice")) {
+    } else if (!strcmp(contents_encryption_mode, "ice") ||
+                   !strcmp(contents_encryption_mode, "ice_wrapped_key_supported")) {
         contents_mode = FS_ENCRYPTION_MODE_PRIVATE;
     } else {
         LOG(ERROR) << "Invalid file contents encryption mode: "
