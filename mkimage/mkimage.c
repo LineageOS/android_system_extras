@@ -95,6 +95,14 @@ table_entry_t arch_name[] = {
     {	IH_CPU_SPARC,		"sparc",	"SPARC",	},
     {	IH_CPU_SPARC64,		"sparc64",	"SPARC 64 Bit",	},
     {	IH_CPU_BLACKFIN,	"blackfin",	"Blackfin",	},
+    {   IH_CPU_AVR32,    "avr32",  "AVR32",  },
+    {   IH_CPU_NDS32,    "nds32",  "NDS32",  },
+    {   IH_CPU_OPENRISC, "or1k",   "OpenRISC 1000",},
+    {   IH_CPU_SANDBOX,  "sandbox",  "Sandbox",  },
+    {   IH_CPU_ARM64,    "arm64",  "AArch64",  },
+    {   IH_CPU_ARC,    "arc",    "ARC",    },
+    {   IH_CPU_X86_64,   "x86_64", "AMD x86_64", },
+    {   IH_CPU_XTENSA,   "xtensa", "Xtensa", },
     {	-1,			"",		"",		},
 };
 
@@ -138,6 +146,9 @@ table_entry_t comp_name[] = {
     {	IH_COMP_NONE,	"none",		"uncompressed",		},
     {	IH_COMP_BZIP2,	"bzip2",	"bzip2 compressed",	},
     {	IH_COMP_GZIP,	"gzip",		"gzip compressed",	},
+    {   IH_COMP_LZMA,   "lzma",     "lzma compressed",  },
+    {   IH_COMP_LZO,    "lzo",      "lzo compressed",   },
+    {   IH_COMP_LZ4,    "lz4",      "lz4 compressed",   },
     {	-1,		"",		"",			},
 };
 
