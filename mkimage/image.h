@@ -76,6 +76,15 @@
 #define IH_CPU_MICROBLAZE	14	/* MicroBlaze   */
 #define IH_CPU_NIOS2		15	/* Nios-II	*/
 #define IH_CPU_BLACKFIN		16	/* Blackfin	*/
+#define IH_CPU_AVR32    17   /* AVR32  */
+#define IH_CPU_ST200    18   /* STMicroelectronics ST200  */
+#define IH_CPU_SANDBOX  19   /* Sandbox architecture (test only) */
+#define IH_CPU_NDS32    20   /* ANDES Technology - NDS32  */
+#define IH_CPU_OPENRISC 21   /* OpenRISC 1000  */
+#define IH_CPU_ARM64    22   /* ARM64  */
+#define IH_CPU_ARC      23   /* Synopsys DesignWare ARC */
+#define IH_CPU_X86_64   24   /* AMD x86_64, Intel and Via */
+#define IH_CPU_XTENSA   25   /* Xtensa */
 
 /*
  * Image Types
@@ -124,6 +133,31 @@
 #define IH_TYPE_FIRMWARE	5	/* Firmware Image		*/
 #define IH_TYPE_SCRIPT		6	/* Script file			*/
 #define IH_TYPE_FILESYSTEM	7	/* Filesystem Image (any type)	*/
+#define IH_TYPE_FLATDT        8  /* Binary Flat Device Tree Blob */
+#define IH_TYPE_KWBIMAGE      9  /* Kirkwood Boot Image    */
+#define IH_TYPE_IMXIMAGE      10 /* Freescale IMXBoot Image  */
+#define IH_TYPE_IM8IMAGE      11 /* Freescale IMX8Boot Image     */
+#define IH_TYPE_UBLIMAGE      12 /* Davinci UBL Image    */
+#define IH_TYPE_OMAPIMAGE     13 /* TI OMAP Config Header Image  */
+#define IH_TYPE_AISIMAGE      14 /* TI Davinci AIS Image   */
+/* OS Kernel Image, can run from any load address */
+#define IH_TYPE_KERNEL_NOLOAD 15
+#define IH_TYPE_PBLIMAGE      16 /* Freescale PBL Boot Image */
+#define IH_TYPE_MXSIMAGE      17 /* Freescale MXSBoot Image  */
+#define IH_TYPE_GPIMAGE       18 /* TI Keystone GPHeader Image */
+#define IH_TYPE_ATMELIMAGE    19 /* ATMEL ROM bootable Image */
+#define IH_TYPE_SOCFPGAIMAGE  20 /* Altera SOCFPGA Preloader */
+#define IH_TYPE_X86_SETUP     21 /* x86 setup.bin Image    */
+#define IH_TYPE_LPC32XXIMAGE  22 /* x86 setup.bin Image    */
+#define IH_TYPE_LOADABLE      23 /* A list of typeless images  */
+#define IH_TYPE_RKIMAGE       24 /* Rockchip Boot Image    */
+#define IH_TYPE_RKSD          25 /* Rockchip SD card   */
+#define IH_TYPE_RKSPI         26 /* Rockchip SPI image   */
+#define IH_TYPE_ZYNQIMAGE     27 /* Xilinx Zynq Boot Image */
+#define IH_TYPE_ZYNQMPIMAGE   28 /* Xilinx ZynqMP Boot Image */
+#define IH_TYPE_ZYNQMPBIF     29 /* Xilinx ZynqMP Boot Image (bif) */
+#define IH_TYPE_FPGA          30 /* FPGA Image */
+#define IH_TYPE_VYBRIDIMAGE   31 /* VYBRID .vyb Image */
 
 /*
  * Compression Types
@@ -131,6 +165,9 @@
 #define IH_COMP_NONE		0	/*  No	 Compression Used	*/
 #define IH_COMP_GZIP		1	/* gzip	 Compression Used	*/
 #define IH_COMP_BZIP2		2	/* bzip2 Compression Used	*/
+#define IH_COMP_LZMA        3   /* lzma  Compression Used */
+#define IH_COMP_LZO         4   /* lzo   Compression Used */
+#define IH_COMP_LZ4         5   /* lz4   Compression Used */
 
 #define IH_MAGIC	0x27051956	/* Image Magic Number		*/
 #define IH_NMLEN		32	/* Image Name Length		*/
