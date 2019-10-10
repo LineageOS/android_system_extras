@@ -22,9 +22,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <private/android_filesystem_config.h>
+
+#include "binder/appops-wrapper.h"
+#include "binder/pm-wrapper.h"
 
 void pwtoid(const char* tok, uid_t* uid, gid_t* gid) {
     struct passwd* pw = getpwnam(tok);
@@ -80,9 +84,6 @@ void extract_uidgids(const char* uidgids, uid_t* uid, gid_t* gid, gid_t* gids, i
 }
 
 int main(int argc, char** argv) {
-    uid_t current_uid = getuid();
-    if (current_uid != AID_ROOT && current_uid != AID_SHELL) error(1, 0, "not allowed");
-
     // Handle -h and --help.
     ++argv;
     if (*argv && (strcmp(*argv, "--help") == 0 || strcmp(*argv, "-h") == 0)) {
@@ -139,6 +140,22 @@ int main(int argc, char** argv) {
     if (i == 0) exec_args[i++] = const_cast<char*>("/system/bin/sh");
     exec_args[i] = NULL;
 
-    execvp(exec_args[0], exec_args);
+    uid_t current_uid = getuid();
+    char* packageName = resolve_package_name(current_uid);
+    if (packageName) {
+        if (!appops_start_op_su(current_uid, packageName)) {
+            int pid = fork();
+            if (!pid) {
+                execvp(exec_args[0], exec_args);
+                exit(EXIT_FAILURE);
+            } else {
+                int status;
+                waitpid(pid, &status, 0);
+                int code = WIFSIGNALED(status) ? WTERMSIG(status) + 128 : WEXITSTATUS(status);
+                appops_finish_op_su(current_uid, packageName);
+                exit(code);
+            }
+        }
+    }
     error(1, errno, "failed to exec %s", exec_args[0]);
 }
