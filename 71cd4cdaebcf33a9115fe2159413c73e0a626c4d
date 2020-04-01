@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "d80e744d_7a17943e",
+        "filename": "ext4_utils/mkuserimg_mke2fs.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 215,
+      "author": {
+        "id": 11883
+      },
+      "writtenOn": "2020-04-01T22:01:47Z",
+      "side": 0,
+      "message": "This is the real fix, not hardcoding system/extras path\nThis way it used the default config in e2fsprogs",
+      "revId": "71cd4cdaebcf33a9115fe2159413c73e0a626c4d",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": true
+    }
+  ]
+}
