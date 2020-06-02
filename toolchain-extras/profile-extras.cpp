@@ -31,8 +31,16 @@ extern "C" {
 
 void __gcov_flush(void);
 
-static void gcov_signal_handler(__unused int signum) {
+// storing SIG_ERR helps us detect (unlikely) looping.
+static sighandler_t chained_gcov_signal_handler = SIG_ERR;
+
+static void gcov_signal_handler(int signum) {
   __gcov_flush();
+  if (chained_gcov_signal_handler != SIG_ERR &&
+      chained_gcov_signal_handler != SIG_IGN &&
+      chained_gcov_signal_handler != SIG_DFL) {
+    (chained_gcov_signal_handler)(signum);
+  }
 }
 
 static const char kCoveragePropName[] = "debug.coverage.flush";
@@ -67,6 +75,22 @@ void *property_watch_loop(__unused void *arg) {
   }
 }
 
+#if defined(__ANDROID_API__) && __ANDROID_API__ >= __ANDROID_API_L__
+static char prop_watch_disabled_procs[][128] = {
+  "zygote",
+  "zygote32",
+  "app_process",
+  "app_process32",
+  "adbd",
+  "init",
+};
+
+static size_t prop_watch_num_disabled_procs = \
+  sizeof(prop_watch_disabled_procs) / sizeof(prop_watch_disabled_procs[0]);
+#endif
+
+__attribute__((weak)) int init_profile_extras_once = 0;
+
 // Initialize libprofile-extras:
 // - Install a signal handler that triggers __gcov_flush on <GCOV_FLUSH_SIGNAL>.
 // - Create a thread that calls __gcov_flush when <kCoveragePropName> sysprop
@@ -81,10 +105,19 @@ void *property_watch_loop(__unused void *arg) {
 // We force the linker to include init_profile_extras() by passing
 // '-uinit_profile_extras' to the linker (in build/soong).
 __attribute__((constructor)) int init_profile_extras(void) {
+  if (init_profile_extras_once)
+    return 0;
+  init_profile_extras_once = 1;
+
+  // is this instance already registered?
+  if (chained_gcov_signal_handler != SIG_ERR) {
+    return -1;
+  }
   sighandler_t ret1 = signal(GCOV_FLUSH_SIGNAL, gcov_signal_handler);
   if (ret1 == SIG_ERR) {
     return -1;
   }
+  chained_gcov_signal_handler = ret1;
 
   // Do not create thread running property_watch_loop for zygote (it can get
   // invoked as zygote or app_process).  This check is only needed for the
@@ -92,11 +125,10 @@ __attribute__((constructor)) int init_profile_extras(void) {
   // getprogname() was added.
 #if defined(__ANDROID_API__) && __ANDROID_API__ >= __ANDROID_API_L__
   const char *prog_basename = basename(getprogname());
-  if (strncmp(prog_basename, "zygote", strlen("zygote")) == 0) {
-    return 0;
-  }
-  if (strncmp(prog_basename, "app_process", strlen("app_process")) == 0) {
-    return 0;
+  for (size_t i = 0; i < prop_watch_num_disabled_procs; i ++) {
+    if (strcmp(prog_basename, prop_watch_disabled_procs[i]) == 0) {
+      return 0;
+    }
   }
 #endif
 
