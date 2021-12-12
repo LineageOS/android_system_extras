@@ -221,7 +221,7 @@ public class BootSignature extends ASN1Object
                 + ((secondSize + pageSize - 1) / pageSize) * pageSize;
 
         int headerVersion = image.getInt(); // boot image header version
-        if (headerVersion > 0) {
+        if (headerVersion > 0 && headerVersion <= 4) {
             image.position(BOOT_IMAGE_HEADER_V1_RECOVERY_DTBO_SIZE_OFFSET);
             int recoveryDtboLength = image.getInt();
             length += ((recoveryDtboLength + pageSize - 1) / pageSize) * pageSize;
