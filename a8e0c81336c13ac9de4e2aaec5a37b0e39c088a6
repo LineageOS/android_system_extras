@@ -34,6 +34,24 @@
       "parentUuid": "2ec4f8a4_48f13397",
       "revId": "a8e0c81336c13ac9de4e2aaec5a37b0e39c088a6",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "d05abf79_c0423082",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 13648
+      },
+      "writtenOn": "2021-12-31T15:20:05Z",
+      "side": 1,
+      "message": "Maybe add similar explanation into the commit message then.",
+      "parentUuid": "32a293ac_343cafa1",
+      "revId": "a8e0c81336c13ac9de4e2aaec5a37b0e39c088a6",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
