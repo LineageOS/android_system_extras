@@ -16,6 +16,23 @@
       "message": "Why 4? if this is a header manifest, version 3 is fine for Android12.",
       "revId": "5bbc48f632bd5f4dec1a72719c3d26743a735b77",
       "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    },
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "64112ee7_ad4e6c00",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 2
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 23699
+      },
+      "writtenOn": "2021-12-31T15:46:14Z",
+      "side": 1,
+      "message": "I see, it\u0027s something else. :) ",
+      "revId": "5bbc48f632bd5f4dec1a72719c3d26743a735b77",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
     }
   ]
 }
