@@ -179,3 +179,26 @@ cc_binary_host {
         "-D_FILE_OFFSET_BITS=64",
     ],
 }
+
+cc_binary_host {
+    name: "lpunpack_static",
+    defaults: ["lp_defaults"],
+    static_libs: [
+        "libbase",
+        "libcrypto",
+        "libcrypto_utils",
+        "libext4_utils",
+        "liblog",
+        "liblp",
+        "libsparse",
+        "libz"
+    ],
+    srcs: [
+        "lpunpack.cc",
+    ],
+    cppflags: [
+        "-D_FILE_OFFSET_BITS=64",
+    ],
+    stl: "libc++_static",
+    static_executable: true,
+}
