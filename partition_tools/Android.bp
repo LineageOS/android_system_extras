@@ -62,6 +62,34 @@ cc_library_shared {
     },
 }
 
+cc_library {
+    name: "liblpdump_static",
+    defaults: ["lp_defaults"],
+    host_supported: true,
+    static_libs: [
+        "libbase",
+        "liblog",
+        "liblp",
+        "libprotobuf-cpp-full",
+        "libjsonpbparse",
+    ],
+    srcs: [
+        "lpdump.cc",
+        "dynamic_partitions_device_info.proto",
+    ],
+    proto: {
+        type: "full",
+    },
+    target: {
+        android: {
+            enabled: false,
+        },
+    },
+    static: {
+        enabled: true,
+    },
+}
+
 cc_binary {
     name: "lpdump",
     defaults: ["lp_defaults"],
@@ -97,6 +125,26 @@ cc_binary {
             ],
         },
     },
+}
+
+cc_binary_host {
+    name: "lpdump_static",
+    defaults: ["lp_defaults"],
+    static_libs: [
+        "libbase",
+        "liblog",
+        "liblp",
+        "liblpdump_static",
+        "libjsonpbparse",
+    ],
+    srcs: [
+        "lpdump_host.cc",
+    ],
+    shared_libs: [
+        "liblpdump",
+    ],
+    stl: "libc++_static",
+    static_executable: true,
 }
 
 cc_binary_host {
