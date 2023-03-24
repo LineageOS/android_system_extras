@@ -181,6 +181,23 @@ cc_binary_host {
 }
 
 cc_binary_host {
+    name: "lpunpack_split",
+    defaults: ["lp_defaults"],
+    shared_libs: [
+        "libbase",
+        "liblog",
+        "liblp",
+        "libsparse",
+    ],
+    srcs: [
+        "lpunpack_split.cc",
+    ],
+    cppflags: [
+        "-D_FILE_OFFSET_BITS=64",
+    ],
+}
+
+cc_binary_host {
     name: "lpunpack_static",
     defaults: ["lp_defaults"],
     static_libs: [
