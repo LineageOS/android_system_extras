@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "unresolved": false,
+      "key": {
+        "uuid": "857bb9a4_dbec8aa7",
+        "filename": "/PATCHSET_LEVEL",
+        "patchSetId": 1
+      },
+      "lineNbr": 0,
+      "author": {
+        "id": 27052
+      },
+      "writtenOn": "2023-03-25T12:16:19Z",
+      "side": 1,
+      "message": "Putting this on hold since now submitted to AOSP as well.",
+      "revId": "4f6182cd2dfd1da326543942baf452d3a5c90dcb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71"
+    }
+  ]
+}
