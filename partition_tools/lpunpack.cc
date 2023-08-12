@@ -165,6 +165,12 @@ int main(int argc, char* argv[]) {
             return EX_OSERR;
         }
 
+        if (IsEmptySuperImage(abs_super_path)) {
+            metadata = ReadFromImageFile(abs_super_path);
+            WriteSplitImageFiles(".", *metadata, metadata->geometry.logical_block_size, {}, true);
+            return EX_OK;
+        }
+
         SparsePtr ptr(sparse_file_import(fd, false, false), sparse_file_destroy);
         if (ptr) {
             std::cerr << "The image file '"
