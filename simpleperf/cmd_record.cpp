@@ -315,6 +315,7 @@ RECORD_FILTER_OPTION_HELP_MSG_FOR_RECORDING
 "                                 matching binary_name regex.\n"
 "--record-timestamp               Generate timestamp packets in ETM stream.\n"
 "--record-cycles                  Generate cycle count packets in ETM stream.\n"
+"--cycle-threshold <threshold>    Set cycle count counter threshold for ETM cycle count packets.\n"
 "\n"
 "Other options:\n"
 "--exit-with-parent            Stop recording when the thread starting simpleperf dies.\n"
@@ -1053,6 +1054,12 @@ bool RecordCommand::ParseOptions(const std::vector<std::string>& args,
 
   if (!options.PullUintValue("--delay", &delay_in_ms_)) {
     return false;
+  }
+
+  size_t cyc_threshold;
+  if (options.PullUintValue("--cycle-threshold", &cyc_threshold)) {
+    ETMRecorder& recorder = ETMRecorder::GetInstance();
+    recorder.SetCycleThreshold(cyc_threshold);
   }
 
   if (!options.PullDoubleValue("--duration", &duration_in_sec_, 1e-9)) {
