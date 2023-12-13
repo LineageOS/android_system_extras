@@ -54,6 +54,8 @@ impl TraceProvider for SimpleperfLbrTraceProvider {
             "--exclude-perf",
             "--binary",
             binary_filter,
+            "--no-dump-symbols",
+            "--no-dump-kernel-symbols",
             "-o",
             trace_file.to_str().unwrap(),
         ];
