@@ -2195,6 +2195,13 @@ void RecordCommand::CollectHitFileInfo(const SampleRecord& r, std::unordered_set
   const ThreadEntry* thread = thread_tree_.FindThreadOrNew(r.tid_data.pid, r.tid_data.tid);
   size_t kernel_ip_count;
   std::vector<uint64_t> ips = r.GetCallChain(&kernel_ip_count);
+  if ((r.sample_type & PERF_SAMPLE_BRANCH_STACK) != 0) {
+    for (uint64_t i = 0; i < r.branch_stack_data.stack_nr; ++i) {
+      const auto& item = r.branch_stack_data.stack[i];
+      ips.push_back(item.from);
+      ips.push_back(item.to);
+    }
+  }
   for (size_t i = 0; i < ips.size(); i++) {
     const MapEntry* map = thread_tree_.FindMap(thread, ips[i], i < kernel_ip_count);
     Dso* dso = map->dso;
