@@ -21,6 +21,7 @@ mod report;
 mod scheduler;
 mod service;
 mod simpleperf_etm_trace_provider;
+mod simpleperf_lbr_trace_provider;
 mod trace_provider;
 
 #[cfg(feature = "test")]
