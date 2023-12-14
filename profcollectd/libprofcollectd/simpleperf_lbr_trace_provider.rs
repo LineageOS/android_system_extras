@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 The Android Open Source Project
+// Copyright (C) 2023 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-//! Trace provider backed by ARM Coresight ETM, using simpleperf tool.
-
+//! Trace provider backed by Intel LBR, using simpleperf tool.
 use anyhow::{anyhow, Result};
 use std::fs::{read_dir, remove_file};
 use std::path::{Path, PathBuf};
@@ -24,25 +23,26 @@ use trace_provider::TraceProvider;
 
 use crate::trace_provider;
 
-static ETM_TRACEFILE_EXTENSION: &str = "etmtrace";
-static ETM_PROFILE_EXTENSION: &str = "data";
+static LBR_TRACEFILE_EXTENSION: &str = "lbrtrace";
+static LBR_PROFILE_EXTENSION: &str = "data";
 
-pub struct SimpleperfEtmTraceProvider {}
+pub struct SimpleperfLbrTraceProvider {}
 
-impl TraceProvider for SimpleperfEtmTraceProvider {
+impl TraceProvider for SimpleperfLbrTraceProvider {
     fn get_name(&self) -> &'static str {
-        "simpleperf_etm"
+        "simpleperf_lbr"
     }
 
     fn is_ready(&self) -> bool {
-        simpleperf_profcollect::is_etm_device_available()
+        true
     }
 
     fn trace(&self, trace_dir: &Path, tag: &str, sampling_period: &Duration, binary_filter: &str) {
-        let trace_file = trace_provider::get_path(trace_dir, tag, ETM_TRACEFILE_EXTENSION);
+        let trace_file = trace_provider::get_path(trace_dir, tag, LBR_TRACEFILE_EXTENSION);
         // Record ETM data for kernel space only when it's not filtered out by binary_filter. So we
         // can get more ETM data for user space when ETM data for kernel space isn't needed.
-        let event_name = if binary_filter.contains("kernel") { "cs-etm" } else { "cs-etm:u" };
+        let event_name =
+            if binary_filter.contains("kernel") { "cpu-cycles" } else { "cpu-cycles:u" };
         let duration: String = sampling_period.as_secs_f64().to_string();
         let args: Vec<&str> = vec![
             "-a",
@@ -50,7 +50,7 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
             event_name,
             "--duration",
             &duration,
-            "--decode-etm",
+            "-b",
             "--exclude-perf",
             "--binary",
             binary_filter,
@@ -64,10 +64,10 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
     }
 
     fn process(&self, trace_dir: &Path, profile_dir: &Path, binary_filter: &str) -> Result<()> {
-        let is_etm_extension = |file: &PathBuf| {
+        let is_lbr_extension = |file: &PathBuf| {
             file.extension()
                 .and_then(|f| f.to_str())
-                .filter(|ext| ext == &ETM_TRACEFILE_EXTENSION)
+                .filter(|ext| ext == &LBR_TRACEFILE_EXTENSION)
                 .is_some()
         };
 
@@ -78,7 +78,7 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
                     .file_name()
                     .ok_or_else(|| anyhow!("Malformed trace path: {}", trace_file.display()))?,
             );
-            profile_file.set_extension(ETM_PROFILE_EXTENSION);
+            profile_file.set_extension(LBR_PROFILE_EXTENSION);
 
             let args: Vec<&str> = vec![
                 "-i",
@@ -99,7 +99,7 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
             .filter_map(|e| e.ok())
             .map(|e| e.path())
             .filter(|e| e.is_file())
-            .filter(is_etm_extension)
+            .filter(is_lbr_extension)
             .try_for_each(process_trace_file)
     }
 
@@ -112,8 +112,8 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
     }
 }
 
-impl SimpleperfEtmTraceProvider {
+impl SimpleperfLbrTraceProvider {
     pub fn supported() -> bool {
-        simpleperf_profcollect::is_etm_driver_available()
+        simpleperf_profcollect::is_lbr_available()
     }
 }
