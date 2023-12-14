@@ -14,12 +14,11 @@
 // limitations under the License.
 //
 
-//! This module implements safe wrappers for simpleperf etm operations required
+//! This module implements safe wrappers for simpleperf operations required
 //! by profcollect.
 
-use std::ffi::CString;
+use std::ffi::{c_char, CString};
 use std::path::Path;
-use std::time::Duration;
 
 fn path_to_cstr(path: &Path) -> CString {
     CString::new(path.to_str().unwrap()).unwrap()
@@ -27,66 +26,40 @@ fn path_to_cstr(path: &Path) -> CString {
 
 /// Returns whether the system has etm driver. ETM driver should be available immediately
 /// after boot.
-pub fn has_driver_support() -> bool {
+pub fn is_etm_driver_available() -> bool {
     // SAFETY: This is always safe to call.
-    unsafe { simpleperf_profcollect_bindgen::HasDriverSupport() }
+    unsafe { simpleperf_profcollect_bindgen::IsETMDriverAvailable() }
 }
 
 /// Returns whether the system has etm device. ETM device may not be available immediately
 /// after boot.
-pub fn has_device_support() -> bool {
+pub fn is_etm_device_available() -> bool {
     // SAFETY: This is always safe to call.
-    unsafe { simpleperf_profcollect_bindgen::HasDeviceSupport() }
+    unsafe { simpleperf_profcollect_bindgen::IsETMDeviceAvailable() }
 }
 
-/// ETM recording scope
-pub enum RecordScope {
-    /// Record etm data only for userspace.
-    USERSPACE,
-    /// Record etm data only for kernel.
-    KERNEL,
-    /// Record etm data for both userspace and kernel.
-    BOTH,
+/// Returns whether the system support LBR recording.
+pub fn is_lbr_available() -> bool {
+    // SAFETY: This is always safe to call.
+    unsafe { simpleperf_profcollect_bindgen::IsLBRAvailable() }
 }
 
-/// Trigger an ETM trace event.
-pub fn record(trace_file: &Path, duration: &Duration, binary_filter: &str, scope: RecordScope) {
-    let event_name: CString = match scope {
-        RecordScope::USERSPACE => CString::new("cs-etm:u").unwrap(),
-        RecordScope::KERNEL => CString::new("cs-etm:k").unwrap(),
-        RecordScope::BOTH => CString::new("cs-etm").unwrap(),
-    };
-    let trace_file = path_to_cstr(trace_file);
-    let duration = duration.as_secs_f32();
-    let binary_filter = CString::new(binary_filter).unwrap();
-
-    // SAFETY: All three pointers are valid C strings, as expected by the function, and aren't
-    // retained after it returns.
-    unsafe {
-        simpleperf_profcollect_bindgen::Record(
-            event_name.as_ptr(),
-            trace_file.as_ptr(),
-            duration,
-            binary_filter.as_ptr(),
-        );
-    }
+/// Run the record command to record ETM/LBR data.
+pub fn run_record_cmd(args: &[&str]) -> bool {
+    let c_args: Vec<CString> = args.iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
+    let mut pointer_args: Vec<*const c_char> = c_args.iter().map(|s| s.as_ptr()).collect();
+    let arg_count: i32 = pointer_args.len().try_into().unwrap();
+    // SAFETY: This is always safe to call.
+    unsafe { simpleperf_profcollect_bindgen::RunRecordCmd(pointer_args.as_mut_ptr(), arg_count) }
 }
 
-/// Translate ETM trace to profile.
-pub fn process(trace_path: &Path, profile_path: &Path, binary_filter: &str) {
-    let trace_path = path_to_cstr(trace_path);
-    let profile_path = path_to_cstr(profile_path);
-    let binary_filter = CString::new(binary_filter).unwrap();
-
-    // SAFETY: All three pointers are valid C strings, as expected by the function, and aren't
-    // retained after it returns.
-    unsafe {
-        simpleperf_profcollect_bindgen::Inject(
-            trace_path.as_ptr(),
-            profile_path.as_ptr(),
-            binary_filter.as_ptr(),
-        );
-    }
+/// Run the inject command to process ETM/LBR data.
+pub fn run_inject_cmd(args: &[&str]) -> bool {
+    let c_args: Vec<CString> = args.iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
+    let mut pointer_args: Vec<*const c_char> = c_args.iter().map(|s| s.as_ptr()).collect();
+    let arg_count: i32 = pointer_args.len().try_into().unwrap();
+    // SAFETY: This is always safe to call.
+    unsafe { simpleperf_profcollect_bindgen::RunInjectCmd(pointer_args.as_mut_ptr(), arg_count) }
 }
 
 /// Save logs in file.

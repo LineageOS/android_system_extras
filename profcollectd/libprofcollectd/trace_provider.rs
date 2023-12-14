@@ -23,6 +23,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::simpleperf_etm_trace_provider::SimpleperfEtmTraceProvider;
+use crate::simpleperf_lbr_trace_provider::SimpleperfLbrTraceProvider;
 
 #[cfg(feature = "test")]
 use crate::logging_trace_provider::LoggingTraceProvider;
@@ -40,6 +41,10 @@ pub fn get_trace_provider() -> Result<Arc<Mutex<dyn TraceProvider + Send>>> {
     if SimpleperfEtmTraceProvider::supported() {
         log::info!("simpleperf_etm trace provider registered.");
         return Ok(Arc::new(Mutex::new(SimpleperfEtmTraceProvider {})));
+    }
+    if SimpleperfLbrTraceProvider::supported() {
+        log::info!("simpleperf_lbr trace provider registered.");
+        return Ok(Arc::new(Mutex::new(SimpleperfLbrTraceProvider {})));
     }
 
     #[cfg(feature = "test")]
