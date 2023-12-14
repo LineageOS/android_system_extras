@@ -229,7 +229,7 @@ class AdbUtils():
 
 def parse_atrace_line(line, pagecache_stats, app_name):
   # Find a mm_filemap_add_to_page_cache entry
-  m = re.match('.* (mm_filemap_add_to_page_cache|mm_filemap_delete_from_page_cache): dev (\d+):(\d+) ino ([0-9a-z]+) page=([0-9a-z]+) pfn=\d+ ofs=(\d+).*', line)
+  m = re.match('.* (mm_filemap_add_to_page_cache|mm_filemap_delete_from_page_cache): dev (\d+):(\d+) ino ([0-9a-z]+) page=([0-9a-z]+) pfn=([0-9a-z]+) ofs=(\d+).*', line)
   if m != None:
     # Get filename
     device_number = int(m.group(2)) << 8 | int(m.group(3))
