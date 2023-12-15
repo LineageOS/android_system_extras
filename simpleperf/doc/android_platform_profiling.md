@@ -80,27 +80,27 @@ can be used to borrow from the counters used by the kernel.
 
 On userdebug/eng devices, we can get boot-time profile via simpleperf.
 
-Step 1. In adb root, set options used to record boot-time profile. Simpleperf stores the options in
-a persist property `persist.simpleperf.boot_record`.
+Step 1. Customize the configuration if needed. By default, simpleperf tracks all processes
+except for itself, starts at `early-init`, and stops when `sys.boot_completed` is set.
+You can customize it by changing the trigger or command line flags in
+`system/extras/simpleperf/simpleperf.rc`.
 
+Step 2. Add `androidboot.simpleperf.boot_record=1` to the kernel command line.
+For example, on Pixel devices, you can do
 ```
-# simpleperf boot-record --enable "-a -g --duration 10 --exclude-perf"
-```
-
-Step 2. Reboot the device. When booting, init finds that the persist property is set, so it forks
-a background process to run simpleperf to record boot-time profile. init starts simpleperf at
-zygote-start stage, right after zygote is started.
-
-```
-$ adb reboot
+$ fastboot oem cmdline add androidboot.simpleperf.boot_record=1
 ```
 
-Step 3. After boot, the boot-time profile is stored in /data/simpleperf_boot_data. Then we can pull
+Step 3. Reboot the device. When booting, init finds that the kernel command line flag is set,
+so it forks a background process to run simpleperf to record boot-time profile.
+init starts simpleperf at `early-init` stage, which is very soon after second-stage init starts.
+
+Step 4. After boot, the boot-time profile is stored in /tmp/boot_perf.data. Then we can pull
 the profile to host to report.
 
 ```
-$ adb shell ls /data/simpleperf_boot_data
-perf-20220126-11-47-51.data
+$ adb shell ls /tmp/boot_perf.data
+/tmp/boot_perf.data
 ```
 
 Following is a boot-time profile example. From timestamp, the first sample is generated at about
