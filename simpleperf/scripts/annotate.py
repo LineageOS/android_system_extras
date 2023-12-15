@@ -25,7 +25,7 @@ import shutil
 from texttable import Texttable
 from typing import Dict, Union
 
-from simpleperf_report_lib import ReportLib
+from simpleperf_report_lib import GetReportLib
 from simpleperf_utils import (
     Addr2Nearestline, BaseArgumentParser, BinaryFinder, extant_dir, flatten_arg_list, is_windows,
     log_exit, ReadElf, SourceFileSearcher)
@@ -186,8 +186,7 @@ class SourceFileAnnotator(object):
            source file:line.
         """
         for perf_data in self.config['perf_data_list']:
-            lib = ReportLib()
-            lib.SetRecordFile(perf_data)
+            lib = GetReportLib(perf_data)
             if self.symfs_dir:
                 lib.SetSymfs(self.symfs_dir)
             if self.kallsyms:
@@ -224,8 +223,7 @@ class SourceFileAnnotator(object):
             binaries, source files, functions, lines.
         """
         for perf_data in self.config['perf_data_list']:
-            lib = ReportLib()
-            lib.SetRecordFile(perf_data)
+            lib = GetReportLib(perf_data)
             if self.symfs_dir:
                 lib.SetSymfs(self.symfs_dir)
             if self.kallsyms:

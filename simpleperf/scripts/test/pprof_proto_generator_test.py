@@ -295,3 +295,6 @@ class TestPprofProtoGenerator(TestBase):
             self.assertIn(31881, threads)
             self.assertNotIn(31850, threads)
         os.unlink(filter_file.name)
+
+    def test_report_sample_proto_file(self):
+        self.run_generator('', testdata_file='display_bitmaps.proto_data')
