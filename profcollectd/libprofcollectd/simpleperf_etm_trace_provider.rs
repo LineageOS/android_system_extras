@@ -35,20 +35,32 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
     }
 
     fn is_ready(&self) -> bool {
-        simpleperf_profcollect::has_device_support()
+        simpleperf_profcollect::is_etm_device_available()
     }
 
     fn trace(&self, trace_dir: &Path, tag: &str, sampling_period: &Duration, binary_filter: &str) {
         let trace_file = trace_provider::get_path(trace_dir, tag, ETM_TRACEFILE_EXTENSION);
         // Record ETM data for kernel space only when it's not filtered out by binary_filter. So we
         // can get more ETM data for user space when ETM data for kernel space isn't needed.
-        let record_scope = if binary_filter.contains("kernel") {
-            simpleperf_profcollect::RecordScope::BOTH
-        } else {
-            simpleperf_profcollect::RecordScope::USERSPACE
-        };
+        let event_name = if binary_filter.contains("kernel") { "cs-etm" } else { "cs-etm:u" };
+        let duration: String = sampling_period.as_secs_f64().to_string();
+        let args: Vec<&str> = vec![
+            "-a",
+            "-e",
+            event_name,
+            "--duration",
+            &duration,
+            "--decode-etm",
+            "--exclude-perf",
+            "--binary",
+            binary_filter,
+            "--no-dump-symbols",
+            "--no-dump-kernel-symbols",
+            "-o",
+            trace_file.to_str().unwrap(),
+        ];
 
-        simpleperf_profcollect::record(&trace_file, sampling_period, binary_filter, record_scope);
+        simpleperf_profcollect::run_record_cmd(&args);
     }
 
     fn process(&self, trace_dir: &Path, profile_dir: &Path, binary_filter: &str) -> Result<()> {
@@ -67,7 +79,18 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
                     .ok_or_else(|| anyhow!("Malformed trace path: {}", trace_file.display()))?,
             );
             profile_file.set_extension(ETM_PROFILE_EXTENSION);
-            simpleperf_profcollect::process(&trace_file, &profile_file, binary_filter);
+
+            let args: Vec<&str> = vec![
+                "-i",
+                trace_file.to_str().unwrap(),
+                "-o",
+                profile_file.to_str().unwrap(),
+                "--output",
+                "branch-list",
+                "--binary",
+                binary_filter,
+            ];
+            simpleperf_profcollect::run_inject_cmd(&args);
             remove_file(&trace_file)?;
             Ok(())
         };
@@ -91,6 +114,6 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
 
 impl SimpleperfEtmTraceProvider {
     pub fn supported() -> bool {
-        simpleperf_profcollect::has_driver_support()
+        simpleperf_profcollect::is_etm_driver_available()
     }
 }
