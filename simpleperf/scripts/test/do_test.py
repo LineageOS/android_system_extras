@@ -130,6 +130,7 @@ def get_test_type(test: str) -> Optional[str]:
                          'TestDebugUnwindReporter',
                          'TestInferno',
                          'TestPprofProtoGenerator',
+                         'TestProtoFileReportLib',
                          'TestPurgatorio',
                          'TestReportHtml',
                          'TestReportLib',

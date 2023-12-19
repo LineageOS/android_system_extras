@@ -20,7 +20,7 @@ import shutil
 import tempfile
 from typing import Dict, List, Optional, Set
 
-from simpleperf_report_lib import ReportLib
+from simpleperf_report_lib import ReportLib, ProtoFileReportLib
 from simpleperf_utils import ReadElf
 from . test_utils import TestBase, TestHelper
 
@@ -377,3 +377,21 @@ class TestReportLib(TestBase):
         self.assertEqual(symbol.symbol_name, "_raw_spin_unlock_irq")
         self.assertEqual(symbol.symbol_addr, 0xffffffc008fb3e0c)
         self.assertEqual(symbol.symbol_len, 0x4c)
+
+
+class TestProtoFileReportLib(TestBase):
+    def test_smoke(self):
+        report_lib = ProtoFileReportLib()
+        report_lib.SetRecordFile(TestHelper.testdata_path('display_bitmaps.proto_data'))
+        sample_count = 0
+        while True:
+            sample = report_lib.GetNextSample()
+            if sample is None:
+                report_lib.Close()
+                break
+            sample_count += 1
+            event = report_lib.GetEventOfCurrentSample()
+            self.assertEqual(event.name, 'cpu-clock')
+            report_lib.GetSymbolOfCurrentSample()
+            report_lib.GetCallChainOfCurrentSample()
+        self.assertEqual(sample_count, 525)

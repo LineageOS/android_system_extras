@@ -32,7 +32,7 @@ import logging
 import sys
 from typing import List, Dict, Optional, NamedTuple, Tuple
 
-from simpleperf_report_lib import ReportLib
+from simpleperf_report_lib import GetReportLib
 from simpleperf_utils import BaseArgumentParser, ReportLibOptions
 
 
@@ -392,12 +392,11 @@ def _gecko_profile(
         report_lib_options: ReportLibOptions,
         max_remove_gap_length: int) -> GeckoProfile:
     """convert a simpleperf profile to gecko format"""
-    lib = ReportLib()
+    lib = GetReportLib(record_file)
 
     lib.ShowIpForUnknownSymbol()
     if symfs_dir is not None:
         lib.SetSymfs(symfs_dir)
-    lib.SetRecordFile(record_file)
     if kallsyms_file is not None:
         lib.SetKallsymsFile(kallsyms_file)
     lib.SetReportOptions(report_lib_options)
