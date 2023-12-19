@@ -28,7 +28,7 @@ from pathlib import Path
 import sys
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
-from simpleperf_report_lib import ReportLib, SymbolStruct
+from simpleperf_report_lib import GetReportLib, SymbolStruct
 from simpleperf_utils import (
     Addr2Nearestline, AddrRange, BaseArgumentParser, BinaryFinder, Disassembly, get_script_dir,
     log_exit, Objdump, open_report_in_browser, ReadElf, ReportLibOptions, SourceFileSearcher)
@@ -639,8 +639,7 @@ class RecordData(object):
         self.binary_finder = BinaryFinder(binary_cache_path, ReadElf(ndk_path))
 
     def load_record_file(self, record_file: str, report_lib_options: ReportLibOptions):
-        lib = ReportLib()
-        lib.SetRecordFile(record_file)
+        lib = GetReportLib(record_file)
         # If not showing ip for unknown symbols, the percent of the unknown symbol may be
         # accumulated to very big, and ranks first in the sample table.
         lib.ShowIpForUnknownSymbol()
