@@ -19,7 +19,7 @@
 """
 
 import sys
-from simpleperf_report_lib import ReportLib
+from simpleperf_report_lib import GetReportLib
 from simpleperf_utils import BaseArgumentParser, flatten_arg_list, ReportLibOptions
 from typing import List, Set, Optional
 
@@ -32,13 +32,11 @@ def report_sample(
         header: bool,
         report_lib_options: ReportLibOptions):
     """ read record_file, and print each sample"""
-    lib = ReportLib()
+    lib = GetReportLib(record_file)
 
     lib.ShowIpForUnknownSymbol()
     if symfs_dir is not None:
         lib.SetSymfs(symfs_dir)
-    if record_file is not None:
-        lib.SetRecordFile(record_file)
     if kallsyms_file is not None:
         lib.SetKallsymsFile(kallsyms_file)
     lib.SetReportOptions(report_lib_options)
