@@ -49,7 +49,7 @@ pub fn run_record_cmd(args: &[&str]) -> bool {
     let c_args: Vec<CString> = args.iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
     let mut pointer_args: Vec<*const c_char> = c_args.iter().map(|s| s.as_ptr()).collect();
     let arg_count: i32 = pointer_args.len().try_into().unwrap();
-    // SAFETY: This is always safe to call.
+    // SAFETY: pointer_args is an array of valid C strings. Its length is defined by arg_count.
     unsafe { simpleperf_profcollect_bindgen::RunRecordCmd(pointer_args.as_mut_ptr(), arg_count) }
 }
 
@@ -58,7 +58,7 @@ pub fn run_inject_cmd(args: &[&str]) -> bool {
     let c_args: Vec<CString> = args.iter().map(|s| CString::new(s.as_bytes()).unwrap()).collect();
     let mut pointer_args: Vec<*const c_char> = c_args.iter().map(|s| s.as_ptr()).collect();
     let arg_count: i32 = pointer_args.len().try_into().unwrap();
-    // SAFETY: This is always safe to call.
+    // SAFETY: pointer_args is an array of valid C strings. Its length is defined by arg_count.
     unsafe { simpleperf_profcollect_bindgen::RunInjectCmd(pointer_args.as_mut_ptr(), arg_count) }
 }
 
