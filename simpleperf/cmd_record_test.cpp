@@ -1103,6 +1103,15 @@ TEST(record_cmd, record_cycles) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-cycles"}));
 }
 
+TEST(record_cmd, cycle_threshold) {
+  if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
+    GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
+    return;
+  }
+  ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-cycles",
+                            "--cycle-threshold", "8"}));
+}
+
 TEST(record_cmd, binary_option) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";

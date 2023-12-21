@@ -197,6 +197,7 @@ void ETMRecorder::SetEtmPerfEventAttr(perf_event_attr* attr) {
   BuildEtmConfig();
   attr->config = etm_event_config_;
   attr->config2 = sink_config_;
+  attr->config3 = cc_threshold_config_;
 }
 
 void ETMRecorder::BuildEtmConfig() {
@@ -228,6 +229,10 @@ void ETMRecorder::BuildEtmConfig() {
       }
       if (cycles_supported) {
         etm_event_config_ |= 1ULL << ETM_OPT_CYCACC;
+
+        if (cycle_threshold_) {
+          cc_threshold_config_ |= cycle_threshold_;
+        }
       }
     }
   }
@@ -282,6 +287,10 @@ void ETMRecorder::SetRecordTimestamp(bool record) {
 
 void ETMRecorder::SetRecordCycles(bool record) {
   record_cycles_ = record;
+}
+
+void ETMRecorder::SetCycleThreshold(size_t threshold) {
+  cycle_threshold_ = threshold;
 }
 
 }  // namespace simpleperf
