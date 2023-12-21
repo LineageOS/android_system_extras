@@ -26,6 +26,7 @@ package {
 python_library_host {
     name: "simpleperf_report_lib",
     srcs: [
+        "report_sample_pb2.py",
         "simpleperf_report_lib.py",
         "simpleperf_utils.py",
     ],
