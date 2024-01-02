@@ -215,8 +215,9 @@ python_binary_host {
 genrule {
     name: "simpleperf_event_table",
     out: ["event_table.cpp"],
+    srcs: ["event_table.json"],
     tools: ["event_table_generator"],
-    cmd: "$(location event_table_generator) $(out)",
+    cmd: "$(location event_table_generator) $(in) $(out)",
 }
 
 cc_defaults {
