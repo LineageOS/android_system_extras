@@ -93,8 +93,8 @@ static void PrintEventTypesOfType(const std::string& type_name, const std::strin
           // clang-format off
 "  # Please refer to \"PMU common architectural and microarchitectural event numbers\"\n"
 "  # and \"ARM recommendations for IMPLEMENTATION DEFINED event numbers\" listed in\n"
-"  # ARMv8 manual for details.\n"
-"  # A possible link is https://developer.arm.com/docs/ddi0487/latest/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile.\n"
+"  # ARMv9 manual for details.\n"
+"  # A possible link is https://developer.arm.com/documentation/ddi0487.\n"
           // clang-format on
       );
     } else if (type_name == "cache") {
