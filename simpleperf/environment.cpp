@@ -1029,4 +1029,54 @@ std::optional<uid_t> GetProcessUid(pid_t pid) {
   return std::nullopt;
 }
 
+std::vector<ARMCpuModel> GetARMCpuModels() {
+  std::vector<ARMCpuModel> cpu_models;
+  LineReader reader("/proc/cpuinfo");
+  if (!reader.Ok()) {
+    return cpu_models;
+  }
+  auto add_cpu = [&](uint32_t processor, uint32_t implementer, uint32_t partnum) {
+    for (auto& model : cpu_models) {
+      if (model.implementer == implementer && model.partnum == partnum) {
+        model.cpus.push_back(processor);
+        return;
+      }
+    }
+    cpu_models.resize(cpu_models.size() + 1);
+    ARMCpuModel& model = cpu_models.back();
+    model.implementer = implementer;
+    model.partnum = partnum;
+    model.cpus.push_back(processor);
+  };
+
+  uint32_t processor = 0;
+  uint32_t implementer = 0;
+  uint32_t partnum = 0;
+  int parsed = 0;
+  std::string* line;
+  while ((line = reader.ReadLine()) != nullptr) {
+    std::vector<std::string> strs = android::base::Split(*line, ":");
+    if (strs.size() != 2) {
+      continue;
+    }
+    std::string name = android::base::Trim(strs[0]);
+    std::string value = android::base::Trim(strs[1]);
+    if (name == "processor") {
+      if (android::base::ParseUint(value, &processor)) {
+        parsed |= 1;
+      }
+    } else if (name == "CPU implementer") {
+      if (android::base::ParseUint(value, &implementer)) {
+        parsed |= 2;
+      }
+    } else if (name == "CPU part") {
+      if (android::base::ParseUint(value, &partnum) && parsed == 0x3) {
+        add_cpu(processor, implementer, partnum);
+      }
+      parsed = 0;
+    }
+  }
+  return cpu_models;
+}
+
 }  // namespace simpleperf
