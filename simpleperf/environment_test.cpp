@@ -142,3 +142,12 @@ TEST(environment, GetMemorySize) {
   ASSERT_TRUE(value);
   ASSERT_GT(value.value(), 0);
 }
+
+TEST(environment, GetARMCpuModels) {
+#if defined(__aarch64__) && defined(__ANDROID__)
+  auto models = GetARMCpuModels();
+  ASSERT_FALSE(models.empty());
+  ASSERT_FALSE(models[0].cpus.empty());
+  ASSERT_EQ(models[0].cpus[0], 0);
+#endif  // defined(__aarch64__) && defined(__ANDROID__)
+}
