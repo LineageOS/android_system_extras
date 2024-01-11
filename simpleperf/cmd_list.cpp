@@ -35,6 +35,13 @@
 #include "event_type.h"
 
 namespace simpleperf {
+
+extern std::unordered_map<std::string, std::unordered_set<int>> cpu_supported_raw_events;
+
+#if defined(__aarch64__) || defined(__arm__)
+extern std::unordered_map<uint64_t, std::string> arm64_cpuid_to_name;
+#endif  // defined(__aarch64__) || defined(__arm__)
+
 namespace {
 
 struct RawEventTestThreadArg {
@@ -78,16 +85,43 @@ class RawEventSupportChecker {
       LOG(ERROR) << "can't get device cpu info";
       return false;
     }
+    for (const auto& model : cpu_models_) {
+      uint64_t cpu_id = (static_cast<uint64_t>(model.implementer) << 32) | model.partnum;
+      if (auto it = arm64_cpuid_to_name.find(cpu_id); it != arm64_cpuid_to_name.end()) {
+        cpu_model_names_.push_back(it->second);
+      } else {
+        cpu_model_names_.push_back("");
+      }
+    }
 #endif  // defined(__aarch64__) || defined(__arm__)
     return true;
   }
 
   RawEventSupportStatus GetCpusSupportingEvent(const EventType& event_type) {
     RawEventSupportStatus status;
-    for (const auto& model : cpu_models_) {
-      bool supported;
-      bool may_supported;
-      TestEventSupportOnCpu(event_type, model.cpus[0], supported, may_supported);
+    std::string required_cpu_model;
+    // For cpu model specific events, the limited_arch is like "arm64:Cortex-A520".
+    if (auto pos = event_type.limited_arch.find(':'); pos != std::string::npos) {
+      required_cpu_model = event_type.limited_arch.substr(pos + 1);
+    }
+
+    for (size_t i = 0; i < cpu_models_.size(); ++i) {
+      const ARMCpuModel& model = cpu_models_[i];
+      const std::string& model_name = cpu_model_names_[i];
+      bool supported = false;
+      bool may_supported = false;
+      if (!required_cpu_model.empty()) {
+        // This is a cpu model specific event, only supported on required_cpu_model.
+        supported = model_name == required_cpu_model;
+      } else if (!model_name.empty()) {
+        // We know events supported on this cpu model.
+        auto it = cpu_supported_raw_events.find(model_name);
+        CHECK(it != cpu_supported_raw_events.end()) << "no events configuration for " << model_name;
+        supported = it->second.count(event_type.config) > 0;
+      } else {
+        // We need to test the event support status.
+        TestEventSupportOnCpu(event_type, model.cpus[0], supported, may_supported);
+      }
 
       if (supported) {
         status.supported_cpus.insert(status.supported_cpus.end(), model.cpus.begin(),
@@ -138,6 +172,7 @@ class RawEventSupportChecker {
   }
 
   std::vector<ARMCpuModel> cpu_models_;
+  std::vector<std::string> cpu_model_names_;
 };
 
 static std::string ToCpuString(const std::vector<int>& cpus) {
