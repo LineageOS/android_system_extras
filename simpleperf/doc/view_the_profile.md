@@ -39,7 +39,7 @@ pprof.
 This will print some debug logs about Failed to read symbols: this is usually OK, unless those
 symbols are hotspots.
 
-Upload pprof.profile to http://pprof/ UI:
+Upload pprof.profile to http://pprof/ or http://pprofng/:
 
 ```
 # Upload all threads in profile, grouped by threadpool.
@@ -58,6 +58,7 @@ This will output a URL, example: https://pprof.corp.google.com/?id=589a608523061
 
 We can view Android profiles using Firefox Profiler: https://profiler.firefox.com/. This does not
 require Firefox installation -- Firefox Profiler is just a website, you can open it in any browser.
+There is also an internal Google-Hosted Firefox Profiler, at go/profiler or go/firefox-profiler.
 
 ![Example](./pictures/firefox_profiler.png)
 
