@@ -15,23 +15,16 @@
 # limitations under the License.
 #
 
+import dataclasses
+from dataclasses import dataclass
 import json
 import sys
 
 
 def gen_event_type_entry_str(event_type_name, event_type, event_config, description='',
                              limited_arch=''):
-    """
-    return string as below:
-    EVENT_TYPE_TABLE_ENTRY(event_type_name, event_type, event_config, description, limited_arch)
-    """
-    return 'EVENT_TYPE_TABLE_ENTRY("%s", %s, %s, "%s", "%s")\n' % (
+    return '{"%s", %s, %s, "%s", "%s"},\n' % (
         event_type_name, event_type, event_config, description, limited_arch)
-
-
-def gen_arm_event_type_entry_str(event_type_name, event_type, event_config, description):
-    return gen_event_type_entry_str(event_type_name, event_type, event_config, description,
-                                    "arm")
 
 
 def gen_hardware_events():
@@ -116,30 +109,116 @@ def gen_hw_cache_events():
     return generated_str
 
 
+@dataclass
+class RawEvent:
+    number: int
+    name: str
+    desc: str
+    limited_arch: str
+
+
+@dataclass
+class CpuModel:
+    name: str
+    implementer: int
+    partnum: int
+    supported_raw_events: list[int] = dataclasses.field(default_factory=list)
+
+
+class ArchData:
+    def __init__(self, arch: str):
+        self.arch = arch
+        self.events: List[RawEvent] = []
+        self.cpus: List[CpuModel] = []
+
+    def load_from_json_data(self, data) -> None:
+        # Load common events
+        for event in data['events']:
+            number = int(event[0], 16)
+            name = 'raw-' + event[1].lower().replace('_', '-')
+            desc = event[2]
+            self.events.append(RawEvent(number, name, desc, self.arch))
+        for cpu in data['cpus']:
+            cpu_name = cpu['name'].lower().replace('_', '-')
+            cpu_model = CpuModel(cpu['name'], int(cpu['implementer'], 16),
+                                 int(cpu['partnum'], 16), [])
+            cpu_index = len(self.cpus)
+            self.cpus.append(cpu_model)
+            # Load common events supported in this cpu model.
+            for number in cpu['common_events']:
+                number = int(number, 16)
+                event = self.get_event(number)
+                cpu_model.supported_raw_events.append(number)
+
+            # Load cpu specific events supported in this cpu model.
+            if 'implementation_defined_events' in cpu:
+                for event in cpu['implementation_defined_events']:
+                    number = int(event[0], 16)
+                    name = ('raw-' + cpu_name + '-' + event[1]).lower().replace('_', '-')
+                    desc = event[2]
+                    limited_arch = self.arch + ':' + cpu['name']
+                    self.events.append(RawEvent(number, name, desc, limited_arch))
+                    cpu_model.supported_raw_events.append(number)
+
+    def get_event(self, event_number: int) -> RawEvent:
+        for event in self.events:
+            if event.number == event_number:
+                return event
+        raise Exception(f'no event for event number {event_number}')
+
+
 class RawEventGenerator:
     def __init__(self, event_table_file: str):
         with open(event_table_file, 'r') as fh:
-            self.event_table = json.load(fh)
+            event_table = json.load(fh)
+            self.arm64_data = ArchData('arm64')
+            self.arm64_data.load_from_json_data(event_table['arm64'])
 
     def generate_raw_events(self) -> str:
         lines = []
-        for event in self.event_table['arm64']['events']:
-            event_number = event[0]
-            event_name = 'raw-' + event[1].lower().replace('_', '-')
-            event_desc = event[2]
-            lines.append(gen_arm_event_type_entry_str(
-                event_name, 'PERF_TYPE_RAW', event_number, event_desc))
-        return ''.join(lines)
+        for event in self.arm64_data.events:
+            lines.append(gen_event_type_entry_str(event.name, 'PERF_TYPE_RAW', '0x%x' %
+                         event.number, event.desc, event.limited_arch))
+        return self.add_arm_guard(''.join(lines))
+
+    def generate_cpu_support_events(self) -> str:
+        text = """
+        // Map from cpu model to raw events supported on that cpu.',
+        std::unordered_map<std::string, std::unordered_set<int>> cpu_supported_raw_events = {
+        """
+
+        lines = []
+        for cpu in self.arm64_data.cpus:
+            event_list = ', '.join('0x%x' % number for number in cpu.supported_raw_events)
+            lines.append('{"%s", {%s}},' % (cpu.name, event_list))
+        text += self.add_arm_guard('\n'.join(lines))
+        text += '};\n'
+        return text
+
+    def generate_cpu_models(self) -> str:
+        text = """
+        std::unordered_map<uint64_t, std::string> arm64_cpuid_to_name = {
+        """
+        lines = []
+        for cpu in self.arm64_data.cpus:
+            cpu_id = (cpu.implementer << 32) | cpu.partnum
+            lines.append('{0x%xull, "%s"},' % (cpu_id, cpu.name))
+        text += '\n'.join(lines)
+        text += '};\n'
+        return self.add_arm_guard(text)
+
+    def add_arm_guard(self, data: str) -> str:
+        return f'#if defined(__aarch64__) || defined(__arm__)\n{data}\n#endif\n'
 
 
 def gen_events(event_table_file: str):
     generated_str = """
+        #include <unordered_map>
+        #include <unordered_set>
+
         #include "event_type.h"
 
         namespace simpleperf {
-
-        #define EVENT_TYPE_TABLE_ENTRY(name, type, config, description, limited_arch) \
-            {name, type, config, description, limited_arch},
 
         std::set<EventType> builtin_event_types = {
     """
@@ -150,6 +229,13 @@ def gen_events(event_table_file: str):
     generated_str += raw_event_generator.generate_raw_events() + '\n'
     generated_str += """
         };
+
+
+    """
+    generated_str += raw_event_generator.generate_cpu_support_events()
+    generated_str += raw_event_generator.generate_cpu_models()
+
+    generated_str += """
         }  // namespace simpleperf
     """
     return generated_str

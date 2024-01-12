@@ -152,6 +152,14 @@ static inline int gettid() {
 }
 #endif
 
+struct ARMCpuModel {
+  uint32_t implementer = 0;
+  uint32_t partnum = 0;
+  std::vector<int> cpus;
+};
+
+std::vector<ARMCpuModel> GetARMCpuModels();
+
 #endif  // defined(__linux__)
 
 std::optional<uint32_t> GetProcessUid(pid_t pid);
