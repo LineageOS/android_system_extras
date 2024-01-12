@@ -63,6 +63,7 @@ TEST(fscrypt, ParseOptions) {
         EXPECT_EQ(FSCRYPT_MODE_AES_256_XTS, options.contents_mode);
         EXPECT_EQ(FSCRYPT_MODE_AES_256_CTS, options.filenames_mode);
         EXPECT_EQ(FSCRYPT_POLICY_FLAGS_PAD_4, options.flags);
+        EXPECT_FALSE(options.dusize_4k);
     }
     for (const auto& d : defaults) {
         TEST_STRING(30, d, "aes-256-xts:aes-256-cts:v2");
@@ -71,6 +72,7 @@ TEST(fscrypt, ParseOptions) {
         EXPECT_EQ(FSCRYPT_MODE_AES_256_XTS, options.contents_mode);
         EXPECT_EQ(FSCRYPT_MODE_AES_256_CTS, options.filenames_mode);
         EXPECT_EQ(FSCRYPT_POLICY_FLAGS_PAD_16, options.flags);
+        EXPECT_FALSE(options.dusize_4k);
     }
 
     EXPECT_FALSE(ParseOptionsForApiLevel(29, "blah", &dummy_options));
@@ -184,6 +186,15 @@ TEST(fscrypt, ParseOptions) {
         EXPECT_EQ(FSCRYPT_MODE_AES_256_HCTR2, options.filenames_mode);
         EXPECT_EQ(FSCRYPT_POLICY_FLAGS_PAD_16, options.flags);
     }
+
+    {
+        TEST_STRING(34, "::dusize_4k", "aes-256-xts:aes-256-cts:v2+dusize_4k");
+        EXPECT_EQ(2, options.version);
+        EXPECT_EQ(FSCRYPT_MODE_AES_256_XTS, options.contents_mode);
+        EXPECT_EQ(FSCRYPT_MODE_AES_256_CTS, options.filenames_mode);
+        EXPECT_EQ(FSCRYPT_POLICY_FLAGS_PAD_16, options.flags);
+        EXPECT_TRUE(options.dusize_4k);
+    }
 }
 
 TEST(fscrypt, ComparePolicies) {
@@ -201,6 +212,7 @@ TEST(fscrypt, ComparePolicies) {
     foo_options.filenames_mode = 1;
     foo_options.flags = 1;
     foo_options.use_hw_wrapped_key = true;
+    foo_options.dusize_4k = true;
     foo.options = foo_options;
     EXPECT_EQ(foo, foo);
     TEST_INEQUALITY(foo, key_raw_ref, "bar");
@@ -209,4 +221,5 @@ TEST(fscrypt, ComparePolicies) {
     TEST_INEQUALITY(foo, options.filenames_mode, 3);
     TEST_INEQUALITY(foo, options.flags, 0);
     TEST_INEQUALITY(foo, options.use_hw_wrapped_key, false);
+    TEST_INEQUALITY(foo, options.dusize_4k, false);
 }
