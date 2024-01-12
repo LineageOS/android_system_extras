@@ -35,6 +35,7 @@ struct EncryptionOptions {
     int filenames_mode;
     int flags;
     bool use_hw_wrapped_key;
+    bool dusize_4k;
 
     // Ensure that "version" is not valid on creation and so must be explicitly set
     EncryptionOptions() : version(0) {}
@@ -64,7 +65,7 @@ bool EnsurePolicy(const EncryptionPolicy& policy, const std::string& directory);
 inline bool operator==(const EncryptionOptions& lhs, const EncryptionOptions& rhs) {
     return (lhs.version == rhs.version) && (lhs.contents_mode == rhs.contents_mode) &&
            (lhs.filenames_mode == rhs.filenames_mode) && (lhs.flags == rhs.flags) &&
-           (lhs.use_hw_wrapped_key == rhs.use_hw_wrapped_key);
+           (lhs.use_hw_wrapped_key == rhs.use_hw_wrapped_key) && (lhs.dusize_4k == rhs.dusize_4k);
 }
 
 inline bool operator!=(const EncryptionOptions& lhs, const EncryptionOptions& rhs) {
