@@ -652,6 +652,7 @@ def main():
     profile = generator.gen(args.jobs)
     store_pprof_profile(config['output_file'], profile)
     logging.info("Report is generated at '%s' successfully." % config['output_file'])
+    logging.info('Before uploading to the continuous PProf UI, use gzip to compress the file.')
 
 
 if __name__ == '__main__':
