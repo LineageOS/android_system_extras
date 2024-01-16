@@ -418,8 +418,6 @@ int fec_close(struct fec_handle *f)
         close(f->fd);
     }
 
-    pthread_mutex_destroy(&f->mutex);
-
     reset_handle(f);
     delete f;
 
@@ -527,11 +525,6 @@ int fec_open(struct fec_handle **handle, const char *path, int mode, int flags,
     f->ecc.roots = roots;
     f->ecc.rsn = FEC_RSM - roots;
     f->flags = flags;
-
-    if (unlikely(pthread_mutex_init(&f->mutex, NULL) != 0)) {
-        error("failed to create a mutex: %s", strerror(errno));
-        return -1;
-    }
 
     f->fd = TEMP_FAILURE_RETRY(open(path, mode | O_CLOEXEC));
 

@@ -135,8 +135,7 @@ struct fec_handle {
     ecc_info ecc;
     int fd;
     int flags; /* additional flags passed to fec_open */
-    int mode; /* mode for open(2) */
-    pthread_mutex_t mutex;
+    int mode;  /* mode for open(2) */
     uint64_t errors;
     uint64_t data_size;
     uint64_t pos;
