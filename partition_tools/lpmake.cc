@@ -489,6 +489,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // unlink before writing, in case it is being used by an emulator or other program,
+    // we don't want to break that program by changing the data it is accessing.
+    unlink(output_path.c_str());
+
     std::unique_ptr<LpMetadata> metadata = builder->Export();
     if (!images.empty() || force_full_image) {
         if (block_devices.size() == 1) {
