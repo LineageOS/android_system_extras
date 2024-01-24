@@ -1215,18 +1215,21 @@ class FlameGraphView {
         let map = new Map();
         for (let node of nodes) {
             for (let child of node.c) {
-                let subNodes = map.get(child.f);
+                let funcName = getFuncName(child.f);
+                let subNodes = map.get(funcName);
                 if (subNodes) {
                     subNodes.push(child);
                 } else {
-                    map.set(child.f, [child]);
+                    map.set(funcName, [child]);
                 }
             }
         }
+        const funcNames = [...map.keys()].sort();
         let res = [];
-        for (let subNodes of map.values()) {
+        funcNames.forEach(function (funcName) {
+            const subNodes = map.get(funcName);
             res.push(subNodes.length == 1 ? subNodes[0] : subNodes);
-        }
+        });
         return res;
     }
 
