@@ -139,8 +139,8 @@ if [[ "$1" == "-b" ]]; then
       exit 3 ;;
   esac
   shift
-  MKFS_OPTS += " -b $BLOCKSIZE"
-  MKFS_OPTS += " -w $BLOCKSIZE"
+  MKFS_OPTS+=" -b $BLOCKSIZE"
+  MKFS_OPTS+=" -w $BLOCKSIZE"
 fi
 
 if [ -z $SIZE ]; then
