@@ -51,10 +51,10 @@ static bool RunInjectCmd(std::vector<std::string>&& args, std::string* output) {
   return true;
 }
 
-static void CheckMatchingExpectedData(std::string& data) {
+static void CheckMatchingExpectedData(const std::string& name, std::string& data) {
   std::string expected_data;
   ASSERT_TRUE(android::base::ReadFileToString(
-      GetTestData(std::string("etm") + OS_PATH_SEPARATOR + "perf_inject.data"), &expected_data));
+      GetTestData(std::string("etm") + OS_PATH_SEPARATOR + name), &expected_data));
   data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
   ASSERT_EQ(data, expected_data);
 }
@@ -64,7 +64,7 @@ TEST(cmd_inject, smoke) {
   ASSERT_TRUE(RunInjectCmd({}, &data));
   // Test that we can find instr range in etm_test_loop binary.
   ASSERT_NE(data.find("etm_test_loop"), std::string::npos);
-  CheckMatchingExpectedData(data);
+  CheckMatchingExpectedData("perf_inject.data", data);
 }
 
 TEST(cmd_inject, binary_option) {
@@ -97,7 +97,7 @@ TEST(cmd_inject, output_option) {
   ASSERT_TRUE(RunInjectCmd({"--output", "branch-list", "-o", tmpfile.path}));
   std::string autofdo_data;
   ASSERT_TRUE(RunInjectCmd({"-i", tmpfile.path, "--output", "autofdo"}, &autofdo_data));
-  CheckMatchingExpectedData(autofdo_data);
+  CheckMatchingExpectedData("perf_inject.data", autofdo_data);
 }
 
 TEST(cmd_inject, skip_empty_output_file) {
@@ -139,7 +139,7 @@ TEST(cmd_inject, unformatted_trace) {
   ASSERT_TRUE(RunInjectCmd({"-i", perf_with_unformatted_trace}, &data));
   // Test that we can find instr range in etm_test_loop binary.
   ASSERT_NE(data.find("etm_test_loop"), std::string::npos);
-  CheckMatchingExpectedData(data);
+  CheckMatchingExpectedData("perf_inject.data", data);
 }
 
 TEST(cmd_inject, multiple_input_files) {
@@ -262,4 +262,14 @@ TEST(cmd_inject, read_lbr_data) {
       },
       &data));
   ASSERT_NE(data.find("194d->1940:706"), data.npos);
+}
+
+TEST(cmd_inject, inject_small_binary) {
+  // etm_test_loop_small, a binary compiled with
+  // "-Wl,-z,noseparate-code", where the file is smaller than its text
+  // section mapped into memory.
+  std::string data;
+  std::string perf_data = GetTestData("etm/perf_for_small_binary.data");
+  ASSERT_TRUE(RunInjectCmd({"-i", perf_data}, &data));
+  CheckMatchingExpectedData("perf_inject_small.data", data);
 }
