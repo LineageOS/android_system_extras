@@ -46,17 +46,6 @@ using namespace std::string_literals;
 
 #define HEX_LOOKUP "0123456789abcdef"
 
-// TODO: remove this when <linux/fscrypt.h> is updated to Linux 6.7
-struct fscrypt_policy_v2__with_log2_data_unit_size {
-    __u8 version;
-    __u8 contents_encryption_mode;
-    __u8 filenames_encryption_mode;
-    __u8 flags;
-    __u8 log2_data_unit_size;
-    __u8 __reserved[3];
-    __u8 master_key_identifier[FSCRYPT_KEY_IDENTIFIER_SIZE];
-};
-
 struct ModeLookupEntry {
     std::string name;
     int id;
@@ -314,7 +303,7 @@ static int GetFilesystemBlockSize(const std::string& path) {
 bool EnsurePolicy(const EncryptionPolicy& policy, const std::string& directory) {
     union {
         fscrypt_policy_v1 v1;
-        fscrypt_policy_v2__with_log2_data_unit_size v2;
+        fscrypt_policy_v2 v2;
     } kern_policy;
     memset(&kern_policy, 0, sizeof(kern_policy));
 
