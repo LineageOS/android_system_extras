@@ -103,3 +103,9 @@ cc_binary {
     srcs: ["etm_test_loop.cpp"],
     // afdo: true,
 }
+
+cc_binary {
+    name: "etm_test_loop_small",
+    srcs: ["etm_test_loop.cpp"],
+    ldflags: ["-Wl,-z,noseparate-code"],
+}
