@@ -340,3 +340,18 @@ K_CYCLES   K_INSTR      IPC
 104562     41350       0.40
 138264     54916       0.40
 ```
+
+## sample_filter.py
+
+`sample_filter.py` generates sample filter files as documented in [sample_filter.md](https://android.googlesource.com/platform/system/extras/+/refs/heads/main/simpleperf/doc/sample_filter.md).
+A filter file can be passed in `--filter-file` when running report scripts.
+
+For example, it can be used to split a large recording file into several report files.
+
+```sh
+$ sample_filter.py -i perf.data --split-time-range 2 -o sample_filter
+$ gecko_profile_generator.py -i perf.data --filter-file sample_filter_part1 \
+    | gzip >profile-part1.json.gz
+$ gecko_profile_generator.py -i perf.data --filter-file sample_filter_part2 \
+    | gzip >profile-part2.json.gz
+```
