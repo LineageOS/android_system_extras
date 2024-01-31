@@ -126,11 +126,12 @@ pub fn reset() -> Result<()> {
 
 /// Inits logging for Android
 pub fn init_logging() {
-    let min_log_level = if cfg!(feature = "test") { log::Level::Info } else { log::Level::Error };
+    let max_log_level =
+        if cfg!(feature = "test") { log::LevelFilter::Info } else { log::LevelFilter::Error };
     android_logger::init_once(
         android_logger::Config::default()
             .with_tag("profcollectd")
-            .with_min_level(min_log_level)
-            .with_log_id(android_logger::LogId::System),
+            .with_max_level(max_log_level)
+            .with_log_buffer(android_logger::LogId::System),
     );
 }
