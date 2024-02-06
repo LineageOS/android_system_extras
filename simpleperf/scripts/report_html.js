@@ -702,9 +702,12 @@ class SampleTableView {
                 let dataTable = table.DataTable({
                     lengthMenu: [10, 20, 50, 100, -1],
                     pageLength: 100,
-                    order: [0, 'desc'],
+                    order: [[0, 'desc'], [1, 'desc'], [2, 'desc']],
                     data: data,
                     responsive: true,
+                    columnDefs: [
+                        { orderSequence: [ 'desc' ], targets: [0, 1, 2] },
+                    ],
                 });
                 dataTable.column(7).visible(false);
 
