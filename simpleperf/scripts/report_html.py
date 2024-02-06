@@ -801,7 +801,8 @@ class RecordData(object):
         # Collect needed source code in SourceFileSet.
         self.source_files.load_source_code(source_dirs)
 
-    def add_disassembly(self, filter_lib: Callable[[str], bool], jobs: int):
+    def add_disassembly(self, filter_lib: Callable[[str], bool],
+                        jobs: int, disassemble_job_size: int):
         """ Collect disassembly information:
             1. Use objdump to collect disassembly for each function in FunctionSet.
             2. Set flag to dump addr_hit_map when generating record info.
@@ -816,6 +817,7 @@ class RecordData(object):
 
         with ThreadPoolExecutor(jobs) as executor:
             futures: List[Future] = []
+            all_tasks = []
             for lib_id, functions in lib_functions.items():
                 lib = self.libs.get_lib(lib_id)
                 if not filter_lib(lib.name):
@@ -823,33 +825,45 @@ class RecordData(object):
                 dso_info = objdump.get_dso_info(lib.name, lib.build_id)
                 if not dso_info:
                     continue
-                # If there are not many functions, it's faster to disassemble them one by one.
-                # Otherwise it's faster to disassemble the whole binary.
-                if len(functions) < jobs:
-                    for function in functions:
-                        futures.append(executor.submit(self._disassemble_function, objdump,
-                                                       dso_info, function))
-                else:
-                    futures.append(executor.submit(self._disassemble_binary, objdump, dso_info,
-                                                   functions))
 
-            for future in futures:
-                future.result()
+                tasks = self.split_disassembly_jobs(functions, disassemble_job_size)
+                logging.debug('create %d jobs to disassemble %d functions in %s',
+                              len(tasks), len(functions), lib.name)
+                for task in tasks:
+                    futures.append(executor.submit(
+                        self._disassemble_functions, objdump, dso_info, task))
+                    all_tasks.append(task)
+
+            for task, future in zip(all_tasks, futures):
+                result = future.result()
+                if result and len(result) == len(task):
+                    for function, disassembly in zip(task, result):
+                        function.disassembly = disassembly.lines
+
+        logging.debug('finished all disassemble jobs')
         self.gen_addr_hit_map_in_record_info = True
 
-    def _disassemble_function(self, objdump: Objdump, dso_info, function: Function):
-        result = objdump.disassemble_function(dso_info, AddrRange(function.start_addr,
-                                              function.addr_len))
-        if result:
-            function.disassembly = result.lines
-
-    def _disassemble_binary(self, objdump: Objdump, dso_info, functions: List[Function]):
+    def split_disassembly_jobs(self, functions: List[Function],
+                               disassemble_job_size: int) -> List[List[Function]]:
+        """ Decide how to split the task of dissassembly functions in one library. """
+        if not functions:
+            return []
         functions.sort(key=lambda f: f.start_addr)
+        result = []
+        job_start_addr = None
+        for function in functions:
+            if (job_start_addr is None or
+                    function.start_addr - job_start_addr > disassemble_job_size):
+                job_start_addr = function.start_addr
+                result.append([function])
+            else:
+                result[-1].append(function)
+        return result
+
+    def _disassemble_functions(self, objdump: Objdump, dso_info,
+                               functions: List[Function]) -> Optional[List[Disassembly]]:
         addr_ranges = [AddrRange(f.start_addr, f.addr_len) for f in functions]
-        result = objdump.disassemble_functions(dso_info, addr_ranges)
-        if result:
-            for i in range(len(functions)):
-                functions[i].disassembly = result[i].lines
+        return objdump.disassemble_functions(dso_info, addr_ranges)
 
     def gen_record_info(self) -> Dict[str, Any]:
         """ Return json data which will be used by report_html.js. """
@@ -1010,6 +1024,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--add_source_code', action='store_true', help='Add source code.')
     parser.add_argument('--source_dirs', nargs='+', help='Source code directories.')
     parser.add_argument('--add_disassembly', action='store_true', help='Add disassembled code.')
+    parser.add_argument('--disassemble-job-size', type=int, default=1024*1024,
+                        help='address range for one disassemble job')
     parser.add_argument('--binary_filter', nargs='+', help="""Annotate source code and disassembly
                         only for selected binaries.""")
     parser.add_argument(
@@ -1064,7 +1080,7 @@ def main():
     if args.add_source_code:
         record_data.add_source_code(args.source_dirs, filter_lib, args.jobs)
     if args.add_disassembly:
-        record_data.add_disassembly(filter_lib, args.jobs)
+        record_data.add_disassembly(filter_lib, args.jobs, args.disassemble_job_size)
 
     # 3. Generate report html.
     report_generator = ReportGenerator(args.report_path)
