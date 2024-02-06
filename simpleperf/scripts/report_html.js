@@ -701,6 +701,7 @@ class SampleTableView {
                 let table = this.tableDiv.find('table');
                 let dataTable = table.DataTable({
                     lengthMenu: [10, 20, 50, 100, -1],
+                    pageLength: 100,
                     order: [0, 'desc'],
                     data: data,
                     responsive: true,
