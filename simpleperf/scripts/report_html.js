@@ -701,9 +701,13 @@ class SampleTableView {
                 let table = this.tableDiv.find('table');
                 let dataTable = table.DataTable({
                     lengthMenu: [10, 20, 50, 100, -1],
-                    order: [0, 'desc'],
+                    pageLength: 100,
+                    order: [[0, 'desc'], [1, 'desc'], [2, 'desc']],
                     data: data,
                     responsive: true,
+                    columnDefs: [
+                        { orderSequence: [ 'desc' ], targets: [0, 1, 2] },
+                    ],
                 });
                 dataTable.column(7).visible(false);
 
