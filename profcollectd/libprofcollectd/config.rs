@@ -17,8 +17,8 @@
 //! ProfCollect configurations.
 
 use anyhow::Result;
-use lazy_static::lazy_static;
 use macaddr::MacAddr6;
+use once_cell::sync::Lazy;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -34,14 +34,16 @@ const DEFAULT_BINARY_FILTER: &str = "^/(system|apex/.+)/(bin|lib|lib64)/.+";
 pub const REPORT_RETENTION_SECS: u64 = 14 * 24 * 60 * 60; // 14 days.
 
 // Static configs that cannot be changed.
-lazy_static! {
-    pub static ref TRACE_OUTPUT_DIR: &'static Path = Path::new("/data/misc/profcollectd/trace/");
-    pub static ref PROFILE_OUTPUT_DIR: &'static Path = Path::new("/data/misc/profcollectd/output/");
-    pub static ref REPORT_OUTPUT_DIR: &'static Path = Path::new("/data/misc/profcollectd/report/");
-    pub static ref CONFIG_FILE: &'static Path =
-        Path::new("/data/misc/profcollectd/output/config.json");
-    pub static ref LOG_FILE: &'static Path = Path::new("/data/misc/profcollectd/output/trace.log");
-}
+pub static TRACE_OUTPUT_DIR: Lazy<&'static Path> =
+    Lazy::new(|| Path::new("/data/misc/profcollectd/trace/"));
+pub static PROFILE_OUTPUT_DIR: Lazy<&'static Path> =
+    Lazy::new(|| Path::new("/data/misc/profcollectd/output/"));
+pub static REPORT_OUTPUT_DIR: Lazy<&'static Path> =
+    Lazy::new(|| Path::new("/data/misc/profcollectd/report/"));
+pub static CONFIG_FILE: Lazy<&'static Path> =
+    Lazy::new(|| Path::new("/data/misc/profcollectd/output/config.json"));
+pub static LOG_FILE: Lazy<&'static Path> =
+    Lazy::new(|| Path::new("/data/misc/profcollectd/output/trace.log"));
 
 /// Dynamic configs, stored in config.json.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
@@ -115,11 +117,8 @@ where
     T::Err: Error + Send + Sync + 'static,
 {
     let default_value = default_value.to_string();
-    let config = flags_rust::GetServerConfigurableFlag(
-        PROFCOLLECT_CONFIG_NAMESPACE,
-        key,
-        &default_value,
-    );
+    let config =
+        flags_rust::GetServerConfigurableFlag(PROFCOLLECT_CONFIG_NAMESPACE, key, &default_value);
     Ok(T::from_str(&config)?)
 }
 
