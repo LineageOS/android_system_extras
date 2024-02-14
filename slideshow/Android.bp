@@ -19,9 +19,6 @@ license {
 cc_binary {
     name: "slideshow",
     srcs: ["slideshow.cpp"],
-    cflags: [
-        "-D__STDC_LIMIT_MACROS",
-    ],
     shared_libs: [
         "libminui",
         "libpng",
