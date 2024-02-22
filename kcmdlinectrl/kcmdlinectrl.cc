@@ -30,24 +30,63 @@
 using namespace std;
 
 void PrintUsage(const char* progname) {
-  std::cerr << "USAGE: " << progname << " PROPERTY_NAME [VALUE]" << endl;
+  std::cerr << "USAGE: " << progname << " get [PROPERTY]" << endl;
+  std::cerr << "       " << progname << " store [PROPERTY] [VALUE]" << endl;
+  std::cerr << "       " << progname << " update-props" << endl;
 }
 
-int main(int argc, char** argv) {
-  char *property_name, *new_value;
-  if (argc == 2) {
-    // Read property.
-    property_name = argv[1];
-    new_value = NULL;
-  } else if (argc == 3) {
-    // Write property.
-    property_name = argv[1];
-    new_value = argv[2];
-  } else {
-    PrintUsage(*argv);
+int UpdateProps() {
+  misc_kcmdline_message m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
+                             .magic = MISC_KCMDLINE_MAGIC_HEADER};
+  std::string err;
+  if (!ReadMiscKcmdlineMessage(&m, &err)) {
+    LOG(ERROR) << "Failed to read from misc: " << err << endl;
     return 1;
   }
 
+  // If invalid, treat it as-if all flags are zero.
+  if (m.magic != MISC_KCMDLINE_MAGIC_HEADER || m.version != MISC_KCMDLINE_MESSAGE_VERSION) {
+    m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
+         .magic = MISC_KCMDLINE_MAGIC_HEADER,
+         .kcmdline_flags = 0};
+  }
+
+  bool use_rust_binder = (m.kcmdline_flags & MISC_KCMDLINE_BINDER_RUST) != 0;
+  android::base::SetProperty("kcmdline.binder", use_rust_binder ? "rust" : "c");
+
+  android::base::SetProperty("kcmdline.loaded", "1");
+  return 0;
+}
+
+int PrintProperty(const char* property_name) {
+  misc_kcmdline_message m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
+                             .magic = MISC_KCMDLINE_MAGIC_HEADER};
+
+  std::string err;
+  if (!ReadMiscKcmdlineMessage(&m, &err)) {
+    LOG(ERROR) << "Failed to read from misc: " << err << endl;
+    return 1;
+  }
+
+  if (m.magic != MISC_KCMDLINE_MAGIC_HEADER || m.version != MISC_KCMDLINE_MESSAGE_VERSION) {
+    cout << "kcmdline message is invalid, treating all flags as zero" << endl;
+    m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
+         .magic = MISC_KCMDLINE_MAGIC_HEADER,
+         .kcmdline_flags = 0};
+  }
+
+  if (!strcmp(property_name, "binder")) {
+    bool use_rust_binder = (m.kcmdline_flags & MISC_KCMDLINE_BINDER_RUST) != 0;
+    const char* binder_value = use_rust_binder ? "rust" : "c";
+    cout << "binder=" << binder_value << endl;
+    return 0;
+  } else {
+    LOG(ERROR) << "Unknown property name: " << property_name << endl;
+    return 1;
+  }
+}
+
+int StoreProperty(const char* property_name, const char* new_value) {
   misc_kcmdline_message m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
                              .magic = MISC_KCMDLINE_MAGIC_HEADER};
 
@@ -65,12 +104,7 @@ int main(int argc, char** argv) {
   }
 
   if (!strcmp(property_name, "binder")) {
-    if (new_value == NULL) {
-      bool use_rust_binder = (m.kcmdline_flags & MISC_KCMDLINE_BINDER_RUST) != 0;
-      const char* binder_value = use_rust_binder ? "rust" : "c";
-      cout << "binder=" << binder_value << endl;
-      return 0;
-    } else if (!strcmp(new_value, "rust")) {
+    if (!strcmp(new_value, "rust")) {
       m.kcmdline_flags |= MISC_KCMDLINE_BINDER_RUST;
     } else if (!strcmp(new_value, "c")) {
       m.kcmdline_flags &= !MISC_KCMDLINE_BINDER_RUST;
@@ -79,7 +113,7 @@ int main(int argc, char** argv) {
       return 1;
     }
   } else {
-    LOG(ERROR) << "No such property name " << property_name << endl;
+    LOG(ERROR) << "Unknown property name: " << property_name << endl;
     return 1;
   }
 
@@ -89,4 +123,36 @@ int main(int argc, char** argv) {
   }
 
   return 0;
+}
+
+int main(int argc, char** argv) {
+  char *action, *property_name, *new_value;
+
+  if (argc == 2) {
+    action = argv[1];
+    property_name = NULL;
+    new_value = NULL;
+  } else if (argc == 3) {
+    action = argv[1];
+    property_name = argv[2];
+    new_value = NULL;
+  } else if (argc == 4) {
+    action = argv[1];
+    property_name = argv[2];
+    new_value = argv[3];
+  } else {
+    PrintUsage(*argv);
+    return 1;
+  }
+
+  if (!strcmp(action, "update-props") && property_name == NULL) {
+    return UpdateProps();
+  } else if (!strcmp(action, "get") && property_name != NULL && new_value == NULL) {
+    return PrintProperty(property_name);
+  } else if (!strcmp(action, "store") && property_name != NULL && new_value != NULL) {
+    return StoreProperty(property_name, new_value);
+  } else {
+    PrintUsage(*argv);
+    return 1;
+  }
 }

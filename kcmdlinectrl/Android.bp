@@ -23,4 +23,5 @@ cc_binary {
         "libbootloader_message",
         "libbase",
     ],
+    init_rc: ["kcmdlinectrl.rc"],
 }
