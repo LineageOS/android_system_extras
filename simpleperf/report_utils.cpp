@@ -23,6 +23,7 @@
 #include <android-base/strings.h>
 
 #include "JITDebugReader.h"
+#include "RegEx.h"
 #include "utils.h"
 
 namespace simpleperf {
@@ -320,6 +321,29 @@ class JavaMethodDeobfuscater : public CallChainReportModifier {
   ProguardMappingRetrace retrace_;
 };
 
+// Use regex to filter method names.
+class MethodNameFilter : public CallChainReportModifier {
+ public:
+  bool RemoveMethod(std::string_view method_name_regex) {
+    if (auto regex = RegEx::Create(method_name_regex); regex != nullptr) {
+      exclude_names_.emplace_back(std::move(regex));
+      return true;
+    }
+    return false;
+  }
+
+  void Modify(std::vector<CallChainReportEntry>& callchain) override {
+    auto it = std::remove_if(callchain.begin(), callchain.end(),
+                             [this](const CallChainReportEntry& entry) {
+                               return SearchInRegs(entry.symbol->DemangledName(), exclude_names_);
+                             });
+    callchain.erase(it, callchain.end());
+  }
+
+ private:
+  std::vector<std::unique_ptr<RegEx>> exclude_names_;
+};
+
 CallChainReportBuilder::CallChainReportBuilder(ThreadTree& thread_tree)
     : thread_tree_(thread_tree) {
   const char* env_name = "REMOVE_R8_SYNTHESIZED_FRAME";
@@ -357,8 +381,15 @@ bool CallChainReportBuilder::AddProguardMappingFile(std::string_view mapping_fil
   if (!java_method_deobfuscater_) {
     java_method_deobfuscater_.reset(new JavaMethodDeobfuscater(remove_r8_synthesized_frame_));
   }
-  return static_cast<JavaMethodDeobfuscater*>(java_method_deobfuscater_.get())
-      ->AddProguardMappingFile(mapping_file);
+  return static_cast<JavaMethodDeobfuscater&>(*java_method_deobfuscater_)
+      .AddProguardMappingFile(mapping_file);
+}
+
+bool CallChainReportBuilder::RemoveMethod(std::string_view method_name_regex) {
+  if (!method_name_filter_) {
+    method_name_filter_.reset(new MethodNameFilter);
+  }
+  return static_cast<MethodNameFilter&>(*method_name_filter_).RemoveMethod(method_name_regex);
 }
 
 std::vector<CallChainReportEntry> CallChainReportBuilder::Build(const ThreadEntry* thread,
@@ -397,6 +428,9 @@ std::vector<CallChainReportEntry> CallChainReportBuilder::Build(const ThreadEntr
   }
   if (java_method_deobfuscater_) {
     java_method_deobfuscater_->Modify(result);
+  }
+  if (method_name_filter_) {
+    method_name_filter_->Modify(result);
   }
   return result;
 }

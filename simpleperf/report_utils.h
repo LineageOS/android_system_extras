@@ -110,6 +110,8 @@ class CallChainReportBuilder {
   void SetConvertJITFrame(bool enable);
   // Add proguard mapping.txt to de-obfuscate minified symbols.
   bool AddProguardMappingFile(std::string_view mapping_file);
+  // Remove methods with name containing the given regular expression.
+  bool RemoveMethod(std::string_view method_name_regex);
   std::vector<CallChainReportEntry> Build(const ThreadEntry* thread,
                                           const std::vector<uint64_t>& ips, size_t kernel_ip_count);
 
@@ -121,6 +123,7 @@ class CallChainReportBuilder {
   std::unique_ptr<CallChainReportModifier> art_frame_remover_;
   std::unique_ptr<CallChainReportModifier> jit_frame_converter_;
   std::unique_ptr<CallChainReportModifier> java_method_deobfuscater_;
+  std::unique_ptr<CallChainReportModifier> method_name_filter_;
 };
 
 struct ThreadReport {

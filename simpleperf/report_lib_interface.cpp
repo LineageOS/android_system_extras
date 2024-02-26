@@ -193,6 +193,9 @@ class ReportLib {
     bool remove_art_frame = !show;
     callchain_report_builder_.SetRemoveArtFrame(remove_art_frame);
   }
+  bool RemoveMethod(const char* method_name_regex) {
+    return callchain_report_builder_.RemoveMethod(method_name_regex);
+  }
   void MergeJavaMethods(bool merge) { callchain_report_builder_.SetConvertJITFrame(merge); }
   bool AddProguardMappingFile(const char* mapping_file) {
     return callchain_report_builder_.AddProguardMappingFile(mapping_file);
@@ -212,11 +215,12 @@ class ReportLib {
   FeatureSection* GetFeatureSection(const char* feature_name);
 
  private:
+  std::unique_ptr<SampleRecord> GetNextSampleRecord();
   void ProcessSampleRecord(std::unique_ptr<Record> r);
   void ProcessSwitchRecord(std::unique_ptr<Record> r);
   void AddSampleRecordToQueue(SampleRecord* r);
-  void SetCurrentSample(const SampleRecord& r);
-  const EventInfo* FindEventOfCurrentSample();
+  bool SetCurrentSample(std::unique_ptr<SampleRecord> sample_record);
+  const EventInfo& FindEvent(const SampleRecord& r);
   void CreateEvents();
 
   bool OpenRecordFileIfNecessary();
@@ -357,9 +361,20 @@ Sample* ReportLib::GetNextSample() {
   if (!OpenRecordFileIfNecessary()) {
     return nullptr;
   }
-  if (!sample_record_queue_.empty()) {
-    sample_record_queue_.pop();
+
+  while (true) {
+    std::unique_ptr<SampleRecord> r = GetNextSampleRecord();
+    if (!r) {
+      break;
+    }
+    if (SetCurrentSample(std::move(r))) {
+      return &current_sample_;
+    }
   }
+  return nullptr;
+}
+
+std::unique_ptr<SampleRecord> ReportLib::GetNextSampleRecord() {
   while (sample_record_queue_.empty()) {
     std::unique_ptr<Record> record;
     if (!record_file_reader_->ReadRecord(record) || record == nullptr) {
@@ -380,8 +395,9 @@ Sample* ReportLib::GetNextSample() {
       }
     }
   }
-  SetCurrentSample(*sample_record_queue_.front());
-  return &current_sample_;
+  std::unique_ptr<SampleRecord> result = std::move(sample_record_queue_.front());
+  sample_record_queue_.pop();
+  return result;
 }
 
 void ReportLib::ProcessSampleRecord(std::unique_ptr<Record> r) {
@@ -453,7 +469,8 @@ void ReportLib::AddSampleRecordToQueue(SampleRecord* r) {
   }
 }
 
-void ReportLib::SetCurrentSample(const SampleRecord& r) {
+bool ReportLib::SetCurrentSample(std::unique_ptr<SampleRecord> sample_record) {
+  const SampleRecord& r = *sample_record;
   current_mappings_.clear();
   callchain_entries_.clear();
   current_sample_.ip = r.ip_data.ip;
@@ -471,6 +488,10 @@ void ReportLib::SetCurrentSample(const SampleRecord& r) {
   std::vector<uint64_t> ips = r.GetCallChain(&kernel_ip_count);
   std::vector<CallChainReportEntry> report_entries =
       callchain_report_builder_.Build(current_thread_, ips, kernel_ip_count);
+  if (report_entries.empty()) {
+    // Skip samples with callchain fully removed by RemoveMethod().
+    return false;
+  }
 
   for (const auto& report_entry : report_entries) {
     callchain_entries_.resize(callchain_entries_.size() + 1);
@@ -491,29 +512,29 @@ void ReportLib::SetCurrentSample(const SampleRecord& r) {
   current_symbol_ = &(callchain_entries_[0].symbol);
   current_callchain_.nr = callchain_entries_.size() - 1;
   current_callchain_.entries = &callchain_entries_[1];
-  const EventInfo* event = FindEventOfCurrentSample();
-  current_event_.name = event->name.c_str();
-  current_event_.tracing_data_format = event->tracing_info.data_format;
+  const EventInfo& event = FindEvent(r);
+  current_event_.name = event.name.c_str();
+  current_event_.tracing_data_format = event.tracing_info.data_format;
   if (current_event_.tracing_data_format.size > 0u && (r.sample_type & PERF_SAMPLE_RAW)) {
     CHECK_GE(r.raw_data.size, current_event_.tracing_data_format.size);
     current_tracing_data_ = r.raw_data.data;
   } else {
     current_tracing_data_ = nullptr;
   }
+  return true;
 }
 
-const EventInfo* ReportLib::FindEventOfCurrentSample() {
+const EventInfo& ReportLib::FindEvent(const SampleRecord& r) {
   if (events_.empty()) {
     CreateEvents();
   }
   if (trace_offcpu_.mode == TraceOffCpuMode::MIXED_ON_OFF_CPU) {
     // To mix on-cpu and off-cpu samples, pretend they are from the same event type.
     // Otherwise, some report scripts may split them.
-    return &events_[0];
+    return events_[0];
   }
-  SampleRecord* r = sample_record_queue_.front().get();
-  size_t attr_index = record_file_reader_->GetAttrIndexOfRecord(r);
-  return &events_[attr_index];
+  size_t attr_index = record_file_reader_->GetAttrIndexOfRecord(&r);
+  return events_[attr_index];
 }
 
 void ReportLib::CreateEvents() {
@@ -611,6 +632,7 @@ bool SetRecordFile(ReportLib* report_lib, const char* record_file) EXPORT;
 bool SetKallsymsFile(ReportLib* report_lib, const char* kallsyms_file) EXPORT;
 void ShowIpForUnknownSymbol(ReportLib* report_lib) EXPORT;
 void ShowArtFrames(ReportLib* report_lib, bool show) EXPORT;
+bool RemoveMethod(ReportLib* report_lib, const char* method_name_regex) EXPORT;
 void MergeJavaMethods(ReportLib* report_lib, bool merge) EXPORT;
 bool AddProguardMappingFile(ReportLib* report_lib, const char* mapping_file) EXPORT;
 const char* GetSupportedTraceOffCpuModes(ReportLib* report_lib) EXPORT;
@@ -656,6 +678,10 @@ void ShowIpForUnknownSymbol(ReportLib* report_lib) {
 
 void ShowArtFrames(ReportLib* report_lib, bool show) {
   return report_lib->ShowArtFrames(show);
+}
+
+bool RemoveMethod(ReportLib* report_lib, const char* method_name_regex) {
+  return report_lib->RemoveMethod(method_name_regex);
 }
 
 void MergeJavaMethods(ReportLib* report_lib, bool merge) {

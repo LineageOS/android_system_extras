@@ -77,4 +77,13 @@ std::unique_ptr<RegEx> RegEx::Create(std::string_view pattern) {
   }
 }
 
+bool SearchInRegs(std::string_view s, const std::vector<std::unique_ptr<RegEx>>& regs) {
+  for (auto& reg : regs) {
+    if (reg->Search(s)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 }  // namespace simpleperf

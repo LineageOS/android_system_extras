@@ -79,15 +79,6 @@ class TidFilter : public RecordFilterCondition {
   std::set<pid_t> exclude_tids_;
 };
 
-static bool SearchInRegs(std::string_view s, const std::vector<std::unique_ptr<RegEx>>& regs) {
-  for (auto& reg : regs) {
-    if (reg->Search(s)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 class ProcessNameFilter : public RecordFilterCondition {
  public:
   ProcessNameFilter(const ThreadTree& thread_tree) : thread_tree_(thread_tree) {}
