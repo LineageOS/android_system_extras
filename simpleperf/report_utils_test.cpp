@@ -540,6 +540,38 @@ TEST_F(CallChainReportBuilderTest, convert_jit_frame_for_jit_method_with_signatu
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+TEST_F(CallChainReportBuilderTest, remove_method_name) {
+  // Test excluding method names.
+  CallChainReportBuilder builder(thread_tree);
+  builder.SetRemoveArtFrame(false);
+  builder.RemoveMethod("art_");
+  std::vector<CallChainReportEntry> entries = builder.Build(thread, fake_ips, 0);
+  ASSERT_EQ(entries.size(), 2);
+  ASSERT_EQ(entries[0].ip, 0x2000);
+  ASSERT_STREQ(entries[0].symbol->Name(), "java_method1");
+  ASSERT_EQ(entries[0].dso->Path(), fake_dex_file_path);
+  ASSERT_EQ(entries[0].vaddr_in_file, 0);
+  ASSERT_EQ(entries[0].execution_type, CallChainExecutionType::INTERPRETED_JVM_METHOD);
+  ASSERT_EQ(entries[1].ip, 0x3000);
+  ASSERT_STREQ(entries[1].symbol->Name(), "java_method2");
+  ASSERT_EQ(entries[1].dso->Path(), fake_dex_file_path);
+  ASSERT_EQ(entries[1].vaddr_in_file, 0x100);
+  ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
+
+  builder.RemoveMethod("java_method2");
+  entries = builder.Build(thread, fake_ips, 0);
+  ASSERT_EQ(entries.size(), 1);
+  ASSERT_EQ(entries[0].ip, 0x2000);
+  ASSERT_STREQ(entries[0].symbol->Name(), "java_method1");
+  ASSERT_EQ(entries[0].dso->Path(), fake_dex_file_path);
+  ASSERT_EQ(entries[0].vaddr_in_file, 0);
+  ASSERT_EQ(entries[0].execution_type, CallChainExecutionType::INTERPRETED_JVM_METHOD);
+
+  builder.RemoveMethod("java_method1");
+  entries = builder.Build(thread, fake_ips, 0);
+  ASSERT_EQ(entries.size(), 0);
+}
+
 class ThreadReportBuilderTest : public testing::Test {
  protected:
   virtual void SetUp() {
