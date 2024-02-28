@@ -91,39 +91,39 @@ struct CallChainReportEntry {
   CallChainExecutionType execution_type = CallChainExecutionType::NATIVE_METHOD;
 };
 
+// a base class for modifying callchain reports
+class CallChainReportModifier {
+ public:
+  virtual ~CallChainReportModifier();
+
+  virtual void Modify(std::vector<CallChainReportEntry>& callchain) = 0;
+};
+
 class CallChainReportBuilder {
  public:
   CallChainReportBuilder(ThreadTree& thread_tree);
   // If true, remove interpreter frames both before and after a Java frame.
   // Default is true.
-  void SetRemoveArtFrame(bool enable) { remove_art_frame_ = enable; }
+  void SetRemoveArtFrame(bool enable);
   // If true, convert a JIT method into its corresponding interpreted Java method. So they can be
   // merged in reports like flamegraph. Default is true.
-  void SetConvertJITFrame(bool enable) { convert_jit_frame_ = enable; }
+  void SetConvertJITFrame(bool enable);
   // Add proguard mapping.txt to de-obfuscate minified symbols.
   bool AddProguardMappingFile(std::string_view mapping_file);
+  // Remove methods with name containing the given regular expression.
+  bool RemoveMethod(std::string_view method_name_regex);
   std::vector<CallChainReportEntry> Build(const ThreadEntry* thread,
                                           const std::vector<uint64_t>& ips, size_t kernel_ip_count);
 
  private:
-  struct JavaMethod {
-    Dso* dso;
-    const Symbol* symbol;
-    JavaMethod(Dso* dso, const Symbol* symbol) : dso(dso), symbol(symbol) {}
-  };
-
   void MarkArtFrame(std::vector<CallChainReportEntry>& callchain);
-  void ConvertJITFrame(std::vector<CallChainReportEntry>& callchain);
-  void CollectJavaMethods();
-  void DeObfuscateJavaMethods(std::vector<CallChainReportEntry>& callchain);
 
   ThreadTree& thread_tree_;
-  bool remove_art_frame_ = true;
   bool remove_r8_synthesized_frame_ = false;
-  bool convert_jit_frame_ = true;
-  bool java_method_initialized_ = false;
-  std::unordered_map<std::string, JavaMethod> java_method_map_;
-  std::unique_ptr<ProguardMappingRetrace> retrace_;
+  std::unique_ptr<CallChainReportModifier> art_frame_remover_;
+  std::unique_ptr<CallChainReportModifier> jit_frame_converter_;
+  std::unique_ptr<CallChainReportModifier> java_method_deobfuscater_;
+  std::unique_ptr<CallChainReportModifier> method_name_filter_;
 };
 
 struct ThreadReport {
