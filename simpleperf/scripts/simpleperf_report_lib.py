@@ -565,6 +565,7 @@ class ProtoFileReportLib:
                      '`pip install protobuf==4.21`.')
 
     def __init__(self):
+        self.record_file = None
         self.report_sample_pb2 = ProtoFileReportLib.get_report_sample_pb2()
         self.records: List[self.report_sample_pb2.Record] = []
         self.record_index = -1
@@ -601,6 +602,7 @@ class ProtoFileReportLib:
         pass
 
     def SetRecordFile(self, record_file: str):
+        self.record_file = record_file
         with open(record_file, 'rb') as fh:
             data = fh.read()
         _check(data[:10] == b'SIMPLEPERF', f'magic number mismatch: {data[:10]}')
@@ -668,8 +670,8 @@ class ProtoFileReportLib:
             one of the modes returned by GetSupportedTraceOffCpuModes().
         """
         supported_modes = self.GetSupportedTraceOffCpuModes()
-        _check(mode in supported_modes,
-               f'unsupported trace-offcpu mode: {mode}. supported modes are: {supported_modes}')
+        _check(mode in supported_modes, f'unsupported trace-offcpu mode: {mode}. ' +
+                f'Supported modes are {supported_modes} in {self.record_file}')
         self.trace_offcpu_mode = mode
 
     def AggregateThreads(self, thread_name_regex_list: List[str]):
@@ -709,14 +711,14 @@ class ProtoFileReportLib:
         if prev_offcpu_sample := self.offcpu_samples.get(sample.thread_id):
             # If there is a previous off-cpu sample, update its period.
             prev_offcpu_sample.event_count = max(sample.time - prev_offcpu_sample.time, 1)
-            self._add_to_sample_queue(sample)
+            self._add_to_sample_queue(prev_offcpu_sample)
 
         if is_offcpu:
             self.offcpu_samples[sample.thread_id] = sample
         else:
             self.offcpu_samples[sample.thread_id] = None
             if self.trace_offcpu_mode in ('on-off-cpu', 'mixed-on-off-cpu'):
-                self.sample_queue.append(sample)
+                self._add_to_sample_queue(sample)
 
     def _process_context_switch(self, context_switch) -> None:
         if not context_switch.switch_on:
