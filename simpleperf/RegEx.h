@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace simpleperf {
 
@@ -50,5 +51,7 @@ class RegEx {
 
   std::string pattern_;
 };
+
+bool SearchInRegs(std::string_view s, const std::vector<std::unique_ptr<RegEx>>& regs);
 
 }  // namespace simpleperf

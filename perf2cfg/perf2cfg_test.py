@@ -16,12 +16,10 @@
 import unittest
 import os.path
 
-def load_tests(loader, standard_tests, _pattern):
-    this_dir = os.path.dirname(__file__)
-    perf2cfg_tests = loader.discover(start_dir=os.path.join(this_dir, 'tests'),
-                                     pattern='test*.py')
-    standard_tests.addTests(perf2cfg_tests)
-    return standard_tests
+from tests.test_edit import *
+from tests.test_events import *
+from tests.test_parse import *
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

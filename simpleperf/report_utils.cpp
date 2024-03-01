@@ -23,6 +23,7 @@
 #include <android-base/strings.h>
 
 #include "JITDebugReader.h"
+#include "RegEx.h"
 #include "utils.h"
 
 namespace simpleperf {
@@ -189,6 +190,160 @@ static bool IsArtEntry(const CallChainReportEntry& entry, bool* is_jni_trampolin
   return false;
 };
 
+CallChainReportModifier::~CallChainReportModifier() {}
+
+// Remove art frames.
+class ArtFrameRemover : public CallChainReportModifier {
+ public:
+  void Modify(std::vector<CallChainReportEntry>& callchain) override {
+    auto it =
+        std::remove_if(callchain.begin(), callchain.end(), [](const CallChainReportEntry& entry) {
+          return entry.execution_type == CallChainExecutionType::ART_METHOD;
+        });
+    callchain.erase(it, callchain.end());
+  }
+};
+
+// Convert JIT methods to their corresponding interpreted Java methods.
+class JITFrameConverter : public CallChainReportModifier {
+ public:
+  JITFrameConverter(const ThreadTree& thread_tree) : thread_tree_(thread_tree) {}
+
+  void Modify(std::vector<CallChainReportEntry>& callchain) override {
+    CollectJavaMethods();
+    for (size_t i = 0; i < callchain.size();) {
+      auto& entry = callchain[i];
+      if (entry.execution_type == CallChainExecutionType::JIT_JVM_METHOD) {
+        // This is a JIT java method, merge it with the interpreted java method having the same
+        // name if possible. Otherwise, merge it with other JIT java methods having the same name
+        // by assigning a common dso_name.
+        if (auto it = java_method_map_.find(std::string(entry.symbol->FunctionName()));
+            it != java_method_map_.end()) {
+          entry.dso = it->second.dso;
+          entry.symbol = it->second.symbol;
+          // Not enough info to map an offset in a JIT method to an offset in a dex file. So just
+          // use the symbol_addr.
+          entry.vaddr_in_file = entry.symbol->addr;
+
+          // ART may call from an interpreted Java method into its corresponding JIT method. To
+          // avoid showing the method calling itself, remove the JIT frame.
+          if (i + 1 < callchain.size() && callchain[i + 1].dso == entry.dso &&
+              callchain[i + 1].symbol == entry.symbol) {
+            callchain.erase(callchain.begin() + i);
+            continue;
+          }
+
+        } else if (!JITDebugReader::IsPathInJITSymFile(entry.dso->Path())) {
+          // Old JITSymFiles use names like "TemporaryFile-XXXXXX". So give them a better name.
+          entry.dso_name = "[JIT cache]";
+        }
+      }
+      i++;
+    }
+  }
+
+ private:
+  struct JavaMethod {
+    Dso* dso;
+    const Symbol* symbol;
+    JavaMethod(Dso* dso, const Symbol* symbol) : dso(dso), symbol(symbol) {}
+  };
+
+  void CollectJavaMethods() {
+    if (!java_method_initialized_) {
+      java_method_initialized_ = true;
+      for (Dso* dso : thread_tree_.GetAllDsos()) {
+        if (dso->type() == DSO_DEX_FILE) {
+          dso->LoadSymbols();
+          for (auto& symbol : dso->GetSymbols()) {
+            java_method_map_.emplace(symbol.Name(), JavaMethod(dso, &symbol));
+          }
+        }
+      }
+    }
+  }
+
+  const ThreadTree& thread_tree_;
+  bool java_method_initialized_ = false;
+  std::unordered_map<std::string, JavaMethod> java_method_map_;
+};
+
+// Use proguard mapping.txt to de-obfuscate minified symbols.
+class JavaMethodDeobfuscater : public CallChainReportModifier {
+ public:
+  JavaMethodDeobfuscater(bool remove_r8_synthesized_frame)
+      : remove_r8_synthesized_frame_(remove_r8_synthesized_frame) {}
+
+  bool AddProguardMappingFile(std::string_view mapping_file) {
+    return retrace_.AddProguardMappingFile(mapping_file);
+  }
+
+  void Modify(std::vector<CallChainReportEntry>& callchain) override {
+    for (size_t i = 0; i < callchain.size();) {
+      auto& entry = callchain[i];
+      if (!IsJavaEntry(entry)) {
+        i++;
+        continue;
+      }
+      std::string_view name = entry.symbol->FunctionName();
+      std::string original_name;
+      bool synthesized;
+      if (retrace_.DeObfuscateJavaMethods(name, &original_name, &synthesized)) {
+        if (synthesized && remove_r8_synthesized_frame_) {
+          callchain.erase(callchain.begin() + i);
+          continue;
+        }
+        entry.symbol->SetDemangledName(original_name);
+      }
+      i++;
+    }
+  }
+
+ private:
+  bool IsJavaEntry(const CallChainReportEntry& entry) {
+    static const char* COMPILED_JAVA_FILE_SUFFIXES[] = {".odex", ".oat", ".dex"};
+    if (entry.execution_type == CallChainExecutionType::JIT_JVM_METHOD ||
+        entry.execution_type == CallChainExecutionType::INTERPRETED_JVM_METHOD) {
+      return true;
+    }
+    if (entry.execution_type == CallChainExecutionType::NATIVE_METHOD) {
+      const std::string& path = entry.dso->Path();
+      for (const char* suffix : COMPILED_JAVA_FILE_SUFFIXES) {
+        if (android::base::EndsWith(path, suffix)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  const bool remove_r8_synthesized_frame_;
+  ProguardMappingRetrace retrace_;
+};
+
+// Use regex to filter method names.
+class MethodNameFilter : public CallChainReportModifier {
+ public:
+  bool RemoveMethod(std::string_view method_name_regex) {
+    if (auto regex = RegEx::Create(method_name_regex); regex != nullptr) {
+      exclude_names_.emplace_back(std::move(regex));
+      return true;
+    }
+    return false;
+  }
+
+  void Modify(std::vector<CallChainReportEntry>& callchain) override {
+    auto it = std::remove_if(callchain.begin(), callchain.end(),
+                             [this](const CallChainReportEntry& entry) {
+                               return SearchInRegs(entry.symbol->DemangledName(), exclude_names_);
+                             });
+    callchain.erase(it, callchain.end());
+  }
+
+ private:
+  std::vector<std::unique_ptr<RegEx>> exclude_names_;
+};
+
 CallChainReportBuilder::CallChainReportBuilder(ThreadTree& thread_tree)
     : thread_tree_(thread_tree) {
   const char* env_name = "REMOVE_R8_SYNTHESIZED_FRAME";
@@ -202,13 +357,39 @@ CallChainReportBuilder::CallChainReportBuilder(ThreadTree& thread_tree)
       remove_r8_synthesized_frame_ = true;
     }
   }
+  SetRemoveArtFrame(true);
+  SetConvertJITFrame(true);
+}
+
+void CallChainReportBuilder::SetRemoveArtFrame(bool enable) {
+  if (enable) {
+    art_frame_remover_.reset(new ArtFrameRemover);
+  } else {
+    art_frame_remover_.reset(nullptr);
+  }
+}
+
+void CallChainReportBuilder::SetConvertJITFrame(bool enable) {
+  if (enable) {
+    jit_frame_converter_.reset(new JITFrameConverter(thread_tree_));
+  } else {
+    jit_frame_converter_.reset(nullptr);
+  }
 }
 
 bool CallChainReportBuilder::AddProguardMappingFile(std::string_view mapping_file) {
-  if (!retrace_) {
-    retrace_.reset(new ProguardMappingRetrace);
+  if (!java_method_deobfuscater_) {
+    java_method_deobfuscater_.reset(new JavaMethodDeobfuscater(remove_r8_synthesized_frame_));
   }
-  return retrace_->AddProguardMappingFile(mapping_file);
+  return static_cast<JavaMethodDeobfuscater&>(*java_method_deobfuscater_)
+      .AddProguardMappingFile(mapping_file);
+}
+
+bool CallChainReportBuilder::RemoveMethod(std::string_view method_name_regex) {
+  if (!method_name_filter_) {
+    method_name_filter_.reset(new MethodNameFilter);
+  }
+  return static_cast<MethodNameFilter&>(*method_name_filter_).RemoveMethod(method_name_regex);
 }
 
 std::vector<CallChainReportEntry> CallChainReportBuilder::Build(const ThreadEntry* thread,
@@ -239,17 +420,17 @@ std::vector<CallChainReportEntry> CallChainReportBuilder::Build(const ThreadEntr
     entry.execution_type = execution_type;
   }
   MarkArtFrame(result);
-  if (remove_art_frame_) {
-    auto it = std::remove_if(result.begin(), result.end(), [](const CallChainReportEntry& entry) {
-      return entry.execution_type == CallChainExecutionType::ART_METHOD;
-    });
-    result.erase(it, result.end());
+  if (art_frame_remover_) {
+    art_frame_remover_->Modify(result);
   }
-  if (convert_jit_frame_) {
-    ConvertJITFrame(result);
+  if (jit_frame_converter_) {
+    jit_frame_converter_->Modify(result);
   }
-  if (retrace_) {
-    DeObfuscateJavaMethods(result);
+  if (java_method_deobfuscater_) {
+    java_method_deobfuscater_->Modify(result);
+  }
+  if (method_name_filter_) {
+    method_name_filter_->Modify(result);
   }
   return result;
 }
@@ -289,91 +470,6 @@ void CallChainReportBuilder::MarkArtFrame(std::vector<CallChainReportEntry>& cal
     if (i > 0 && callchain[i - 1].execution_type == CallChainExecutionType::ART_METHOD) {
       callchain[i - 1].execution_type = CallChainExecutionType::NATIVE_METHOD;
     }
-  }
-}
-
-void CallChainReportBuilder::ConvertJITFrame(std::vector<CallChainReportEntry>& callchain) {
-  CollectJavaMethods();
-  for (size_t i = 0; i < callchain.size();) {
-    auto& entry = callchain[i];
-    if (entry.execution_type == CallChainExecutionType::JIT_JVM_METHOD) {
-      // This is a JIT java method, merge it with the interpreted java method having the same
-      // name if possible. Otherwise, merge it with other JIT java methods having the same name
-      // by assigning a common dso_name.
-      if (auto it = java_method_map_.find(std::string(entry.symbol->FunctionName()));
-          it != java_method_map_.end()) {
-        entry.dso = it->second.dso;
-        entry.symbol = it->second.symbol;
-        // Not enough info to map an offset in a JIT method to an offset in a dex file. So just
-        // use the symbol_addr.
-        entry.vaddr_in_file = entry.symbol->addr;
-
-        // ART may call from an interpreted Java method into its corresponding JIT method. To
-        // avoid showing the method calling itself, remove the JIT frame.
-        if (i + 1 < callchain.size() && callchain[i + 1].dso == entry.dso &&
-            callchain[i + 1].symbol == entry.symbol) {
-          callchain.erase(callchain.begin() + i);
-          continue;
-        }
-
-      } else if (!JITDebugReader::IsPathInJITSymFile(entry.dso->Path())) {
-        // Old JITSymFiles use names like "TemporaryFile-XXXXXX". So give them a better name.
-        entry.dso_name = "[JIT cache]";
-      }
-    }
-    i++;
-  }
-}
-
-void CallChainReportBuilder::CollectJavaMethods() {
-  if (!java_method_initialized_) {
-    java_method_initialized_ = true;
-    for (Dso* dso : thread_tree_.GetAllDsos()) {
-      if (dso->type() == DSO_DEX_FILE) {
-        dso->LoadSymbols();
-        for (auto& symbol : dso->GetSymbols()) {
-          java_method_map_.emplace(symbol.Name(), JavaMethod(dso, &symbol));
-        }
-      }
-    }
-  }
-}
-
-static bool IsJavaEntry(const CallChainReportEntry& entry) {
-  static const char* COMPILED_JAVA_FILE_SUFFIXES[] = {".odex", ".oat", ".dex"};
-  if (entry.execution_type == CallChainExecutionType::JIT_JVM_METHOD ||
-      entry.execution_type == CallChainExecutionType::INTERPRETED_JVM_METHOD) {
-    return true;
-  }
-  if (entry.execution_type == CallChainExecutionType::NATIVE_METHOD) {
-    const std::string& path = entry.dso->Path();
-    for (const char* suffix : COMPILED_JAVA_FILE_SUFFIXES) {
-      if (android::base::EndsWith(path, suffix)) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-void CallChainReportBuilder::DeObfuscateJavaMethods(std::vector<CallChainReportEntry>& callchain) {
-  for (size_t i = 0; i < callchain.size();) {
-    auto& entry = callchain[i];
-    if (!IsJavaEntry(entry)) {
-      i++;
-      continue;
-    }
-    std::string_view name = entry.symbol->FunctionName();
-    std::string original_name;
-    bool synthesized;
-    if (retrace_->DeObfuscateJavaMethods(name, &original_name, &synthesized)) {
-      if (synthesized && remove_r8_synthesized_frame_) {
-        callchain.erase(callchain.begin() + i);
-        continue;
-      }
-      entry.symbol->SetDemangledName(original_name);
-    }
-    i++;
   }
 }
 
