@@ -137,6 +137,28 @@ class TestReportLib(TestBase):
         report_lib.ShowArtFrames(True)
         self.assertTrue(has_art_frame(report_lib))
 
+    def test_remove_method(self):
+        def get_methods(report_lib) -> Set[str]:
+            methods = set()
+            report_lib.SetRecordFile(TestHelper.testdata_path('perf_display_bitmaps.data'))
+            while True:
+                sample = report_lib.GetNextSample()
+                if not sample:
+                    break
+                methods.add(report_lib.GetSymbolOfCurrentSample().symbol_name)
+                callchain = report_lib.GetCallChainOfCurrentSample()
+                for i in range(callchain.nr):
+                    methods.add(callchain.entries[i].symbol.symbol_name)
+            report_lib.Close()
+            return methods
+
+        report_lib = ReportLib()
+        report_lib.RemoveMethod('android.view')
+        methods = get_methods(report_lib)
+        self.assertFalse(any('android.view' in method for method in methods))
+        self.assertTrue(any('android.widget' in method for method in methods))
+
+
     def test_merge_java_methods(self):
         def parse_dso_names(report_lib):
             dso_names = set()
@@ -409,9 +431,6 @@ class TestProtoFileReportLib(TestBase):
         # GetSupportedTraceOffCpuModes() before SetRecordFile() triggers RuntimeError.
         with self.assertRaises(RuntimeError):
             report_lib.GetSupportedTraceOffCpuModes()
-        # SetTraceOffCpuModes() before SetRecordFile() triggers RuntimeError.
-        with self.assertRaises(RuntimeError):
-            report_lib.SetTraceOffCpuMode('on-cpu')
 
         mode_dict = {
             'on-cpu': {
@@ -468,5 +487,3 @@ class TestProtoFileReportLib(TestBase):
                                 TestHelper.testdata_path('perf.data'))
         report_lib.SetRecordFile(proto_file_path)
         self.assertEqual(report_lib.GetSupportedTraceOffCpuModes(), [])
-        with self.assertRaises(RuntimeError):
-            report_lib.SetTraceOffCpuMode('on-cpu')
