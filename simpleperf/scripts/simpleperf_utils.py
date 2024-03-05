@@ -1096,6 +1096,7 @@ class ArgParseFormatter(
 @dataclass
 class ReportLibOptions:
     show_art_frames: bool
+    remove_method: List[str]
     trace_offcpu: str
     proguard_mapping_files: List[str]
     sample_filters: List[str]
@@ -1121,6 +1122,8 @@ class BaseArgumentParser(argparse.ArgumentParser):
         parser.add_argument('--show-art-frames', '--show_art_frames',
                             action=argparse.BooleanOptionalAction, default=default_show_art_frames,
                             help='Show frames of internal methods in the ART Java interpreter.')
+        parser.add_argument('--remove-method', nargs='+', metavar='method_name_regex',
+                            help='remove methods with name containing the regular expression')
         parser.add_argument(
             '--trace-offcpu', choices=['on-cpu', 'off-cpu', 'on-off-cpu', 'mixed-on-off-cpu'],
             help="""Set report mode for profiles recorded with --trace-offcpu option. All possible
@@ -1220,8 +1223,8 @@ class BaseArgumentParser(argparse.ArgumentParser):
         if self.has_report_lib_options:
             sample_filters = self._build_sample_filter(namespace)
             report_lib_options = ReportLibOptions(
-                namespace.show_art_frames, namespace.trace_offcpu, namespace.proguard_mapping_file,
-                sample_filters, namespace.aggregate_threads)
+                namespace.show_art_frames, namespace.remove_method, namespace.trace_offcpu,
+                namespace.proguard_mapping_file, sample_filters, namespace.aggregate_threads)
             setattr(namespace, 'report_lib_options', report_lib_options)
 
         if not Log.initialized:
