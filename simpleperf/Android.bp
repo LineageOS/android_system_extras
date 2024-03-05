@@ -15,6 +15,7 @@
 //
 
 package {
+    default_team: "trendy_team_llvm_and_toolchains",
     default_applicable_licenses: ["system_extras_simpleperf_license"],
 }
 
