@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_android_kernel",
     default_applicable_licenses: ["system_extras_verity_license"],
 }
 

@@ -238,6 +238,23 @@ class ReportLibStructure(ct.Structure):
     _fields_ = []
 
 
+def SetReportOptionsForReportLib(report_lib, options: ReportLibOptions):
+    if options.proguard_mapping_files:
+        for file_path in options.proguard_mapping_files:
+            report_lib.AddProguardMappingFile(file_path)
+    if options.show_art_frames:
+        report_lib.ShowArtFrames(True)
+    if options.remove_method:
+        for name in options.remove_method:
+            report_lib.RemoveMethod(name)
+    if options.trace_offcpu:
+        report_lib.SetTraceOffCpuMode(options.trace_offcpu)
+    if options.sample_filters:
+        report_lib.SetSampleFilter(options.sample_filters)
+    if options.aggregate_threads:
+        report_lib.AggregateThreads(options.aggregate_threads)
+
+
 # pylint: disable=invalid-name
 class ReportLib(object):
     """ Read contents from perf.data. """
@@ -257,6 +274,8 @@ class ReportLib(object):
         self._SetKallsymsFileFunc = self._lib.SetKallsymsFile
         self._ShowIpForUnknownSymbolFunc = self._lib.ShowIpForUnknownSymbol
         self._ShowArtFramesFunc = self._lib.ShowArtFrames
+        self._RemoveMethodFunc = self._lib.RemoveMethod
+        self._RemoveMethodFunc.restype = ct.c_bool
         self._MergeJavaMethodsFunc = self._lib.MergeJavaMethods
         self._AddProguardMappingFileFunc = self._lib.AddProguardMappingFile
         self._AddProguardMappingFileFunc.restype = ct.c_bool
@@ -304,17 +323,7 @@ class ReportLib(object):
 
     def SetReportOptions(self, options: ReportLibOptions):
         """ Set report options in one call. """
-        if options.proguard_mapping_files:
-            for file_path in options.proguard_mapping_files:
-                self.AddProguardMappingFile(file_path)
-        if options.show_art_frames:
-            self.ShowArtFrames(True)
-        if options.trace_offcpu:
-            self.SetTraceOffCpuMode(options.trace_offcpu)
-        if options.sample_filters:
-            self.SetSampleFilter(options.sample_filters)
-        if options.aggregate_threads:
-            self.AggregateThreads(options.aggregate_threads)
+        SetReportOptionsForReportLib(self, options)
 
     def SetLogSeverity(self, log_level: str = 'info'):
         """ Set log severity of native lib, can be verbose,debug,info,error,fatal."""
@@ -337,6 +346,11 @@ class ReportLib(object):
     def ShowArtFrames(self, show: bool = True):
         """ Show frames of internal methods of the Java interpreter. """
         self._ShowArtFramesFunc(self.getInstance(), show)
+
+    def RemoveMethod(self, method_name_regex: str):
+        """ Remove methods with name containing method_name_regex. """
+        res = self._RemoveMethodFunc(self.getInstance(), _char_pt(method_name_regex))
+        _check(res, f'failed to call RemoveMethod({method_name_regex})')
 
     def MergeJavaMethods(self, merge: bool = True):
         """ This option merges jitted java methods with the same name but in different jit
@@ -583,17 +597,7 @@ class ProtoFileReportLib:
 
     def SetReportOptions(self, options: ReportLibOptions):
         """ Set report options in one call. """
-        if options.proguard_mapping_files:
-            for file_path in options.proguard_mapping_files:
-                self.AddProguardMappingFile(file_path)
-        if options.show_art_frames:
-            self.ShowArtFrames(True)
-        if options.trace_offcpu:
-            self.SetTraceOffCpuMode(options.trace_offcpu)
-        if options.sample_filters:
-            self.SetSampleFilter(options.sample_filters)
-        if options.aggregate_threads:
-            self.AggregateThreads(options.aggregate_threads)
+        SetReportOptionsForReportLib(self, options)
 
     def SetLogSeverity(self, log_level: str = 'info'):
         pass
@@ -645,6 +649,10 @@ class ProtoFileReportLib:
     def ShowArtFrames(self, show: bool = True):
         raise NotImplementedError(
             'Showing art frames are not implemented for report_sample profiles')
+
+    def RemoveMethod(self, method_name_regex: str):
+        """ Remove methods with name containing method_name_regex. """
+        raise NotImplementedError("Removing method isn't implemented for report_sample profiles")
 
     def SetSampleFilter(self, filters: List[str]):
         raise NotImplementedError('sample filters are not implemented for report_sample profiles')
