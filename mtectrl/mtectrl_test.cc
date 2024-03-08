@@ -35,6 +35,7 @@ int mtectrl(std::string_view arg) {
 }
 
 int RunMteCtrl() {
+  CHECK(android::base::GetIntProperty("arm64.memtag.test_bootctl_loaded", 0) == 1);
   std::string arg = android::base::GetProperty("arm64.memtag.test_bootctl", "none");
   arg += " ";
   arg += android::base::GetProperty("arm64.memtag.test_bootctl_override", "default");
@@ -44,13 +45,14 @@ int RunMteCtrl() {
 void Boot(misc_memtag_message m) {
   std::string m_str(reinterpret_cast<char*>(&m), sizeof(m));
   android::base::WriteStringToFile(m_str, "/data/local/tmp/misc_memtag");
-  mtectrl("-s arm64.memtag.test_bootctl");
+  mtectrl("-s arm64.memtag.test_bootctl -f arm64.memtag.test_bootctl_loaded");
   // arm64.memtag.test_bootctl got updated, so we trigger ourselves.
   RunMteCtrl();
 }
 
 void Reboot() {
   android::base::SetProperty("arm64.memtag.test_bootctl", "INVALID");
+  android::base::SetProperty("arm64.memtag.test_bootctl_loaded", "0");
   std::string m_str;
   ASSERT_TRUE(android::base::ReadFileToString("/data/local/tmp/misc_memtag", &m_str));
   misc_memtag_message m;
@@ -79,6 +81,9 @@ std::string GetMisc() {
 std::string TestProperty() {
   return android::base::GetProperty("arm64.memtag.test_bootctl", "");
 }
+std::string TestFlag() {
+  return android::base::GetProperty("arm64.memtag.test_bootctl_loaded", "");
+}
 }  // namespace
 
 class MteCtrlTest : public ::testing::Test {
@@ -90,6 +95,7 @@ class MteCtrlTest : public ::testing::Test {
     close(fd);
     android::base::SetProperty("arm64.memtag.test_bootctl", "INVALID");
     android::base::SetProperty("arm64.memtag.test_bootctl_override", "");
+    android::base::SetProperty("arm64.memtag.test_bootctl_loaded", "0");
   }
   void TearDown() override {
     CHECK(unlink("/data/local/tmp/misc_memtag") == 0);
@@ -116,13 +122,16 @@ TEST_F(MteCtrlTest, set_once_kernel) {
 TEST_F(MteCtrlTest, read_memtag) {
   Boot({});
   SetMemtagProp("memtag");
+  Reboot();
   EXPECT_EQ(TestProperty(), "memtag");
+  EXPECT_EQ(TestFlag(), "1");
 }
 
 TEST_F(MteCtrlTest, read_invalid_memtag_message) {
   misc_memtag_message m = {.version = 1, .magic = 0xffff, .memtag_mode = MISC_MEMTAG_MODE_MEMTAG};
   Boot(m);
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
+  EXPECT_EQ(TestFlag(), "1");
 }
 
 TEST_F(MteCtrlTest, read_invalid_memtag_mode) {
@@ -131,6 +140,7 @@ TEST_F(MteCtrlTest, read_invalid_memtag_mode) {
                            .memtag_mode = MISC_MEMTAG_MODE_MEMTAG | 1u << 31};
   Boot(m);
   EXPECT_EQ(TestProperty(), "memtag");
+  EXPECT_EQ(TestFlag(), "1");
 }
 
 TEST_F(MteCtrlTest, set_read_force_off) {
@@ -141,7 +151,7 @@ TEST_F(MteCtrlTest, set_read_force_off) {
   EXPECT_EQ(TestProperty(), "memtag-off,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, set_read_force_off_none) {
@@ -152,7 +162,7 @@ TEST_F(MteCtrlTest, set_read_force_off_none) {
   EXPECT_EQ(TestProperty(), "memtag-off,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, set_read_force_off_and_on) {
@@ -163,7 +173,7 @@ TEST_F(MteCtrlTest, set_read_force_off_and_on) {
   EXPECT_EQ(TestProperty(), "memtag-off,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
   SetOverrideProp("force_on");
   Reboot();
   EXPECT_EQ(TestProperty(), "memtag,forced");
@@ -202,7 +212,7 @@ TEST_F(MteCtrlTest, set_read_force_on) {
   EXPECT_EQ(TestProperty(), "memtag,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, set_read_force_on_none) {
@@ -213,7 +223,7 @@ TEST_F(MteCtrlTest, set_read_force_on_none) {
   EXPECT_EQ(TestProperty(), "memtag,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, set_read_force_on_and_off) {
@@ -224,7 +234,7 @@ TEST_F(MteCtrlTest, set_read_force_on_and_off) {
   EXPECT_EQ(TestProperty(), "memtag,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
   SetOverrideProp("force_off");
   Reboot();
   EXPECT_EQ(TestProperty(), "memtag-off,forced");
@@ -264,7 +274,8 @@ TEST_F(MteCtrlTest, override) {
 
 TEST_F(MteCtrlTest, read_empty) {
   Boot({});
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
+  EXPECT_EQ(TestFlag(), "1");
 }
 
 TEST_F(MteCtrlTest, force_off_invalid_mode) {
@@ -276,7 +287,7 @@ TEST_F(MteCtrlTest, force_off_invalid_mode) {
   EXPECT_EQ(TestProperty(), "memtag-off,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, force_on_invalid_mode) {
@@ -288,7 +299,7 @@ TEST_F(MteCtrlTest, force_on_invalid_mode) {
   EXPECT_EQ(TestProperty(), "memtag,forced");
   SetOverrideProp("default");
   Reboot();
-  EXPECT_EQ(TestProperty(), "");
+  EXPECT_EQ(TestProperty(), "none");
 }
 
 TEST_F(MteCtrlTest, mode_invalid_override) {

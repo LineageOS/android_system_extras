@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import time
+from typing import Optional
 
 from simpleperf_utils import (
     AdbHelper, BaseArgumentParser, bytes_to_str, extant_dir, get_script_dir, get_target_binary_path,
@@ -194,6 +195,8 @@ class ProfilerBase(object):
     def __init__(self, args):
         self.args = args
         self.adb = AdbHelper(enable_switch_to_root=not args.disable_adb_root)
+        if not self.adb.is_device_available():
+            log_exit('No Android device is connected via ADB.')
         self.is_root_device = self.adb.switch_to_root()
         self.android_version = self.adb.get_android_version()
         if self.android_version < 7:
@@ -293,8 +296,22 @@ class AppProfiler(ProfilerBase):
 
     def prepare(self):
         super(AppProfiler, self).prepare()
+        self.app_versioncode = self.get_app_versioncode()
         if self.args.compile_java_code:
             self.compile_java_code()
+
+    def get_app_versioncode(self) -> Optional[str]:
+        result, output = self.adb.run_and_return_output(
+            ['shell', 'pm', 'list', 'packages', '--show-versioncode'])
+        if not result:
+            return None
+        prefix = f'package:{self.args.app} '
+        for line in output.splitlines():
+            if line.startswith(prefix):
+                pos = line.find('versionCode:')
+                if pos != -1:
+                    return line[pos + len('versionCode:'):].strip()
+        return None
 
     def compile_java_code(self):
         self.kill_app_process()
@@ -335,10 +352,10 @@ class AppProfiler(ProfilerBase):
             result, ps_output = self.adb.run_and_return_output(
                 ['shell', 'ps', '-p', pid, '-o', 'USER'])
             if not result:
-              return None
+                return None
             uid = SHELL_PS_UID_PATTERN.search(ps_output).group(1)
             if uid == current_user.strip():
-              return int(pid)
+                return int(pid)
         return None
 
     def run_in_app_dir(self, args):
@@ -349,14 +366,25 @@ class AppProfiler(ProfilerBase):
         return self.adb.run_and_return_output(adb_args)
 
     def start(self):
-        if self.args.activity or self.args.test:
+        if self.args.launch or self.args.activity or self.args.test:
             self.kill_app_process()
-        self.start_profiling(['--app', self.args.app])
+        args = ['--app', self.args.app]
+        if self.app_versioncode:
+            args += ['--add-meta-info', f'app_versioncode={self.app_versioncode}']
+        self.start_profiling(args)
+        if self.args.launch:
+            self.start_app()
         if self.args.activity:
             self.start_activity()
         elif self.args.test:
             self.start_test()
         # else: no need to start an activity or test.
+
+    def start_app(self):
+        result = self.adb.run(['shell', 'monkey', '-p', self.args.app, '1'])
+        if not result:
+            self.record_subproc.terminate()
+            log_exit(f"Can't start {self.args.app}")
 
     def start_activity(self):
         activity = self.args.app + '/' + self.args.activity
@@ -447,6 +475,9 @@ def main():
                                   wrap.sh in the apk to use the native instructions.""")
 
     app_start_group = app_target_group.add_mutually_exclusive_group()
+    app_start_group.add_argument('--launch', action='store_true', help="""Used with -p. Profile the
+                                 launch time of an Android app. The app will be started or
+                                 restarted.""")
     app_start_group.add_argument('-a', '--activity', help="""Used with -p. Profile the launch time
                                  of an activity in an Android app. The app will be started or
                                  restarted to run the activity. Like `-a .MainActivity`.""")

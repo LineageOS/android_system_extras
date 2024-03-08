@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include <future>
 #include "fec_private.h"
 
 struct process_info {
     int id;
-    fec_handle *f;
-    uint8_t *buf;
+    fec_handle* f;
+    uint8_t* buf;
     size_t count;
     uint64_t offset;
     read_func func;
@@ -28,21 +29,15 @@ struct process_info {
 };
 
 /* thread function  */
-static void * __process(void *cookie)
-{
-    process_info *p = static_cast<process_info *>(cookie);
-
-    debug("thread %d: [%" PRIu64 ", %" PRIu64 ")", p->id, p->offset,
-        p->offset + p->count);
+static process_info* __process(process_info* p) {
+    debug("thread %d: [%" PRIu64 ", %" PRIu64 ")", p->id, p->offset, p->offset + p->count);
 
     p->rc = p->func(p->f, p->buf, p->count, p->offset, &p->errors);
     return p;
 }
 
 /* launches a maximum number of threads to process a read */
-ssize_t process(fec_handle *f, uint8_t *buf, size_t count, uint64_t offset,
-        read_func func)
-{
+ssize_t process(fec_handle* f, uint8_t* buf, size_t count, uint64_t offset, read_func func) {
     check(f);
     check(buf);
     check(func);
@@ -60,30 +55,27 @@ ssize_t process(fec_handle *f, uint8_t *buf, size_t count, uint64_t offset,
     }
 
     uint64_t start = (offset / FEC_BLOCKSIZE) * FEC_BLOCKSIZE;
-    size_t blocks = fec_div_round_up(count, FEC_BLOCKSIZE);
+    size_t blocks = fec_div_round_up(offset + count - start, FEC_BLOCKSIZE);
 
-    size_t count_per_thread = fec_div_round_up(blocks, threads) * FEC_BLOCKSIZE;
-    size_t max_threads = fec_div_round_up(count, count_per_thread);
-
-    if ((size_t)threads > max_threads) {
-        threads = (int)max_threads;
+    /* start at most one thread per block we're accessing */
+    if ((size_t)threads > blocks) {
+        threads = (int)blocks;
     }
 
+    size_t count_per_thread = fec_div_round_up(blocks, threads) * FEC_BLOCKSIZE;
     size_t left = count;
     uint64_t pos = offset;
     uint64_t end = start + count_per_thread;
 
-    debug("%d threads, %zu bytes per thread (total %zu)", threads,
-        count_per_thread, count);
+    debug("max %d threads, %zu bytes per thread (total %zu spanning %zu blocks)", threads,
+          count_per_thread, count, blocks);
 
-    std::vector<pthread_t> handles;
+    std::vector<std::future<process_info*>> handles;
     process_info info[threads];
     ssize_t rc = 0;
 
     /* start threads to process queue */
-    for (int i = 0; i < threads; ++i) {
-        check(left > 0);
-
+    for (int i = 0; i < threads && left > 0; ++i) {
         info[i].id = i;
         info[i].f = f;
         info[i].buf = &buf[pos - offset];
@@ -97,32 +89,19 @@ ssize_t process(fec_handle *f, uint8_t *buf, size_t count, uint64_t offset,
             info[i].count = left;
         }
 
-        pthread_t thread;
-
-        if (pthread_create(&thread, NULL, __process, &info[i]) != 0) {
-            error("failed to create thread: %s", strerror(errno));
-            rc = -1;
-        } else {
-            handles.push_back(thread);
-        }
+        handles.push_back(std::async(std::launch::async, __process, &info[i]));
 
         pos = end;
-        end  += count_per_thread;
+        end += count_per_thread;
         left -= info[i].count;
     }
-
-    check(left == 0);
 
     ssize_t nread = 0;
 
     /* wait for all threads to complete */
-    for (auto thread : handles) {
-        process_info *p = NULL;
-
-        if (pthread_join(thread, (void **)&p) != 0) {
-            error("failed to join thread: %s", strerror(errno));
-            rc = -1;
-        } else if (!p || p->rc == -1) {
+    for (auto&& future : handles) {
+        process_info* p = future.get();
+        if (!p || p->rc == -1) {
             rc = -1;
         } else {
             nread += p->rc;
@@ -130,7 +109,7 @@ ssize_t process(fec_handle *f, uint8_t *buf, size_t count, uint64_t offset,
         }
     }
 
-    if (rc == -1) {
+    if (left > 0 || rc == -1) {
         errno = EIO;
         return -1;
     }

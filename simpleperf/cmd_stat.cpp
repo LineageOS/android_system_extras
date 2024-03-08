@@ -34,6 +34,7 @@
 #include <android-base/unique_fd.h>
 
 #include "IOEventLoop.h"
+#include "ProbeEvents.h"
 #include "cmd_stat_impl.h"
 #include "command.h"
 #include "environment.h"
@@ -90,6 +91,18 @@ static const std::unordered_map<std::string_view, std::pair<std::string_view, st
         {"raw-l2d-cache-refill-wr", {"raw-l2d-cache-wr", "level 2 data cache refill rate, write"}},
         {"raw-l2d-tlb-refill-rd", {"raw-l2d-tlb-rd", "level 2 data TLB refill rate, read"}},
 };
+
+std::string CounterSummary::ReadableCountValue(bool csv) {
+  if (type_name == "cpu-clock" || type_name == "task-clock") {
+    // Convert nanoseconds to milliseconds.
+    double value = count / 1e6;
+    return android::base::StringPrintf("%lf(ms)", value);
+  }
+  if (csv) {
+    return android::base::StringPrintf("%" PRIu64, count);
+  }
+  return ReadableCount(count);
+}
 
 const CounterSummary* CounterSummaries::FindSummary(const std::string& type_name,
                                                     const std::string& modifier,
@@ -350,9 +363,9 @@ class StatCommand : public Command {
 "                      On non-rooted devices, the app must be debuggable,\n"
 "                      because we use run-as to switch to the app's context.\n"
 #endif
-"--cpu cpu_item1,cpu_item2,...\n"
-"                 Collect information only on the selected cpus. cpu_item can\n"
-"                 be a cpu number like 1, or a cpu range like 0-3.\n"
+"--cpu cpu_item1,cpu_item2,...  Monitor events on selected cpus. cpu_item can be a number like\n"
+"                               1, or a range like 0-3. A --cpu option affects all event types\n"
+"                               following it until meeting another --cpu option.\n"
 "--csv            Write report in comma separate form.\n"
 "--duration time_in_sec  Monitor for time_in_sec seconds instead of running\n"
 "                        [command]. Here time_in_sec may be any positive\n"
@@ -376,6 +389,11 @@ class StatCommand : public Command {
 "             Similar to -e option. But events specified in the same --group\n"
 "             option are monitored as a group, and scheduled in and out at the\n"
 "             same time.\n"
+"--kprobe kprobe_event1,kprobe_event2,...\n"
+"             Add kprobe events during stating. The kprobe_event format is in\n"
+"             Documentation/trace/kprobetrace.rst in the kernel. Examples:\n"
+"               'p:myprobe do_sys_openat2 $arg2:string'   - add event kprobes:myprobe\n"
+"               'r:myretprobe do_sys_openat2 $retval:s64' - add event kprobes:myretprobe\n"
 "--no-inherit     Don't stat created child threads/processes.\n"
 "-o output_filename  Write report to output_filename instead of standard output.\n"
 "--per-core       Print counters for each cpu core.\n"
@@ -384,6 +402,9 @@ class StatCommand : public Command {
 "                      Stat events on existing processes. Processes are searched either by pid\n"
 "                      or process name regex. Mutually exclusive with -a.\n"
 "-t tid1,tid2,...      Stat events on existing threads. Mutually exclusive with -a.\n"
+"--tp-filter filter_string    Set filter_string for the previous tracepoint event.\n"
+"                             Format is in Documentation/trace/events.rst in the kernel.\n"
+"                             An example: 'prev_comm != \"simpleperf\" && (prev_pid > 1)'.\n"
 "--print-hw-counter    Test and print CPU PMU hardware counters available on the device.\n"
 "--sort key1,key2,...  Select keys used to sort the report, used when --per-thread\n"
 "                      or --per-core appears. The appearance order of keys decides\n"
@@ -433,8 +454,8 @@ class StatCommand : public Command {
   bool Run(const std::vector<std::string>& args);
 
  private:
-  bool ParseOptions(const std::vector<std::string>& args,
-                    std::vector<std::string>* non_option_args);
+  bool ParseOptions(const std::vector<std::string>& args, std::vector<std::string>* non_option_args,
+                    ProbeEvents& probe_events);
   void PrintHardwareCounters();
   bool AddDefaultMeasuredEventTypes();
   void SetEventSelectionFlags();
@@ -451,7 +472,6 @@ class StatCommand : public Command {
   double interval_in_ms_;
   bool interval_only_values_;
   std::vector<std::vector<CounterSum>> last_sum_values_;
-  std::vector<int> cpus_;
   EventSelectionSet event_selection_set_;
   std::string output_filename_;
   android::base::unique_fd out_fd_;
@@ -479,7 +499,8 @@ bool StatCommand::Run(const std::vector<std::string>& args) {
 
   // 1. Parse options, and use default measured event types if not given.
   std::vector<std::string> workload_args;
-  if (!ParseOptions(args, &workload_args)) {
+  ProbeEvents probe_events(event_selection_set_);
+  if (!ParseOptions(args, &workload_args, probe_events)) {
     return false;
   }
   if (print_hw_counter_) {
@@ -523,7 +544,7 @@ bool StatCommand::Run(const std::vector<std::string>& args) {
   } else if (!event_selection_set_.HasMonitoredTarget()) {
     if (workload != nullptr) {
       event_selection_set_.AddMonitoredProcesses({workload->GetPid()});
-      event_selection_set_.SetEnableOnExec(true);
+      event_selection_set_.SetEnableCondition(false, true);
     } else if (!app_package_name_.empty()) {
       std::set<pid_t> pids = WaitForAppProcesses(app_package_name_);
       event_selection_set_.AddMonitoredProcesses(pids);
@@ -540,7 +561,7 @@ bool StatCommand::Run(const std::vector<std::string>& args) {
   }
 
   // 3. Open perf_event_files and output file if defined.
-  if (!event_selection_set_.OpenEventFiles(cpus_)) {
+  if (!event_selection_set_.OpenEventFiles()) {
     return false;
   }
   std::unique_ptr<FILE, decltype(&fclose)> fp_holder(nullptr, fclose);
@@ -561,11 +582,6 @@ bool StatCommand::Run(const std::vector<std::string>& args) {
 
   // 4. Add signal/periodic Events.
   IOEventLoop* loop = event_selection_set_.GetIOEventLoop();
-  if (interval_in_ms_ != 0) {
-    if (!loop->UsePreciseTimer()) {
-      return false;
-    }
-  }
   std::chrono::time_point<std::chrono::steady_clock> start_time;
   std::vector<CountersInfo> counters;
   if (need_to_check_targets && !event_selection_set_.StopWhenNoMoreTargets()) {
@@ -632,7 +648,8 @@ bool StatCommand::Run(const std::vector<std::string>& args) {
 }
 
 bool StatCommand::ParseOptions(const std::vector<std::string>& args,
-                               std::vector<std::string>* non_option_args) {
+                               std::vector<std::string>* non_option_args,
+                               ProbeEvents& probe_events) {
   OptionValueMap options;
   std::vector<std::pair<OptionName, OptionValue>> ordered_options;
 
@@ -647,14 +664,6 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   if (auto value = options.PullValue("--app"); value) {
     app_package_name_ = *value->str_value;
   }
-  if (auto value = options.PullValue("--cpu"); value) {
-    if (auto cpus = GetCpusFromString(*value->str_value); cpus) {
-      cpus_.assign(cpus->begin(), cpus->end());
-    } else {
-      return false;
-    }
-  }
-
   csv_ = options.PullBoolValue("--csv");
 
   if (!options.PullDoubleValue("--duration", &duration_in_sec_, 1e-9)) {
@@ -665,21 +674,14 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   }
   interval_only_values_ = options.PullBoolValue("--interval-only-values");
 
-  for (const OptionValue& value : options.PullValues("-e")) {
-    for (const auto& event_type : Split(*value.str_value, ",")) {
-      if (!event_selection_set_.AddEventType(event_type)) {
+  in_app_context_ = options.PullBoolValue("--in-app");
+  for (const OptionValue& value : options.PullValues("--kprobe")) {
+    for (const auto& cmd : Split(*value.str_value, ",")) {
+      if (!probe_events.AddKprobe(cmd)) {
         return false;
       }
     }
   }
-
-  for (const OptionValue& value : options.PullValues("--group")) {
-    if (!event_selection_set_.AddEventGroup(Split(*value.str_value, ","))) {
-      return false;
-    }
-  }
-
-  in_app_context_ = options.PullBoolValue("--in-app");
   child_inherit_ = !options.PullBoolValue("--no-inherit");
 
   if (auto value = options.PullValue("-o"); value) {
@@ -727,7 +729,47 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   verbose_mode_ = options.PullBoolValue("--verbose");
 
   CHECK(options.values.empty());
-  CHECK(ordered_options.empty());
+
+  // Process ordered options.
+  for (const auto& pair : ordered_options) {
+    const OptionName& name = pair.first;
+    const OptionValue& value = pair.second;
+
+    if (name == "--cpu") {
+      if (auto v = GetCpusFromString(*value.str_value); v) {
+        std::set<int>& cpus = v.value();
+        event_selection_set_.SetCpusForNewEvents(std::vector<int>(cpus.begin(), cpus.end()));
+      } else {
+        return false;
+      }
+    } else if (name == "-e") {
+      for (const auto& event_type : Split(*value.str_value, ",")) {
+        if (!probe_events.CreateProbeEventIfNotExist(event_type)) {
+          return false;
+        }
+        if (!event_selection_set_.AddEventType(event_type)) {
+          return false;
+        }
+      }
+    } else if (name == "--group") {
+      std::vector<std::string> event_types = Split(*value.str_value, ",");
+      for (const auto& event_type : event_types) {
+        if (!probe_events.CreateProbeEventIfNotExist(event_type)) {
+          return false;
+        }
+      }
+      if (!event_selection_set_.AddEventGroup(event_types)) {
+        return false;
+      }
+    } else if (name == "--tp-filter") {
+      if (!event_selection_set_.SetTracepointFilter(*value.str_value)) {
+        return false;
+      }
+    } else {
+      LOG(ERROR) << "unprocessed option: " << name;
+      return false;
+    }
+  }
 
   if (system_wide_collection_ && event_selection_set_.HasMonitoredTarget()) {
     LOG(ERROR) << "Stat system wide and existing processes/threads can't be "
@@ -749,6 +791,9 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
 }
 
 std::optional<bool> CheckHardwareCountersOnCpu(int cpu, size_t counters) {
+  if (counters == 0) {
+    return true;
+  }
   const EventType* event = FindEventTypeByName("cpu-cycles", true);
   if (event == nullptr) {
     return std::nullopt;
@@ -929,20 +974,7 @@ bool StatCommand::ShowCounters(const std::vector<CountersInfo>& counters, double
 }
 
 void StatCommand::CheckHardwareCounterMultiplexing() {
-  size_t hardware_events = 0;
-  for (const EventType* event : event_selection_set_.GetEvents()) {
-    if (event->IsHardwareEvent()) {
-      hardware_events++;
-    }
-  }
-  if (hardware_events == 0) {
-    return;
-  }
-  std::vector<int> cpus = cpus_;
-  if (cpus.empty()) {
-    cpus = GetOnlineCpus();
-  }
-  for (int cpu : cpus) {
+  for (const auto& [cpu, hardware_events] : event_selection_set_.GetHardwareCountersForCpus()) {
     std::optional<bool> result = CheckHardwareCountersOnCpu(cpu, hardware_events);
     if (result.has_value() && !result.value()) {
       LOG(WARNING) << "It seems the number of hardware events are more than the number of\n"

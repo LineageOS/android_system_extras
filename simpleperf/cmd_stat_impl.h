@@ -131,28 +131,7 @@ struct CounterSummary {
   }
 
  private:
-  std::string ReadableCountValue(bool csv) {
-    if (type_name == "cpu-clock" || type_name == "task-clock") {
-      // Convert nanoseconds to milliseconds.
-      double value = count / 1e6;
-      return android::base::StringPrintf("%lf(ms)", value);
-    } else {
-      // Convert big numbers to human friendly mode. For example,
-      // 1000000 will be converted to 1,000,000.
-      std::string s = android::base::StringPrintf("%" PRIu64, count);
-      if (csv) {
-        return s;
-      } else {
-        for (size_t i = s.size() - 1, j = 1; i > 0; --i, ++j) {
-          if (j == 3) {
-            s.insert(s.begin() + i, ',');
-            j = 0;
-          }
-        }
-        return s;
-      }
-    }
-  }
+  std::string ReadableCountValue(bool csv);
 };
 
 BUILD_COMPARE_VALUE_FUNCTION_REVERSE(CompareSummaryCount, count);
@@ -328,15 +307,16 @@ inline const OptionFormatMap& GetStatCmdOptionFormats() {
   static const OptionFormatMap option_formats = {
       {"-a", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::NOT_ALLOWED}},
       {"--app", {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::NOT_ALLOWED}},
-      {"--cpu", {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::ALLOWED}},
+      {"--cpu", {OptionValueType::STRING, OptionType::ORDERED, AppRunnerType::ALLOWED}},
       {"--csv", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
       {"--duration", {OptionValueType::DOUBLE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
       {"--interval", {OptionValueType::DOUBLE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
       {"--interval-only-values",
        {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
-      {"-e", {OptionValueType::STRING, OptionType::MULTIPLE, AppRunnerType::ALLOWED}},
-      {"--group", {OptionValueType::STRING, OptionType::MULTIPLE, AppRunnerType::ALLOWED}},
+      {"-e", {OptionValueType::STRING, OptionType::ORDERED, AppRunnerType::ALLOWED}},
+      {"--group", {OptionValueType::STRING, OptionType::ORDERED, AppRunnerType::ALLOWED}},
       {"--in-app", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
+      {"--kprobe", {OptionValueType::STRING, OptionType::MULTIPLE, AppRunnerType::NOT_ALLOWED}},
       {"--no-inherit", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
       {"-o", {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::NOT_ALLOWED}},
       {"--out-fd", {OptionValueType::UINT, OptionType::SINGLE, AppRunnerType::CHECK_FD}},
@@ -347,6 +327,7 @@ inline const OptionFormatMap& GetStatCmdOptionFormats() {
       {"--sort", {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::ALLOWED}},
       {"--stop-signal-fd", {OptionValueType::UINT, OptionType::SINGLE, AppRunnerType::CHECK_FD}},
       {"-t", {OptionValueType::STRING, OptionType::MULTIPLE, AppRunnerType::ALLOWED}},
+      {"--tp-filter", {OptionValueType::STRING, OptionType::ORDERED, AppRunnerType::ALLOWED}},
       {"--tracepoint-events",
        {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::CHECK_PATH}},
       {"--use-devfreq-counters",

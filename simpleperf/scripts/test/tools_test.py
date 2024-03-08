@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import os
 from pathlib import Path
 
 from binary_cache_builder import BinaryCacheBuilder
-from simpleperf_utils import (Addr2Nearestline, BinaryFinder, Objdump, ReadElf,
-                              SourceFileSearcher, is_windows, remove)
+from simpleperf_utils import (Addr2Nearestline, AddrRange, BinaryFinder, Disassembly, Objdump,
+                              ReadElf, SourceFileSearcher, is_windows, remove)
 from . test_utils import TestBase, TestHelper
 
 
@@ -207,7 +208,7 @@ system/extras/simpleperf/runtest/two_functions.cpp:21:3
                 'expected_items': [
                     ('main', 0),
                     ('two_functions.cpp:20', 0),
-                    ('1134:      	add	x29, sp, #16', 0x1134),
+                    ('1134:      	add	x29, sp, #0x10', 0x1134),
                 ],
             },
             '/simpleperf_runtest_two_functions_arm': {
@@ -225,7 +226,7 @@ system/extras/simpleperf/runtest/two_functions.cpp:21:3
                 'expected_items': [
                     ('main', 0),
                     ('two_functions.cpp:20', 0),
-                    (r'19f0:      	movl	%eax, 9314(%rip)', 0x19f0),
+                    (r'19f0:      	movl	%eax, 0x2462(%rip)', 0x19f0),
                 ],
             },
             '/simpleperf_runtest_two_functions_x86': {
@@ -234,7 +235,7 @@ system/extras/simpleperf/runtest/two_functions.cpp:21:3
                 'expected_items': [
                     ('main', 0),
                     ('two_functions.cpp:20', 0),
-                    (r'16f7:      	cmpl	$100000000, %ecx', 0x16f7),
+                    (r'16f7:      	cmpl	$0x5f5e100, %ecx', 0x16f7),
                 ],
             },
         }
@@ -244,22 +245,94 @@ system/extras/simpleperf/runtest/two_functions.cpp:21:3
             dso = test_map[dso_path]
             dso_info = objdump.get_dso_info(dso_path, None)
             self.assertIsNotNone(dso_info, dso_path)
-            disassemble_code = objdump.disassemble_code(dso_info, dso['start_addr'], dso['len'])
-            self.assertTrue(disassemble_code, dso_path)
-            i = 0
-            for expected_line, expected_addr in dso['expected_items']:
-                found = False
-                while i < len(disassemble_code):
-                    line, addr = disassemble_code[i]
-                    if addr == expected_addr and expected_line in line:
-                        found = True
-                        i += 1
-                        break
+            addr_range = AddrRange(dso['start_addr'], dso['len'])
+            disassembly = objdump.disassemble_function(dso_info, addr_range)
+            self.assertTrue(disassembly, dso_path)
+            self._check_disassembly(disassembly, dso_path, dso)
+
+            result = objdump.disassemble_functions(dso_info, [addr_range])
+            self.assertTrue(result, dso_path)
+            self.assertEqual(len(result), 1)
+            self._check_disassembly(result[0], dso_path, dso)
+
+    def _check_disassembly(self, disassembly: Disassembly, dso_path: str, dso) -> None:
+        disassemble_code = disassembly.lines
+        i = 0
+        for expected_line, expected_addr in dso['expected_items']:
+            found = False
+            while i < len(disassemble_code):
+                line, addr = disassemble_code[i]
+                if addr == expected_addr and expected_line in line:
+                    found = True
                     i += 1
-                if not found:
-                    s = '\n'.join('%s:0x%x' % item for item in disassemble_code)
-                    self.fail('for %s, %s:0x%x not found in disassemble code:\n%s' %
-                              (dso_path, expected_line, expected_addr, s))
+                    break
+                i += 1
+            if not found:
+                s = '\n'.join('%s:0x%x' % item for item in disassemble_code)
+                self.fail('for %s, %s:0x%x not found in disassemble code:\n%s' %
+                          (dso_path, expected_line, expected_addr, s))
+
+    def test_objdump_parse_disassembly_for_functions(self):
+        # Parse kernel disassembly.
+        s = """
+ffffffc008000000 <_text>:
+; _text():
+; arch/arm64/kernel/head.S:60
+ffffffc008000000:      	ccmp	x18, #0x0, #0xd, pl
+ffffffc008000004:      	b	0xffffffc009b2a37c <primary_entry>
+
+ffffffc008000008 <$d.1>:
+ffffffc008000008: 00 00 00 00  	.word	0x00000000
+ffffffc0089bbb30 <readl>:
+; readl():
+; include/asm-generic/io.h:218
+ffffffc0089bbb30:      	paciasp
+ffffffc0089bbb34:      	stp	x29, x30, [sp, #-0x30]!
+        """
+        addr_ranges = [AddrRange(0xffffffc008000000, 8),
+                       AddrRange(0xffffffc008000010, 10),
+                       AddrRange(0xffffffc0089bbb30, 20)]
+        binary_finder = BinaryFinder(TestHelper.testdata_dir, ReadElf(TestHelper.ndk_path))
+        objdump = Objdump(TestHelper.ndk_path, binary_finder)
+        result = objdump._parse_disassembly_for_functions(io.StringIO(s), addr_ranges)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(
+            result[0].lines,
+            [('ffffffc008000000 <_text>:', 0xffffffc008000000),
+             ('; _text():', 0),
+             ('; arch/arm64/kernel/head.S:60', 0),
+             ('ffffffc008000000:      	ccmp	x18, #0x0, #0xd, pl', 0xffffffc008000000),
+             ('ffffffc008000004:      	b	0xffffffc009b2a37c <primary_entry>',
+                0xffffffc008000004),
+             ('', 0)])
+        self.assertEqual(len(result[1].lines), 0)
+        self.assertEqual(result[2].lines, [
+            ('ffffffc0089bbb30 <readl>:', 0xffffffc0089bbb30),
+            ('; readl():', 0),
+            ('; include/asm-generic/io.h:218', 0),
+            ('ffffffc0089bbb30:      	paciasp', 0xffffffc0089bbb30),
+            ('ffffffc0089bbb34:      	stp	x29, x30, [sp, #-0x30]!', 0xffffffc0089bbb34),
+            ('', 0)])
+
+        # Parse user space library disassembly.
+        s = """
+0000000000200000 <art::gc::collector::ConcurrentCopying::ProcessMarkStack()>:
+; art::gc::collector::ConcurrentCopying::ProcessMarkStack():
+; art/runtime/gc/collector/concurrent_copying.cc:2121
+  200000:      	stp	x29, x30, [sp, #-0x20]!
+  200004:      	stp	x20, x19, [sp, #0x10]
+        """
+        addr_ranges = [AddrRange(0x200000, 8)]
+        result = objdump._parse_disassembly_for_functions(io.StringIO(s), addr_ranges)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].lines, [
+            ('0000000000200000 <art::gc::collector::ConcurrentCopying::ProcessMarkStack()>:',
+                0x200000),
+            ('; art::gc::collector::ConcurrentCopying::ProcessMarkStack():', 0),
+            ('; art/runtime/gc/collector/concurrent_copying.cc:2121', 0),
+            ('  200000:      	stp	x29, x30, [sp, #-0x20]!', 0x200000),
+            ('  200004:      	stp	x20, x19, [sp, #0x10]', 0x200004),
+            ('', 0)])
 
     def test_readelf(self):
         test_map = {

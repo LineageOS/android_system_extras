@@ -31,7 +31,7 @@ import shutil
 import subprocess
 import sys
 import time
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union, TextIO
 
 
 NDK_ERROR_MESSAGE = "Please install the Android NDK (https://developer.android.com/studio/projects/install-ndk), then set NDK path with --ndk_path option."
@@ -360,6 +360,8 @@ class AdbHelper(object):
             return 'x86_64'
         if '86' in output:
             return 'x86'
+        if 'riscv64' in output:
+            return 'riscv64'
         log_fatal('unsupported architecture: %s' % output.strip())
         return ''
 
@@ -787,6 +789,24 @@ class SourceFileSearcher(object):
         return os.path.join(best_matched_rparent[::-1], file_name)
 
 
+class AddrRange:
+    def __init__(self, start: int, len: int):
+        self.start = start
+        self.len = len
+
+    @property
+    def end(self) -> int:
+        return self.start + self.len
+
+    def is_in_range(self, addr: int) -> bool:
+        return addr >= self.start and addr < self.end
+
+
+class Disassembly:
+    def __init__(self):
+        self.lines: List[Tuple[str, int]] = []
+
+
 class Objdump(object):
     """ A wrapper of objdump to disassemble code. """
 
@@ -806,9 +826,8 @@ class Objdump(object):
             return None
         return (str(real_path), arch)
 
-    def disassemble_code(self, dso_info, start_addr, addr_len) -> List[Tuple[str, int]]:
-        """ Disassemble [start_addr, start_addr + addr_len] of dso_path.
-            Return a list of pair (disassemble_code_line, addr).
+    def disassemble_function(self, dso_info, addr_range: AddrRange) -> Optional[Disassembly]:
+        """ Disassemble code for an addr range in a binary.
         """
         real_path, arch = dso_info
         objdump_path = self.objdump_paths.get(arch)
@@ -818,15 +837,15 @@ class Objdump(object):
                 log_exit("Can't find llvm-objdump." + NDK_ERROR_MESSAGE)
             self.objdump_paths[arch] = objdump_path
 
-        # 3. Run objdump.
+        # Run objdump.
         args = [objdump_path, '-dlC', '--no-show-raw-insn',
-                '--start-address=0x%x' % start_addr,
-                '--stop-address=0x%x' % (start_addr + addr_len),
+                '--start-address=0x%x' % addr_range.start,
+                '--stop-address=0x%x' % (addr_range.end),
                 real_path]
         if arch == 'arm' and 'llvm-objdump' in objdump_path:
             args += ['--print-imm-hex']
         try:
-            subproc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            subproc = subprocess.Popen(args, stdout=subprocess.PIPE)
             (stdoutdata, _) = subproc.communicate()
             stdoutdata = bytes_to_str(stdoutdata)
         except OSError:
@@ -834,7 +853,7 @@ class Objdump(object):
 
         if not stdoutdata:
             return None
-        result = []
+        result = Disassembly()
         for line in stdoutdata.split('\n'):
             line = line.rstrip()  # Remove '\r' on Windows.
             items = line.split(':', 1)
@@ -842,8 +861,73 @@ class Objdump(object):
                 addr = int(items[0], 16)
             except ValueError:
                 addr = 0
-            result.append((line, addr))
+            result.lines.append((line, addr))
         return result
+
+    def disassemble_functions(self, dso_info, sorted_addr_ranges: List[AddrRange]
+                              ) -> Optional[List[Disassembly]]:
+        """ Disassemble code for multiple addr ranges in a binary. sorted_addr_ranges should be
+            sorted by addr_range.start.
+        """
+        real_path, arch = dso_info
+        objdump_path = self.objdump_paths.get(arch)
+        if not objdump_path:
+            objdump_path = ToolFinder.find_tool_path('llvm-objdump', self.ndk_path, arch)
+            if not objdump_path:
+                log_exit("Can't find llvm-objdump." + NDK_ERROR_MESSAGE)
+            self.objdump_paths[arch] = objdump_path
+
+        # Run objdump.
+        args = [objdump_path, '-dlC', '--no-show-raw-insn', real_path]
+        if arch == 'arm' and 'llvm-objdump' in objdump_path:
+            args += ['--print-imm-hex']
+        try:
+            proc = subprocess.Popen(args, stdout=subprocess.PIPE, text=True)
+            result = self._parse_disassembly_for_functions(proc.stdout, sorted_addr_ranges)
+            proc.wait()
+        except OSError:
+            return None
+        return result
+
+    def _parse_disassembly_for_functions(self, fh: TextIO, sorted_addr_ranges: List[AddrRange]) -> Optional[List[Disassembly]]:
+        current_id = 0
+        in_range = False
+        result = [Disassembly() for _ in sorted_addr_ranges]
+        while True:
+            line = fh.readline()
+            if not line:
+                break
+            line = line.rstrip()  # Remove '\r\n'.
+            addr = self._get_addr_from_disassembly_line(line)
+            if current_id >= len(sorted_addr_ranges):
+                continue
+            if addr:
+                if in_range and not sorted_addr_ranges[current_id].is_in_range(addr):
+                    in_range = False
+                if not in_range:
+                    # Skip addr ranges before the current address.
+                    while current_id < len(sorted_addr_ranges) and sorted_addr_ranges[current_id].end <= addr:
+                        current_id += 1
+                    if current_id < len(sorted_addr_ranges) and sorted_addr_ranges[current_id].is_in_range(addr):
+                        in_range = True
+            if in_range:
+                result[current_id].lines.append((line, addr))
+        return result
+
+    def _get_addr_from_disassembly_line(self, line: str) -> int:
+        # line may be an instruction, like: " 24a469c: stp x29, x30, [sp, #-0x60]!" or
+        #  "ffffffc0085d9664:      	paciasp".
+        # line may be a function start point, like "00000000024a4698 <DoWork()>:".
+        items = line.strip().split()
+        if not items:
+            return 0
+        s = items[0]
+        if s.endswith(':'):
+            s = s[:-1]
+        try:
+            return int(s, 16)
+        except ValueError:
+            return 0
 
 
 class ReadElf(object):
@@ -875,6 +959,8 @@ class ReadElf(object):
                     return 'x86_64'
                 if output.find('80386') != -1:
                     return 'x86'
+                if output.find('RISC-V') != -1:
+                    return 'riscv64'
             except subprocess.CalledProcessError:
                 pass
         return 'unknown'
@@ -1047,6 +1133,8 @@ class BaseArgumentParser(argparse.ArgumentParser):
             self, group: Optional[Any] = None, with_pid_shortcut: bool = True):
         if not group:
             group = self.add_argument_group('Sample filter options')
+        group.add_argument('--cpu', nargs='+', help="""only include samples for the selected cpus.
+                            cpu can be a number like 1, or a range like 0-3""")
         group.add_argument('--exclude-pid', metavar='pid', nargs='+', type=int,
                            help='exclude samples for selected processes')
         group.add_argument('--exclude-tid', metavar='tid', nargs='+', type=int,
@@ -1084,6 +1172,8 @@ class BaseArgumentParser(argparse.ArgumentParser):
     def _build_sample_filter(self, args: argparse.Namespace) -> List[str]:
         """ Build sample filters, which can be passed to ReportLib.SetSampleFilter(). """
         filters = []
+        if args.cpu:
+            filters.extend(['--cpu', ','.join(args.cpu)])
         if args.exclude_pid:
             filters.extend(['--exclude-pid', ','.join(str(pid) for pid in args.exclude_pid)])
         if args.exclude_tid:

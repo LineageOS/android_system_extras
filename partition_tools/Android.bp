@@ -147,16 +147,26 @@ cc_binary {
 
 cc_binary {
     name: "lpdumpd",
-    defaults: ["lp_defaults"],
+    defaults: [
+        "lp_defaults",
+        "libsnapshot_cow_defaults",
+        "libsnapshot_hal_deps",
+    ],
     init_rc: ["lpdumpd.rc"],
     shared_libs: [
         "libbase",
         "libbinder",
+        "libfs_mgr_binder",
         "liblog",
         "liblp",
         "liblpdump",
         "liblpdump_interface-cpp",
+        "libprotobuf-cpp-lite",
+        "libsnapshot",
         "libutils",
+    ],
+    static_libs: [
+        "update_metadata-protos",
     ],
     srcs: [
         "lpdumpd.cc",
@@ -171,6 +181,9 @@ cc_binary_host {
         "liblog",
         "liblp",
         "libsparse",
+    ],
+    static_libs: [
+        "libc++fs",
     ],
     srcs: [
         "lpunpack.cc",

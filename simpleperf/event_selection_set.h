@@ -52,15 +52,15 @@ struct CountersInfo {
   std::vector<CounterInfo> counters;
 };
 
-struct SampleSpeed {
-  // There are two ways to set sample speed:
+struct SampleRate {
+  // There are two ways to set sample rate:
   // 1. sample_freq: take [sample_freq] samples every second.
   // 2. sample_period: take one sample every [sample_period] events happen.
   uint64_t sample_freq;
   uint64_t sample_period;
-  SampleSpeed(uint64_t freq = 0, uint64_t period = 0) : sample_freq(freq), sample_period(period) {}
+  SampleRate(uint64_t freq = 0, uint64_t period = 0) : sample_freq(freq), sample_period(period) {}
   bool UseFreq() const {
-    // Only use one way to set sample speed.
+    // Only use one way to set sample rate.
     CHECK_NE(sample_freq != 0u, sample_period != 0u);
     return sample_freq != 0u;
   }
@@ -107,8 +107,9 @@ class EventSelectionSet {
 
   bool empty() const { return groups_.empty(); }
 
-  bool AddEventType(const std::string& event_name, size_t* group_id = nullptr);
-  bool AddEventGroup(const std::vector<std::string>& event_names, size_t* group_id = nullptr);
+  bool AddEventType(const std::string& event_name);
+  bool AddEventType(const std::string& event_name, const SampleRate& sample_rate);
+  bool AddEventGroup(const std::vector<std::string>& event_names);
   // For each sample generated for the existing event group, add counters for selected events.
   bool AddCounters(const std::vector<std::string>& event_names);
   std::vector<const EventType*> GetEvents() const;
@@ -117,11 +118,15 @@ class EventSelectionSet {
   bool HasAuxTrace() const { return has_aux_trace_; }
   EventAttrIds GetEventAttrWithId() const;
   std::unordered_map<uint64_t, std::string> GetEventNamesById() const;
+  std::unordered_map<uint64_t, int> GetCpusById() const;
+  std::map<int, size_t> GetHardwareCountersForCpus() const;
 
-  void SetEnableOnExec(bool enable);
-  bool GetEnableOnExec();
+  void SetEnableCondition(bool enable_on_open, bool enable_on_exec);
   void SampleIdAll();
-  void SetSampleSpeed(size_t group_id, const SampleSpeed& speed);
+  // Only set sample rate for events that haven't set sample rate.
+  void SetSampleRateForNewEvents(const SampleRate& rate);
+  // Set on which cpus to monitor events. Only set cpus for events that haven't set before.
+  void SetCpusForNewEvents(const std::vector<int>& cpus);
   bool SetBranchSampling(uint64_t branch_sample_type);
   void EnableFpCallChainSampling();
   bool EnableDwarfCallChainSampling(uint32_t dump_stack_size);
@@ -158,13 +163,10 @@ class EventSelectionSet {
 
   IOEventLoop* GetIOEventLoop() { return loop_.get(); }
 
-  // If cpus = {}, monitor on all cpus, with a perf event file for each cpu.
-  // If cpus = {-1}, monitor on all cpus, with a perf event file shared by all cpus.
-  // Otherwise, monitor on selected cpus, with a perf event file for each cpu.
-  bool OpenEventFiles(const std::vector<int>& cpus);
+  bool OpenEventFiles();
   bool ReadCounters(std::vector<CountersInfo>* counters);
   bool MmapEventFiles(size_t min_mmap_pages, size_t max_mmap_pages, size_t aux_buffer_size,
-                      size_t record_buffer_size, bool allow_cutting_samples, bool exclude_perf);
+                      size_t record_buffer_size, bool allow_truncating_samples, bool exclude_perf);
   bool PrepareToReadMmapEventData(const std::function<bool(Record*)>& callback);
   bool SyncKernelBuffer();
   bool FinishReadMmapEventData();
@@ -188,11 +190,22 @@ class EventSelectionSet {
     std::vector<int> allowed_cpus;
     std::string tracepoint_filter;
   };
-  typedef std::vector<EventSelection> EventSelectionGroup;
+
+  struct EventSelectionGroup {
+    std::vector<EventSelection> selections;
+    bool set_sample_rate = false;
+    // Select on which cpus to monitor this event group:
+    // If cpus = {}, monitor on all cpus, with a perf event file for each cpu. This is the default
+    // option.
+    // If cpus = {-1}, monitor on all cpus, with a perf event file shared by all cpus.
+    // Otherwise, monitor on selected cpus, with a perf event file for each cpu.
+    std::vector<int> cpus;
+  };
 
   bool BuildAndCheckEventSelection(const std::string& event_name, bool first_event,
                                    EventSelection* selection);
   void UnionSampleType();
+  void SetSampleRateForGroup(EventSelectionGroup& group, const SampleRate& rate);
   bool OpenEventFilesOnGroup(EventSelectionGroup& group, pid_t tid, int cpu,
                              std::string* failed_event_type);
   bool ApplyFilters();
@@ -216,6 +229,8 @@ class EventSelectionSet {
 
   bool has_aux_trace_ = false;
   std::vector<AddrFilter> addr_filters_;
+  std::optional<SampleRate> sample_rate_;
+  std::optional<std::vector<int>> cpus_;
 
   DISALLOW_COPY_AND_ASSIGN(EventSelectionSet);
 };

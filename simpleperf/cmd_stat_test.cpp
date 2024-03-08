@@ -22,6 +22,7 @@
 
 #include <thread>
 
+#include "ProbeEvents.h"
 #include "cmd_stat_impl.h"
 #include "command.h"
 #include "environment.h"
@@ -227,12 +228,13 @@ TEST(stat_cmd, stop_when_no_more_targets) {
   ASSERT_TRUE(StatCmd()->Run({"-t", std::to_string(tid), "--in-app"}));
 }
 
-TEST(stat_cmd, sample_speed_should_be_zero) {
+TEST(stat_cmd, sample_rate_should_be_zero) {
   TEST_REQUIRE_HW_COUNTER();
   EventSelectionSet set(true);
   ASSERT_TRUE(set.AddEventType("cpu-cycles"));
   set.AddMonitoredProcesses({getpid()});
-  ASSERT_TRUE(set.OpenEventFiles({-1}));
+  set.SetCpusForNewEvents({-1});
+  ASSERT_TRUE(set.OpenEventFiles());
   const EventAttrIds& attrs = set.GetEventAttrWithId();
   ASSERT_GT(attrs.size(), 0u);
   for (auto& attr : attrs) {
@@ -289,12 +291,14 @@ TEST(stat_cmd, set_comm_in_another_thread) {
       EventSelectionSet set(true);
       ASSERT_TRUE(set.AddEventType("cpu-cycles"));
       set.AddMonitoredThreads({child_tid});
-      ASSERT_TRUE(set.OpenEventFiles({-1}));
+      set.SetCpusForNewEvents({-1});
+      ASSERT_TRUE(set.OpenEventFiles());
 
       EventSelectionSet set2(true);
       ASSERT_TRUE(set2.AddEventType("instructions"));
       set2.AddMonitoredThreads({gettid()});
-      ASSERT_TRUE(set2.OpenEventFiles({-1}));
+      set2.SetCpusForNewEvents({-1});
+      ASSERT_TRUE(set2.OpenEventFiles());
 
       // For kernels with the bug, setting comm will make the monitored events of the child thread
       // on the cpu of the current thread.
@@ -380,6 +384,54 @@ TEST(stat_cmd, counter_sum) {
 
 TEST(stat_cmd, print_hw_counter_option) {
   ASSERT_TRUE(StatCmd()->Run({"--print-hw-counter"}));
+}
+
+TEST(stat_cmd, record_different_counters_for_different_cpus) {
+  std::vector<int> online_cpus = GetOnlineCpus();
+  ASSERT_FALSE(online_cpus.empty());
+  std::string cpu0 = std::to_string(online_cpus[0]);
+  std::string cpu1 = std::to_string(online_cpus.back());
+
+  CaptureStdout capture;
+  ASSERT_TRUE(capture.Start());
+  ASSERT_TRUE(StatCmd()->Run({"--csv", "--cpu", cpu0, "-e", "cpu-clock", "--cpu", cpu1, "-e",
+                              "task-clock", "--verbose", "sleep", SLEEP_SEC}));
+  std::string output = capture.Finish();
+  bool has_cpu_clock = false;
+  bool has_task_clock = false;
+  for (auto& line : android::base::Split(output, "\n")) {
+    if (android::base::StartsWith(line, "cpu-clock,")) {
+      ASSERT_NE(line.find("cpu," + cpu0 + ","), line.npos) << output;
+      has_cpu_clock = true;
+    } else if (android::base::StartsWith(line, "task-clock,")) {
+      ASSERT_NE(line.find("cpu," + cpu1 + ","), line.npos) << output;
+      has_task_clock = true;
+    }
+  }
+  ASSERT_TRUE(has_cpu_clock) << output;
+  ASSERT_TRUE(has_task_clock) << output;
+}
+
+TEST(stat_cmd, kprobe_option) {
+  TEST_REQUIRE_ROOT();
+  EventSelectionSet event_selection_set(false);
+  ProbeEvents probe_events(event_selection_set);
+  if (!probe_events.IsKprobeSupported()) {
+    GTEST_LOG_(INFO) << "Skip this test as kprobe isn't supported by the kernel.";
+    return;
+  }
+  ASSERT_TRUE(StatCmd()->Run({"-e", "kprobes:myprobe", "--kprobe", "p:myprobe do_sys_openat2", "-a",
+                              "--duration", SLEEP_SEC}));
+  // A default kprobe event is created if not given an explicit --kprobe option.
+  ASSERT_TRUE(StatCmd()->Run({"-e", "kprobes:do_sys_openat2", "-a", "--duration", SLEEP_SEC}));
+  ASSERT_TRUE(StatCmd()->Run({"--group", "kprobes:do_sys_openat2", "-a", "--duration", SLEEP_SEC}));
+}
+
+TEST(stat_cmd, tp_filter_option) {
+  TEST_REQUIRE_HOST_ROOT();
+  TEST_REQUIRE_TRACEPOINT_EVENTS();
+  ASSERT_TRUE(StatCmd()->Run(
+      {"-e", "sched:sched_switch", "--tp-filter", "prev_comm != sleep", "sleep", SLEEP_SEC}));
 }
 
 class StatCmdSummaryBuilderTest : public ::testing::Test {

@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <version>
 
 #include <android-base/file.h>
 #include <android-base/logging.h>
@@ -32,7 +33,6 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/Object/Binary.h>
 #include <llvm/Object/ELFObjectFile.h>
 #include <llvm/Object/ObjectFile.h>
 
@@ -142,8 +142,7 @@ namespace {
 
 struct BinaryWrapper {
   std::unique_ptr<llvm::MemoryBuffer> buffer;
-  std::unique_ptr<llvm::object::Binary> binary;
-  llvm::object::ObjectFile* obj = nullptr;
+  std::unique_ptr<llvm::object::ObjectFile> obj;
 };
 
 static ElfStatus OpenObjectFile(const std::string& filename, uint64_t file_offset,
@@ -165,36 +164,70 @@ static ElfStatus OpenObjectFile(const std::string& filename, uint64_t file_offse
   if (status != ElfStatus::NO_ERROR) {
     return status;
   }
-  auto buffer_or_err = llvm::MemoryBuffer::getOpenFileSlice(fd, filename, file_size, file_offset);
+  auto buffer_or_err = llvm::MemoryBuffer::getFileSlice(filename, file_size, file_offset);
   if (!buffer_or_err) {
     return ElfStatus::READ_FAILED;
   }
-  auto binary_or_err = llvm::object::createBinary(buffer_or_err.get()->getMemBufferRef());
-  if (!binary_or_err) {
+  auto obj_or_err =
+      llvm::object::ObjectFile::createObjectFile(buffer_or_err.get()->getMemBufferRef());
+  if (!obj_or_err) {
     return ElfStatus::READ_FAILED;
   }
   wrapper->buffer = std::move(buffer_or_err.get());
-  wrapper->binary = std::move(binary_or_err.get());
-  wrapper->obj = llvm::dyn_cast<llvm::object::ObjectFile>(wrapper->binary.get());
-  if (wrapper->obj == nullptr) {
-    return ElfStatus::FILE_MALFORMED;
-  }
+  wrapper->obj = std::move(obj_or_err.get());
   return ElfStatus::NO_ERROR;
 }
 
 static ElfStatus OpenObjectFileInMemory(const char* data, size_t size, BinaryWrapper* wrapper) {
   auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(data, size));
-  auto binary_or_err = llvm::object::createBinary(buffer->getMemBufferRef());
-  if (!binary_or_err) {
+  auto obj_or_err = llvm::object::ObjectFile::createObjectFile(buffer->getMemBufferRef());
+  if (!obj_or_err) {
     return ElfStatus::FILE_MALFORMED;
   }
   wrapper->buffer = std::move(buffer);
-  wrapper->binary = std::move(binary_or_err.get());
-  wrapper->obj = llvm::dyn_cast<llvm::object::ObjectFile>(wrapper->binary.get());
-  if (wrapper->obj == nullptr) {
-    return ElfStatus::FILE_MALFORMED;
-  }
+  wrapper->obj = std::move(obj_or_err.get());
   return ElfStatus::NO_ERROR;
+}
+
+static inline llvm::Expected<uint32_t> GetSymbolFlags(const llvm::object::ELFSymbolRef& symbol) {
+  return symbol.getFlags();
+}
+
+static inline llvm::Expected<uint64_t> GetSymbolValue(const llvm::object::ELFSymbolRef& symbol) {
+  return symbol.getValue();
+}
+
+static inline llvm::Expected<llvm::StringRef> GetSectionName(
+    const llvm::object::SectionRef& section) {
+  return section.getName();
+}
+
+static inline llvm::Expected<llvm::StringRef> GetSectionContents(
+    const llvm::object::SectionRef& section) {
+  return section.getContents();
+}
+
+template <typename ELFT>
+static inline const llvm::object::ELFFile<ELFT>* GetELFFile(
+    const llvm::object::ELFObjectFile<ELFT>* obj) {
+  return &obj->getELFFile();
+}
+
+template <typename ELFT>
+static inline const typename ELFT::Ehdr& GetELFHeader(const llvm::object::ELFFile<ELFT>* elf) {
+  return elf->getHeader();
+}
+
+template <typename ELFT>
+static inline llvm::Expected<typename ELFT::PhdrRange> GetELFProgramHeaders(
+    const llvm::object::ELFFile<ELFT>* elf) {
+  return elf->program_headers();
+}
+
+template <typename ELFT>
+static inline llvm::Expected<llvm::StringRef> GetELFSectionName(
+    const llvm::object::ELFFile<ELFT>* elf, const typename ELFT::Shdr& section_header) {
+  return elf->getSectionName(section_header);
 }
 
 void ReadSymbolTable(llvm::object::symbol_iterator sym_begin, llvm::object::symbol_iterator sym_end,
@@ -204,7 +237,8 @@ void ReadSymbolTable(llvm::object::symbol_iterator sym_begin, llvm::object::symb
     ElfFileSymbol symbol;
     auto symbol_ref = static_cast<const llvm::object::ELFSymbolRef*>(&*sym_begin);
     // Exclude undefined symbols, otherwise we may wrongly use them as labels in functions.
-    if (symbol_ref->getFlags() & symbol_ref->SF_Undefined) {
+    if (auto flags = GetSymbolFlags(*symbol_ref);
+        !flags || (flags.get() & symbol_ref->SF_Undefined)) {
       continue;
     }
     llvm::Expected<llvm::object::section_iterator> section_it_or_err = symbol_ref->getSection();
@@ -213,11 +247,11 @@ void ReadSymbolTable(llvm::object::symbol_iterator sym_begin, llvm::object::symb
     }
     // Symbols in .dynsym section don't have associated section.
     if (section_it_or_err.get() != section_end) {
-      llvm::StringRef section_name;
-      if (section_it_or_err.get()->getName(section_name) || section_name.empty()) {
+      llvm::Expected<llvm::StringRef> section_name = GetSectionName(*section_it_or_err.get());
+      if (!section_name || section_name.get().empty()) {
         continue;
       }
-      if (section_name == ".text") {
+      if (section_name.get() == ".text") {
         symbol.is_in_text_section = true;
       }
     }
@@ -228,7 +262,11 @@ void ReadSymbolTable(llvm::object::symbol_iterator sym_begin, llvm::object::symb
     }
 
     symbol.name = symbol_name_or_err.get();
-    symbol.vaddr = symbol_ref->getValue();
+    llvm::Expected<uint64_t> symbol_value = GetSymbolValue(*symbol_ref);
+    if (!symbol_value) {
+      continue;
+    }
+    symbol.vaddr = symbol_value.get();
     if ((symbol.vaddr & 1) != 0 && is_arm) {
       // Arm sets bit 0 to mark it as thumb code, remove the flag.
       symbol.vaddr &= ~1;
@@ -267,9 +305,8 @@ void AddSymbolForPltSection(const llvm::object::ELFObjectFile<ELFT>* elf,
   // just use a symbol @plt to represent instructions in .plt section.
   for (auto it = elf->section_begin(); it != elf->section_end(); ++it) {
     const llvm::object::ELFSectionRef& section_ref = *it;
-    llvm::StringRef section_name;
-    std::error_code err = section_ref.getName(section_name);
-    if (err || section_name != ".plt") {
+    llvm::Expected<llvm::StringRef> section_name = GetSectionName(section_ref);
+    if (!section_name || section_name.get() != ".plt") {
       continue;
     }
     const auto* shdr = elf->getSection(section_ref.getRawDataRefImpl());
@@ -295,14 +332,13 @@ void CheckSymbolSections(const llvm::object::ELFObjectFile<ELFT>* elf, bool* has
   *has_dynsym = false;
   for (auto it = elf->section_begin(); it != elf->section_end(); ++it) {
     const llvm::object::ELFSectionRef& section_ref = *it;
-    llvm::StringRef section_name;
-    std::error_code err = section_ref.getName(section_name);
-    if (err) {
+    llvm::Expected<llvm::StringRef> section_name = GetSectionName(section_ref);
+    if (!section_name) {
       continue;
     }
-    if (section_name == ".dynsym") {
+    if (section_name.get() == ".dynsym") {
       *has_dynsym = true;
-    } else if (section_name == ".symtab") {
+    } else if (section_name.get() == ".symtab") {
       *has_symtab = true;
     }
   }
@@ -315,17 +351,20 @@ template <typename ELFT>
 class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
  public:
   ElfFileImpl(BinaryWrapper&& wrapper, const llvm::object::ELFObjectFile<ELFT>* elf_obj)
-      : wrapper_(std::move(wrapper)), elf_obj_(elf_obj), elf_(elf_obj->getELFFile()) {}
+      : wrapper_(std::move(wrapper)), elf_obj_(elf_obj), elf_(GetELFFile(elf_obj_)) {}
 
-  bool Is64Bit() override { return elf_->getHeader()->getFileClass() == llvm::ELF::ELFCLASS64; }
+  bool Is64Bit() override { return GetELFHeader(elf_).getFileClass() == llvm::ELF::ELFCLASS64; }
 
   llvm::MemoryBuffer* GetMemoryBuffer() override { return wrapper_.buffer.get(); }
 
   std::vector<ElfSegment> GetProgramHeader() override {
-    auto program_headers = elf_->program_headers();
-    std::vector<ElfSegment> segments(program_headers.size());
-    for (size_t i = 0; i < program_headers.size(); i++) {
-      const auto& phdr = program_headers[i];
+    auto program_headers = GetELFProgramHeaders(elf_);
+    if (!program_headers) {
+      return {};
+    }
+    std::vector<ElfSegment> segments(program_headers.get().size());
+    for (size_t i = 0; i < program_headers.get().size(); i++) {
+      const auto& phdr = program_headers.get()[i];
       segments[i].vaddr = phdr.p_vaddr;
       segments[i].file_offset = phdr.p_offset;
       segments[i].file_size = phdr.p_filesz;
@@ -345,7 +384,7 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
     std::vector<ElfSection> sections(section_headers.size());
     for (size_t i = 0; i < section_headers.size(); i++) {
       const auto& shdr = section_headers[i];
-      if (auto name = elf_->getSectionName(&shdr); name) {
+      if (auto name = GetELFSectionName(elf_, shdr); name) {
         sections[i].name = name.get();
       }
       sections[i].vaddr = shdr.sh_addr;
@@ -362,9 +401,11 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
     for (auto it = elf_obj_->section_begin(); it != elf_obj_->section_end(); ++it) {
       const llvm::object::ELFSectionRef& section_ref = *it;
       if (section_ref.getType() == llvm::ELF::SHT_NOTE) {
-        if (it->getContents(data)) {
-          return ElfStatus::READ_FAILED;
+        llvm::Expected<llvm::StringRef> content = GetSectionContents(section_ref);
+        if (!content) {
+          return ElfStatus::NO_BUILD_ID;
         }
+        const llvm::StringRef& data = content.get();
         if (data.data() < binary_start || data.data() + data.size() > binary_end) {
           return ElfStatus::NO_BUILD_ID;
         }
@@ -377,7 +418,7 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
   }
 
   ElfStatus ParseSymbols(const ParseSymbolCallback& callback) override {
-    auto machine = elf_->getHeader()->e_machine;
+    auto machine = GetELFHeader(elf_).e_machine;
     bool is_arm = (machine == llvm::ELF::EM_ARM || machine == llvm::ELF::EM_AARCH64);
     AddSymbolForPltSection(elf_obj_, callback);
     // Some applications deliberately ship elf files with broken section tables.
@@ -412,7 +453,7 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
   }
 
   void ParseDynamicSymbols(const ParseSymbolCallback& callback) override {
-    auto machine = elf_->getHeader()->e_machine;
+    auto machine = GetELFHeader(elf_).e_machine;
     bool is_arm = (machine == llvm::ELF::EM_ARM || machine == llvm::ELF::EM_AARCH64);
     ReadSymbolTable(elf_obj_->dynamic_symbol_begin(), elf_obj_->dynamic_symbol_end(), callback,
                     is_arm, elf_obj_->section_end());
@@ -421,16 +462,15 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
   ElfStatus ReadSection(const std::string& section_name, std::string* content) override {
     for (llvm::object::section_iterator it = elf_obj_->section_begin();
          it != elf_obj_->section_end(); ++it) {
-      llvm::StringRef name;
-      if (it->getName(name) || name != section_name) {
+      llvm::Expected<llvm::StringRef> name = GetSectionName(*it);
+      if (!name || name.get() != section_name) {
         continue;
       }
-      llvm::StringRef data;
-      std::error_code err = it->getContents(data);
-      if (err) {
+      llvm::Expected<llvm::StringRef> data = GetSectionContents(*it);
+      if (!data) {
         return ElfStatus::READ_FAILED;
       }
-      *content = data;
+      *content = data.get();
       return ElfStatus::NO_ERROR;
     }
     return ElfStatus::SECTION_NOT_FOUND;
@@ -439,11 +479,13 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
   uint64_t ReadMinExecutableVaddr(uint64_t* file_offset) {
     bool has_vaddr = false;
     uint64_t min_addr = std::numeric_limits<uint64_t>::max();
-    for (auto it = elf_->program_header_begin(); it != elf_->program_header_end(); ++it) {
-      if ((it->p_type == llvm::ELF::PT_LOAD) && (it->p_flags & llvm::ELF::PF_X)) {
-        if (it->p_vaddr < min_addr) {
-          min_addr = it->p_vaddr;
-          *file_offset = it->p_offset;
+    auto program_headers = GetELFProgramHeaders(elf_);
+    if (program_headers) {
+      for (const auto& ph : program_headers.get()) {
+        if ((ph.p_type == llvm::ELF::PT_LOAD) && (ph.p_flags & llvm::ELF::PF_X) &&
+            (ph.p_vaddr < min_addr)) {
+          min_addr = ph.p_vaddr;
+          *file_offset = ph.p_offset;
           has_vaddr = true;
         }
       }
@@ -457,10 +499,14 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
   }
 
   bool VaddrToOff(uint64_t vaddr, uint64_t* file_offset) override {
-    for (auto ph = elf_->program_header_begin(); ph != elf_->program_header_end(); ++ph) {
-      if (ph->p_type == llvm::ELF::PT_LOAD && vaddr >= ph->p_vaddr &&
-          vaddr < ph->p_vaddr + ph->p_filesz) {
-        *file_offset = vaddr - ph->p_vaddr + ph->p_offset;
+    auto program_headers = GetELFProgramHeaders(elf_);
+    if (!program_headers) {
+      return false;
+    }
+    for (const auto& ph : program_headers.get()) {
+      if (ph.p_type == llvm::ELF::PT_LOAD && vaddr >= ph.p_vaddr &&
+          vaddr < ph.p_vaddr + ph.p_filesz) {
+        *file_offset = vaddr - ph.p_vaddr + ph.p_offset;
         return true;
       }
     }
@@ -474,11 +520,11 @@ class ElfFileImpl<llvm::object::ELFObjectFile<ELFT>> : public ElfFile {
 };
 
 std::unique_ptr<ElfFile> CreateElfFileImpl(BinaryWrapper&& wrapper, ElfStatus* status) {
-  if (auto obj = llvm::dyn_cast<llvm::object::ELF32LEObjectFile>(wrapper.obj)) {
+  if (auto obj = llvm::dyn_cast<llvm::object::ELF32LEObjectFile>(wrapper.obj.get())) {
     return std::unique_ptr<ElfFile>(
         new ElfFileImpl<llvm::object::ELF32LEObjectFile>(std::move(wrapper), obj));
   }
-  if (auto obj = llvm::dyn_cast<llvm::object::ELF64LEObjectFile>(wrapper.obj)) {
+  if (auto obj = llvm::dyn_cast<llvm::object::ELF64LEObjectFile>(wrapper.obj.get())) {
     return std::unique_ptr<ElfFile>(
         new ElfFileImpl<llvm::object::ELF64LEObjectFile>(std::move(wrapper), obj));
   }
@@ -569,3 +615,17 @@ __attribute__((weak)) extern "C" int del_curterm(struct term*) {
 __attribute__((weak)) extern "C" int tigetnum(char*) {
   return -1;
 }
+
+// libsimpleperf_readelf.a may depend on __libcpp_verbose_abort(), which isn't available
+// in the old libc++ used in platform. So define a custom version here, as instructed in
+// https://github.com/llvm/llvm-project/blob/main/libcxx/docs/UsingLibcxx.rst.
+_LIBCPP_BEGIN_NAMESPACE_STD
+void __libcpp_verbose_abort(char const* format, ...) {
+  va_list list;
+  va_start(list, format);
+  vfprintf(stderr, format, list);
+  va_end(list);
+
+  abort();
+}
+_LIBCPP_END_NAMESPACE_STD
