@@ -27,12 +27,10 @@
 #include <functional>
 #include <iostream>
 
-using namespace std;
-
 void PrintUsage(const char* progname) {
-  std::cerr << "USAGE: " << progname << " get [PROPERTY]" << endl;
-  std::cerr << "       " << progname << " store [PROPERTY] [VALUE]" << endl;
-  std::cerr << "       " << progname << " update-props" << endl;
+  std::cerr << "USAGE: " << progname << " get [PROPERTY]" << std::endl;
+  std::cerr << "       " << progname << " store [PROPERTY] [VALUE]" << std::endl;
+  std::cerr << "       " << progname << " update-props" << std::endl;
 }
 
 int UpdateProps() {
@@ -40,7 +38,7 @@ int UpdateProps() {
                              .magic = MISC_KCMDLINE_MAGIC_HEADER};
   std::string err;
   if (!ReadMiscKcmdlineMessage(&m, &err)) {
-    LOG(ERROR) << "Failed to read from misc: " << err << endl;
+    LOG(ERROR) << "Failed to read from misc: " << err;
     return 1;
   }
 
@@ -64,12 +62,12 @@ int PrintProperty(const char* property_name) {
 
   std::string err;
   if (!ReadMiscKcmdlineMessage(&m, &err)) {
-    LOG(ERROR) << "Failed to read from misc: " << err << endl;
+    LOG(ERROR) << "Failed to read from misc: " << err;
     return 1;
   }
 
   if (m.magic != MISC_KCMDLINE_MAGIC_HEADER || m.version != MISC_KCMDLINE_MESSAGE_VERSION) {
-    cout << "kcmdline message is invalid, treating all flags as zero" << endl;
+    std::cout << "kcmdline message is invalid, treating all flags as zero" << std::endl;
     m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
          .magic = MISC_KCMDLINE_MAGIC_HEADER,
          .kcmdline_flags = 0};
@@ -78,10 +76,10 @@ int PrintProperty(const char* property_name) {
   if (!strcmp(property_name, "binder")) {
     bool use_rust_binder = (m.kcmdline_flags & MISC_KCMDLINE_BINDER_RUST) != 0;
     const char* binder_value = use_rust_binder ? "rust" : "c";
-    cout << "binder=" << binder_value << endl;
+    std::cout << "binder=" << binder_value << std::endl;
     return 0;
   } else {
-    LOG(ERROR) << "Unknown property name: " << property_name << endl;
+    LOG(ERROR) << "Unknown property name: " << property_name;
     return 1;
   }
 }
@@ -92,12 +90,12 @@ int StoreProperty(const char* property_name, const char* new_value) {
 
   std::string err;
   if (!ReadMiscKcmdlineMessage(&m, &err)) {
-    LOG(ERROR) << "Failed to read from misc: " << err << endl;
+    LOG(ERROR) << "Failed to read from misc: " << err;
     return 1;
   }
 
   if (m.magic != MISC_KCMDLINE_MAGIC_HEADER || m.version != MISC_KCMDLINE_MESSAGE_VERSION) {
-    cout << "kcmdline message is invalid, resetting it" << endl;
+    std::cout << "kcmdline message is invalid, resetting it" << std::endl;
     m = {.version = MISC_KCMDLINE_MESSAGE_VERSION,
          .magic = MISC_KCMDLINE_MAGIC_HEADER,
          .kcmdline_flags = 0};
@@ -109,16 +107,16 @@ int StoreProperty(const char* property_name, const char* new_value) {
     } else if (!strcmp(new_value, "c")) {
       m.kcmdline_flags &= !MISC_KCMDLINE_BINDER_RUST;
     } else {
-      LOG(ERROR) << "Binder property can only by 'c' or 'rust', but got " << new_value << endl;
+      LOG(ERROR) << "Binder property can only be 'c' or 'rust', but got " << new_value;
       return 1;
     }
   } else {
-    LOG(ERROR) << "Unknown property name: " << property_name << endl;
+    LOG(ERROR) << "Unknown property name: " << property_name;
     return 1;
   }
 
   if (!WriteMiscKcmdlineMessage(m, &err)) {
-    LOG(ERROR) << "Failed to write to misc: " << err << endl;
+    LOG(ERROR) << "Failed to write to misc: " << err;
     return 1;
   }
 
