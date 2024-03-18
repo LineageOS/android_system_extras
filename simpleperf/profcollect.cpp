@@ -17,6 +17,7 @@
 #include <time.h>
 
 #include <android-base/file.h>
+#include <android-base/properties.h>
 #include <android-base/stringprintf.h>
 #include <android-base/strings.h>
 
@@ -55,6 +56,15 @@ bool IsETMDriverAvailable() {
 bool IsETMDeviceAvailable() {
   auto result = ETMRecorder::GetInstance().CheckEtmSupport();
   if (!result.ok()) {
+    if (result.error().find("can't find etr device") != std::string::npos) {
+      // Trigger a manual probe of etr. It may take effect the next time running
+      // IsETMDeviceAvailable().
+      std::string prop_name = "profcollectd.etr.probe";
+      bool res = android::base::SetProperty(prop_name, "1");
+      if (!res) {
+        LOG(ERROR) << "fails to setprop" << prop_name;
+      }
+    }
     LOG(INFO) << "HasDeviceSupport check failed: " << result.error();
     return false;
   }
