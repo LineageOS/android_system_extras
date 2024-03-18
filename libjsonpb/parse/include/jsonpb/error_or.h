@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <variant>
 
 #include <android-base/logging.h>
@@ -49,22 +50,22 @@ struct ErrorOr {
     return *std::get_if<0u>(&data_);
   }
   bool ok() const { return data_.index() != 0; }
-  static ErrorOr<T> MakeError(const std::string& message) {
-    return ErrorOr<T>(message, Tag::kDummy);
+  static ErrorOr<T> MakeError(std::string message) {
+    return ErrorOr<T>(std::move(message), Tag::kDummy);
   }
 
  private:
   enum class Tag { kDummy };
   static constexpr std::in_place_index_t<0> kIndex0{};
   static constexpr std::in_place_index_t<1> kIndex1{};
-  ErrorOr(const std::string& msg, Tag) : data_(kIndex0, msg) {}
+  ErrorOr(std::string msg, Tag) : data_(kIndex0, std::move(msg)) {}
 
   std::variant<std::string, T> data_;
 };
 
 template <typename T>
-inline ErrorOr<T> MakeError(const std::string& message) {
-  return ErrorOr<T>::MakeError(message);
+inline ErrorOr<T> MakeError(std::string message) {
+  return ErrorOr<T>::MakeError(std::move(message));
 }
 
 }  // namespace jsonpb

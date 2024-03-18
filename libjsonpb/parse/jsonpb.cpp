@@ -40,7 +40,7 @@ ErrorOr<std::string> MessageToJsonString(const Message& message) {
   std::unique_ptr<TypeResolver> resolver(
       NewTypeResolverForDescriptorPool(kTypeUrlPrefix, DescriptorPool::generated_pool()));
 
-  google::protobuf::util::JsonOptions options;
+  google::protobuf::util::JsonPrintOptions options;
   options.add_whitespace = true;
 
   std::string json;
@@ -48,7 +48,7 @@ ErrorOr<std::string> MessageToJsonString(const Message& message) {
                                    &json, options);
 
   if (!status.ok()) {
-    return MakeError<std::string>(status.message().as_string());
+    return MakeError<std::string>(std::string(status.message()));
   }
   return ErrorOr<std::string>(std::move(json));
 }
@@ -61,7 +61,7 @@ ErrorOr<std::monostate> JsonStringToMessage(const std::string& content, Message*
   std::string binary;
   auto status = JsonToBinaryString(resolver.get(), GetTypeUrl(*message), content, &binary);
   if (!status.ok()) {
-    return MakeError<std::monostate>(status.message().as_string());
+    return MakeError<std::monostate>(std::string(status.message()));
   }
   if (!message->ParseFromString(binary)) {
     return MakeError<std::monostate>("Fail to parse.");
