@@ -449,6 +449,7 @@ class ReportCommand : public Command {
 "                      The default sort keys are:\n"
 "                        comm,pid,tid,dso,symbol\n"
 "--symfs <dir>         Look for files with symbols relative to this directory.\n"
+"--symdir <dir>        Look for files with symbols in a directory recursively.\n"
 "--vmlinux <file>      Parse kernel symbols from <file>.\n"
 "\n"
 "Sample filter options:\n"
@@ -585,6 +586,7 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
       {"--sort", {OptionValueType::STRING, OptionType::SINGLE}},
       {"--symbols", {OptionValueType::STRING, OptionType::MULTIPLE}},
       {"--symfs", {OptionValueType::STRING, OptionType::SINGLE}},
+      {"--symdir", {OptionValueType::STRING, OptionType::SINGLE}},
       {"--vmlinux", {OptionValueType::STRING, OptionType::SINGLE}},
   };
   OptionFormatMap record_filter_options = GetRecordFilterOptionFormats(false);
@@ -689,6 +691,11 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
 
   if (auto value = options.PullValue("--symfs"); value) {
     if (!Dso::SetSymFsDir(*value->str_value)) {
+      return false;
+    }
+  }
+  if (auto value = options.PullValue("--symdir"); value) {
+    if (!Dso::AddSymbolDir(*value->str_value)) {
       return false;
     }
   }
