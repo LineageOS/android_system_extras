@@ -40,16 +40,23 @@ static std::unique_ptr<Command> ReportCmd() {
 class ReportCommandTest : public ::testing::Test {
  protected:
   void Report(const std::string& perf_data,
-              const std::vector<std::string>& add_args = std::vector<std::string>()) {
-    ReportRaw(GetTestData(perf_data), add_args);
+              const std::vector<std::string>& add_args = std::vector<std::string>(),
+              bool with_symfs = true) {
+    ReportRaw(GetTestData(perf_data), add_args, with_symfs);
   }
 
   void ReportRaw(const std::string& perf_data,
-                 const std::vector<std::string>& add_args = std::vector<std::string>()) {
+                 const std::vector<std::string>& add_args = std::vector<std::string>(),
+                 bool with_symfs = true) {
     success = false;
     TemporaryFile tmp_file;
-    std::vector<std::string> args = {"-i", perf_data,    "--symfs", GetTestDataDir(),
-                                     "-o", tmp_file.path};
+    std::vector<std::string> args = {"-i", perf_data, "-o", tmp_file.path};
+
+    if (with_symfs) {
+      args.emplace_back("--symfs");
+      args.emplace_back(GetTestDataDir());
+    }
+
     args.insert(args.end(), add_args.begin(), add_args.end());
     ASSERT_TRUE(ReportCmd()->Run(args));
     ASSERT_TRUE(android::base::ReadFileToString(tmp_file.path, &content));
@@ -363,6 +370,13 @@ TEST_F(ReportCommandTest, report_dumped_symbols_with_symfs_dir) {
   Report(PERF_DATA_WITH_SYMBOLS, {"--symfs", GetTestDataDir()});
   ASSERT_TRUE(success);
   ASSERT_NE(content.find("main"), std::string::npos);
+}
+
+TEST_F(ReportCommandTest, report_dumped_symbols_with_symdir) {
+  // Check if we can report symbols by specifying symdir.
+  Report(PERF_DATA, {"--symdir", GetTestDataDir()}, false);
+  ASSERT_TRUE(success);
+  ASSERT_NE(content.find("GlobalFunc"), std::string::npos);
 }
 
 TEST_F(ReportCommandTest, report_without_symfs_dir) {
