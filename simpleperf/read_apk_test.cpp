@@ -22,6 +22,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(read_apk, FindElfInApkByOffset) {
   ApkInspector inspector;
   ASSERT_TRUE(inspector.FindElfInApkByOffset("/dev/null", 0) == nullptr);
@@ -36,6 +37,7 @@ TEST(read_apk, FindElfInApkByOffset) {
   ASSERT_EQ(NATIVELIB_SIZE_IN_APK, ee->entry_size());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_apk, FindElfInApkByName) {
   ASSERT_TRUE(ApkInspector::FindElfInApkByName("/dev/null", "") == nullptr);
   ASSERT_TRUE(ApkInspector::FindElfInApkByName(GetTestData(APK_FILE), "") == nullptr);
@@ -45,6 +47,7 @@ TEST(read_apk, FindElfInApkByName) {
   ASSERT_EQ(NATIVELIB_SIZE_IN_APK, ee->entry_size());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_apk, ParseExtractedInMemoryPath) {
   std::string zip_path;
   std::string entry_name;

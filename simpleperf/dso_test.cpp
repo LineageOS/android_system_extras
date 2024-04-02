@@ -30,6 +30,7 @@
 using namespace simpleperf;
 using namespace simpleperf_dso_impl;
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, use_build_id_list) {
   // Create a temp symdir with build_id_list.
   TemporaryDir tmpdir;
@@ -57,6 +58,7 @@ static std::string ConvertPathSeparator(const std::string& path) {
   return result;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, concatenating_symfs_dir) {
   DebugElfFileFinder finder;
   ASSERT_TRUE(finder.SetSymFsDir(GetTestDataDir()));
@@ -73,6 +75,7 @@ TEST(DebugElfFileFinder, concatenating_symfs_dir) {
             GetTestDataDir() + apk_path + "!/" + NATIVELIB_IN_APK);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, use_vdso) {
   DebugElfFileFinder finder;
   std::string fake_vdso32 = "fake_vdso32";
@@ -84,6 +87,7 @@ TEST(DebugElfFileFinder, use_vdso) {
   ASSERT_EQ(finder.FindDebugFile("[vdso]", true, build_id), fake_vdso64);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, add_symbol_dir) {
   DebugElfFileFinder finder;
   ASSERT_FALSE(finder.AddSymbolDir(GetTestDataDir() + "dir_not_exist"));
@@ -94,6 +98,7 @@ TEST(DebugElfFileFinder, add_symbol_dir) {
             symfs_dir + OS_PATH_SEPARATOR + "elf_for_build_id_check");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, build_id_list) {
   DebugElfFileFinder finder;
   // Find file in symfs dir with correct build_id_list.
@@ -109,6 +114,7 @@ TEST(DebugElfFileFinder, build_id_list) {
   ASSERT_EQ(finder.FindDebugFile("elf", false, CHECK_ELF_FILE_BUILD_ID), "elf");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, no_build_id) {
   DebugElfFileFinder finder;
   // If not given a build id, we should match an elf in symfs without build id.
@@ -118,6 +124,7 @@ TEST(DebugElfFileFinder, no_build_id) {
   ASSERT_EQ(finder.FindDebugFile("elf", false, build_id), symfs_dir + OS_PATH_SEPARATOR + "elf");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, find_basename_in_symfs_dir) {
   DebugElfFileFinder finder;
   // Find normal elf file.
@@ -136,6 +143,7 @@ TEST(DebugElfFileFinder, find_basename_in_symfs_dir) {
             symfs_dir + OS_PATH_SEPARATOR + "elf");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, build_id_mismatch) {
   DebugElfFileFinder finder;
   finder.SetSymFsDir(GetTestDataDir());
@@ -148,6 +156,7 @@ TEST(DebugElfFileFinder, build_id_mismatch) {
   ASSERT_NE(stderr_output.find("build id mismatch"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, dex_file_dso) {
 #if defined(__linux__)
   for (DsoType dso_type : {DSO_DEX_FILE, DSO_ELF_FILE}) {
@@ -177,6 +186,7 @@ TEST(dso, dex_file_dso) {
 #endif  // defined(__linux__)
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, dex_file_offsets) {
   std::unique_ptr<Dso> dso = Dso::CreateDso(DSO_DEX_FILE, "");
   ASSERT_TRUE(dso);
@@ -186,6 +196,7 @@ TEST(dso, dex_file_offsets) {
   ASSERT_EQ(*dso->DexFileOffsets(), std::vector<uint64_t>({0x1, 0x2, 0x3, 0x4, 0x5}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, embedded_elf) {
   const std::string file_path = GetUrlInApk(GetTestData(APK_FILE), NATIVELIB_IN_APK);
   std::unique_ptr<Dso> dso = Dso::CreateDso(DSO_ELF_FILE, file_path);
@@ -205,12 +216,14 @@ TEST(dso, embedded_elf) {
   ASSERT_EQ(build_id, native_lib_build_id);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, IpToVaddrInFile) {
   std::unique_ptr<Dso> dso = Dso::CreateDso(DSO_ELF_FILE, GetTestData("libc.so"));
   ASSERT_TRUE(dso);
   ASSERT_EQ(0xa5140, dso->IpToVaddrInFile(0xe9201140, 0xe9201000, 0xa5000));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, kernel_address_randomization) {
   // Use ELF_FILE as a fake kernel vmlinux.
   const std::string vmlinux_path = GetTestData(ELF_FILE);
@@ -234,6 +247,7 @@ TEST(dso, kernel_address_randomization) {
   ASSERT_STREQ(symbol->Name(), "GlobalFunc");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, find_vmlinux_in_symdirs) {
   // Create a symdir.
   TemporaryDir tmpdir;
@@ -260,6 +274,7 @@ TEST(dso, find_vmlinux_in_symdirs) {
   ASSERT_EQ(0x400927, dso->IpToVaddrInFile(0x800527, 0x800000, 0));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, kernel_module) {
   // Test finding debug files for kernel modules.
   Dso::SetSymFsDir(GetTestDataDir());
@@ -272,6 +287,7 @@ TEST(dso, kernel_module) {
   ASSERT_EQ(dso->GetDebugFilePath(), GetTestData(ELF_FILE));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, kernel_module_CalculateMinVaddr) {
   // Create fake Dso objects.
   auto kernel_dso = Dso::CreateDso(DSO_KERNEL, DEFAULT_KERNEL_MMAP_NAME);
@@ -302,6 +318,7 @@ TEST(dso, kernel_module_CalculateMinVaddr) {
   ASSERT_EQ(module_dso->IpToVaddrInFile(0xffffffa9bc7a64e8ULL, module_memory_start, 0), 0x144e8);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, symbol_map_file) {
   auto dso = Dso::CreateDso(DSO_SYMBOL_MAP_FILE, "perf-123.map");
   ASSERT_TRUE(dso);
@@ -310,6 +327,7 @@ TEST(dso, symbol_map_file) {
   ASSERT_EQ(0x12345678, dso->IpToVaddrInFile(0x12345678, 0xe9201000, 0xa5000));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, FunctionName) {
   Symbol symbol = Symbol("void ctep.v(cteo, ctgc, ctbn)", 0x0, 0x1);
   ASSERT_EQ(symbol.FunctionName(), "ctep.v");
@@ -319,6 +337,7 @@ TEST(dso, FunctionName) {
   ASSERT_EQ(symbol.FunctionName(), "ctep.v");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, search_debug_file_only_when_needed) {
   Dso::SetBuildIds({std::make_pair("/elf", BuildId("1b12a384a9f4a3f3659b7171ca615dbec3a81f71"))});
   Dso::SetSymFsDir(GetTestDataDir());
@@ -330,6 +349,7 @@ TEST(dso, search_debug_file_only_when_needed) {
   capture.Stop();
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, read_symbol_warning) {
   {
     // Don't warn when the file may not be an ELF file.
@@ -370,6 +390,7 @@ TEST(dso, read_symbol_warning) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(dso, demangle) {
   ASSERT_EQ(Dso::Demangle("main"), "main");
   ASSERT_EQ(Dso::Demangle("_ZN4main4main17h2a68d4d833d7495aE"), "main::main::h2a68d4d833d7495a");

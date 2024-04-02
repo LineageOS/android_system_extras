@@ -43,10 +43,12 @@ static std::unique_ptr<Command> TraceSchedCmd() {
   return CreateCommandInstance("trace-sched");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(trace_sched_cmd, smoke) {
   TEST_IN_ROOT({ ASSERT_TRUE(TraceSchedCmd()->Run({"--duration", "1"})); });
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(trace_sched_cmd, report_smoke) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());

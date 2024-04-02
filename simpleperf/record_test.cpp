@@ -23,6 +23,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 class RecordTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
@@ -42,16 +43,19 @@ class RecordTest : public ::testing::Test {
   perf_event_attr event_attr;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, MmapRecordMatchBinary) {
   MmapRecord record(event_attr, true, 1, 2, 0x1000, 0x2000, 0x3000, "MmapRecord", 0);
   CheckRecordMatchBinary(record);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, CommRecordMatchBinary) {
   CommRecord record(event_attr, 1, 2, "CommRecord", 0, 7);
   CheckRecordMatchBinary(record);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecordMatchBinary) {
   event_attr.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_ID |
                            PERF_SAMPLE_CPU | PERF_SAMPLE_PERIOD | PERF_SAMPLE_CALLCHAIN;
@@ -59,6 +63,7 @@ TEST_F(RecordTest, SampleRecordMatchBinary) {
   CheckRecordMatchBinary(record);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_exclude_kernel_callchain) {
   SampleRecord r(event_attr, 0, 1, 0, 0, 0, 0, 0, {}, {}, {}, 0);
   ASSERT_TRUE(r.ExcludeKernelCallChain());
@@ -103,6 +108,7 @@ TEST_F(RecordTest, SampleRecord_exclude_kernel_callchain) {
                                     {}, 0));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_ReplaceRegAndStackWithCallChain) {
   event_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
   std::vector<std::vector<uint64_t>> user_ip_tests = {
@@ -130,6 +136,7 @@ TEST_F(RecordTest, SampleRecord_ReplaceRegAndStackWithCallChain) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_UpdateUserCallChain) {
   event_attr.sample_type |= PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER;
   SampleRecord r(event_attr, 0, 1, 2, 3, 4, 5, 6, {}, {1, PERF_CONTEXT_USER, 2}, {}, 0);
@@ -140,6 +147,7 @@ TEST_F(RecordTest, SampleRecord_UpdateUserCallChain) {
   CheckRecordEqual(r, expected);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_AdjustCallChainGeneratedByKernel) {
   event_attr.sample_type |= PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER;
   SampleRecord r(event_attr, 0, 1, 2, 3, 4, 5, 6, {}, {1, 5, 0, PERF_CONTEXT_USER, 6, 0}, {}, 0);
@@ -154,6 +162,7 @@ TEST_F(RecordTest, SampleRecord_AdjustCallChainGeneratedByKernel) {
   CheckRecordEqual(r, expected);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_PerfSampleReadData) {
   event_attr.sample_type |= PERF_SAMPLE_READ;
   event_attr.read_format =
@@ -180,6 +189,7 @@ TEST_F(RecordTest, SampleRecord_PerfSampleReadData) {
   CheckRecordMatchBinary(r2);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, CommRecord) {
   CommRecord r(event_attr, 1, 2, "init_name", 3, 4);
   size_t record_size = r.size();
@@ -194,6 +204,7 @@ TEST_F(RecordTest, CommRecord) {
   CheckRecordMatchBinary(r);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, DebugRecord) {
   DebugRecord r(1234, "hello");
   ASSERT_EQ(r.size() % sizeof(uint64_t), 0);

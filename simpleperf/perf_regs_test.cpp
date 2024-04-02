@@ -20,6 +20,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(RegSet, arch) {
   ArchType arch_pairs[3][2] = {
       {ARCH_X86_32, ARCH_X86_64},

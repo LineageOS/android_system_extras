@@ -85,10 +85,12 @@ static bool RunRecordCmd(std::vector<std::string> v, const char* output_file = n
   return RecordCmd()->Run(v);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, no_options) {
   ASSERT_TRUE(RunRecordCmd({}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, system_wide_option) {
   TEST_IN_ROOT(ASSERT_TRUE(RunRecordCmd({"-a"})));
 }
@@ -115,16 +117,19 @@ static void CheckEventType(const std::string& record_file, const std::string& ev
   FAIL();
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, sample_period_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({"-c", "100000"}, tmpfile.path));
   CheckEventType(tmpfile.path, GetDefaultEvent(), 100000u, 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, event_option) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cpu-clock"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, freq_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({"-f", "99"}, tmpfile.path));
@@ -134,6 +139,7 @@ TEST(record_cmd, freq_option) {
   ASSERT_FALSE(RunRecordCmd({"-f", std::to_string(UINT_MAX)}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, multiple_freq_or_sample_period_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({"-f", "99", "-e", "task-clock", "-c", "1000000", "-e", "cpu-clock"},
@@ -142,11 +148,13 @@ TEST(record_cmd, multiple_freq_or_sample_period_option) {
   CheckEventType(tmpfile.path, "cpu-clock", 1000000u, 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, output_file_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RecordCmd()->Run({"-o", tmpfile.path, "-e", GetDefaultEvent(), "sleep", SLEEP_SEC}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dump_kernel_mmap) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({}, tmpfile.path));
@@ -167,6 +175,7 @@ TEST(record_cmd, dump_kernel_mmap) {
   ASSERT_TRUE(have_kernel_mmap);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dump_build_id_feature) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({}, tmpfile.path));
@@ -177,10 +186,12 @@ TEST(record_cmd, dump_build_id_feature) {
   ASSERT_GT(reader->FeatureSectionDescriptors().size(), 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, tracepoint_event) {
   TEST_IN_ROOT(ASSERT_TRUE(RunRecordCmd({"-a", "-e", "sched:sched_switch"})));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, rN_event) {
   TEST_REQUIRE_HW_COUNTER();
   OMIT_TEST_ON_NON_NATIVE_ABIS();
@@ -211,6 +222,7 @@ TEST(record_cmd, rN_event) {
   ASSERT_EQ(event_number, attrs[0].attr.config);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, branch_sampling) {
   TEST_REQUIRE_HW_COUNTER();
   if (IsBranchSamplingSupported()) {
@@ -225,14 +237,17 @@ TEST(record_cmd, branch_sampling) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, event_modifier) {
   ASSERT_TRUE(RunRecordCmd({"-e", GetDefaultEvent() + std::string(":u")}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, fp_callchain_sampling) {
   ASSERT_TRUE(RunRecordCmd({"--call-graph", "fp"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, fp_callchain_sampling_warning_on_arm) {
   if (GetTargetArch() != ARCH_ARM) {
     GTEST_LOG_(INFO) << "This test does nothing as it only tests on arm arch.";
@@ -245,10 +260,12 @@ TEST(record_cmd, fp_callchain_sampling_warning_on_arm) {
       testing::ExitedWithCode(0), "doesn't work well on arm");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, system_wide_fp_callchain_sampling) {
   TEST_IN_ROOT(ASSERT_TRUE(RunRecordCmd({"-a", "--call-graph", "fp"})));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dwarf_callchain_sampling) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   ASSERT_TRUE(IsDwarfCallChainSamplingSupported());
@@ -270,12 +287,14 @@ TEST(record_cmd, dwarf_callchain_sampling) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, system_wide_dwarf_callchain_sampling) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   ASSERT_TRUE(IsDwarfCallChainSamplingSupported());
   TEST_IN_ROOT(RunRecordCmd({"-a", "--call-graph", "dwarf"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, no_unwind_option) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   ASSERT_TRUE(IsDwarfCallChainSamplingSupported());
@@ -283,6 +302,7 @@ TEST(record_cmd, no_unwind_option) {
   ASSERT_FALSE(RunRecordCmd({"--no-unwind"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, post_unwind_option) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   ASSERT_TRUE(IsDwarfCallChainSamplingSupported());
@@ -294,6 +314,7 @@ TEST(record_cmd, post_unwind_option) {
   ASSERT_TRUE(RunRecordCmd({"-p", pid, "--call-graph", "dwarf", "--post-unwind=no"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, existing_processes) {
   std::vector<std::unique_ptr<Workload>> workloads;
   CreateProcesses(2, &workloads);
@@ -302,6 +323,7 @@ TEST(record_cmd, existing_processes) {
   ASSERT_TRUE(RunRecordCmd({"-p", pid_list}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, existing_threads) {
   std::vector<std::unique_ptr<Workload>> workloads;
   CreateProcesses(2, &workloads);
@@ -311,17 +333,20 @@ TEST(record_cmd, existing_threads) {
   ASSERT_TRUE(RunRecordCmd({"-t", tid_list}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, no_monitored_threads) {
   TemporaryFile tmpfile;
   ASSERT_FALSE(RecordCmd()->Run({"-o", tmpfile.path}));
   ASSERT_FALSE(RecordCmd()->Run({"-o", tmpfile.path, ""}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, more_than_one_event_types) {
   ASSERT_TRUE(RunRecordCmd({"-e", "task-clock,cpu-clock"}));
   ASSERT_TRUE(RunRecordCmd({"-e", "task-clock", "-e", "cpu-clock"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, mmap_page_option) {
   ASSERT_TRUE(RunRecordCmd({"-m", "1"}));
   ASSERT_FALSE(RunRecordCmd({"-m", "0"}));
@@ -345,6 +370,7 @@ static void CheckKernelSymbol(const std::string& path, bool need_kallsyms, bool*
   *success = true;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, kernel_symbol) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({"--no-dump-symbols"}, tmpfile.path));
@@ -390,6 +416,7 @@ static bool CheckDumpedSymbols(const std::string& path, bool allow_dumped_symbol
   return true;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, no_dump_symbols) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({}, tmpfile.path));
@@ -408,6 +435,7 @@ TEST(record_cmd, no_dump_symbols) {
   ASSERT_TRUE(CheckDumpedSymbols(tmpfile.path, false));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dump_kernel_symbols) {
   TEST_REQUIRE_ROOT();
   TemporaryFile tmpfile;
@@ -423,6 +451,7 @@ TEST(record_cmd, dump_kernel_symbols) {
   ASSERT_TRUE(has_kernel_symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, group_option) {
   ASSERT_TRUE(RunRecordCmd({"--group", "task-clock,cpu-clock", "-m", "16"}));
   ASSERT_TRUE(
@@ -430,10 +459,12 @@ TEST(record_cmd, group_option) {
                     "--group", "task-clock:k,cpu-clock:k", "-m", "16"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, symfs_option) {
   ASSERT_TRUE(RunRecordCmd({"--symfs", "/"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, duration_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RecordCmd()->Run({"--duration", "1.2", "-p", std::to_string(getpid()), "-o",
@@ -442,6 +473,7 @@ TEST(record_cmd, duration_option) {
       {"--duration", "1", "-o", tmpfile.path, "-e", GetDefaultEvent(), "sleep", "2"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, support_modifier_for_clock_events) {
   for (const std::string& e : {"cpu-clock", "task-clock"}) {
     for (const std::string& m : {"u", "k"}) {
@@ -450,6 +482,7 @@ TEST(record_cmd, support_modifier_for_clock_events) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, handle_SIGHUP) {
   TemporaryFile tmpfile;
   int pipefd[2];
@@ -470,6 +503,7 @@ TEST(record_cmd, handle_SIGHUP) {
   ASSERT_STREQ(data, "STARTED");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, stop_when_no_more_targets) {
   TemporaryFile tmpfile;
   std::atomic<int> tid(0);
@@ -484,6 +518,7 @@ TEST(record_cmd, stop_when_no_more_targets) {
       {"-o", tmpfile.path, "-t", std::to_string(tid), "--in-app", "-e", GetDefaultEvent()}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, donot_stop_when_having_targets) {
   std::vector<std::unique_ptr<Workload>> workloads;
   CreateProcesses(1, &workloads);
@@ -496,6 +531,7 @@ TEST(record_cmd, donot_stop_when_having_targets) {
   ASSERT_GT(end_time_in_ns - start_time_in_ns, static_cast<uint64_t>(2e9));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, start_profiling_fd_option) {
   int pipefd[2];
   ASSERT_EQ(0, pipe(pipefd));
@@ -514,6 +550,7 @@ TEST(record_cmd, start_profiling_fd_option) {
   ASSERT_EQ("STARTED", s);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_meta_info_feature) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({}, tmpfile.path));
@@ -530,6 +567,7 @@ TEST(record_cmd, record_meta_info_feature) {
 }
 
 // See http://b/63135835.
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, cpu_clock_for_a_long_time) {
   std::vector<std::unique_ptr<Workload>> workloads;
   CreateProcesses(1, &workloads);
@@ -539,6 +577,7 @@ TEST(record_cmd, cpu_clock_for_a_long_time) {
       RecordCmd()->Run({"-e", "cpu-clock", "-o", tmpfile.path, "-p", pid, "--duration", "3"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dump_regs_for_tracepoint_events) {
   TEST_REQUIRE_HOST_ROOT();
   TEST_REQUIRE_TRACEPOINT_EVENTS();
@@ -549,6 +588,7 @@ TEST(record_cmd, dump_regs_for_tracepoint_events) {
   ASSERT_TRUE(IsDumpingRegsForTracepointEventsSupported());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, trace_offcpu_option) {
   // On linux host, we need root privilege to read tracepoint events.
   TEST_REQUIRE_HOST_ROOT();
@@ -574,10 +614,12 @@ TEST(record_cmd, trace_offcpu_option) {
   ASSERT_FALSE(RunRecordCmd({"--trace-offcpu", "-e", "cpu-clock,task-clock"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, exit_with_parent_option) {
   ASSERT_TRUE(RunRecordCmd({"--exit-with-parent"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, use_cmd_exit_code_option) {
   TemporaryFile tmpfile;
   int exit_code;
@@ -590,6 +632,7 @@ TEST(record_cmd, use_cmd_exit_code_option) {
   ASSERT_NE(exit_code, 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, clockid_option) {
   if (!IsSettingClockIdSupported()) {
     ASSERT_FALSE(RunRecordCmd({"--clockid", "monotonic"}));
@@ -603,6 +646,7 @@ TEST(record_cmd, clockid_option) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, generate_samples_by_hw_counters) {
   TEST_REQUIRE_HW_COUNTER();
   std::vector<std::string> events = {"cpu-cycles", "instructions"};
@@ -622,16 +666,19 @@ TEST(record_cmd, generate_samples_by_hw_counters) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, callchain_joiner_options) {
   ASSERT_TRUE(RunRecordCmd({"--no-callchain-joiner"}));
   ASSERT_TRUE(RunRecordCmd({"--callchain-joiner-min-matching-nodes", "2"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, dashdash) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RecordCmd()->Run({"-o", tmpfile.path, "-e", GetDefaultEvent(), "--", "sleep", "1"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, size_limit_option) {
   std::vector<std::unique_ptr<Workload>> workloads;
   CreateProcesses(1, &workloads);
@@ -646,6 +693,7 @@ TEST(record_cmd, size_limit_option) {
   ASSERT_FALSE(RunRecordCmd({"--size-limit", "0"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, support_mmap2) {
   // mmap2 is supported in kernel >= 3.16. If not supported, please cherry pick below kernel
   // patches:
@@ -654,6 +702,7 @@ TEST(record_cmd, support_mmap2) {
   ASSERT_TRUE(IsMmap2Supported());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, kernel_bug_making_zero_dyn_size) {
   // Test a kernel bug that makes zero dyn_size in kernel < 3.13. If it fails, please cherry pick
   // below kernel patch: 0a196848ca365e perf: Fix arch_perf_out_copy_user default
@@ -680,6 +729,7 @@ TEST(record_cmd, kernel_bug_making_zero_dyn_size) {
   ASSERT_TRUE(has_sample);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, kernel_bug_making_zero_dyn_size_for_kernel_samples) {
   // Test a kernel bug that makes zero dyn_size for syscalls of 32-bit applications in 64-bit
   // kernels. If it fails, please cherry pick below kernel patch:
@@ -709,6 +759,7 @@ TEST(record_cmd, kernel_bug_making_zero_dyn_size_for_kernel_samples) {
   ASSERT_TRUE(has_sample);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, cpu_percent_option) {
   ASSERT_TRUE(RunRecordCmd({"--cpu-percent", "50"}));
   ASSERT_FALSE(RunRecordCmd({"--cpu-percent", "0"}));
@@ -790,6 +841,7 @@ static void TestRecordingApps(const std::string& app_name, const std::string& ap
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, app_option_for_debuggable_app) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   TEST_REQUIRE_APPS();
@@ -799,6 +851,7 @@ TEST(record_cmd, app_option_for_debuggable_app) {
   TestRecordingApps("com.android.simpleperf.debuggable", "debuggable");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, app_option_for_profileable_app) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   TEST_REQUIRE_APPS();
@@ -828,6 +881,7 @@ static void RecordJavaApp(RecordingAppHelper& helper) {
 }
 #endif  // defined(__ANDROID__)
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_java_app) {
 #if defined(__ANDROID__)
   OMIT_TEST_ON_NON_NATIVE_ABIS();
@@ -858,6 +912,7 @@ TEST(record_cmd, record_java_app) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_native_app) {
 #if defined(__ANDROID__)
   // In case of non-native ABI guest symbols are never directly executed, thus
@@ -893,6 +948,7 @@ TEST(record_cmd, record_native_app) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, check_trampoline_after_art_jni_methods) {
   // Test if art jni methods are called by art_jni_trampoline.
 #if defined(__ANDROID__)
@@ -959,10 +1015,12 @@ TEST(record_cmd, check_trampoline_after_art_jni_methods) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, no_cut_samples_option) {
   ASSERT_TRUE(RunRecordCmd({"--no-cut-samples"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, cs_etm_event) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -997,6 +1055,7 @@ TEST(record_cmd, cs_etm_event) {
   ASSERT_TRUE(has_aux);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, cs_etm_system_wide) {
   TEST_REQUIRE_ROOT();
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
@@ -1006,6 +1065,7 @@ TEST(record_cmd, cs_etm_system_wide) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "-a"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, aux_buffer_size_option) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1018,6 +1078,7 @@ TEST(record_cmd, aux_buffer_size_option) {
   ASSERT_FALSE(RunRecordCmd({"-e", "cs-etm", "--aux-buffer-size", "12k"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, addr_filter_option) {
   TEST_REQUIRE_HW_COUNTER();
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
@@ -1078,6 +1139,7 @@ TEST(record_cmd, addr_filter_option) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--addr-filter", filter}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, decode_etm_option) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1087,6 +1149,7 @@ TEST(record_cmd, decode_etm_option) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--decode-etm", "--exclude-perf"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_timestamp) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1095,6 +1158,7 @@ TEST(record_cmd, record_timestamp) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-timestamp"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_cycles) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1103,6 +1167,7 @@ TEST(record_cmd, record_cycles) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-cycles"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, cycle_threshold) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1112,6 +1177,7 @@ TEST(record_cmd, cycle_threshold) {
                             "--cycle-threshold", "8"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, binary_option) {
   if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
@@ -1120,6 +1186,7 @@ TEST(record_cmd, binary_option) {
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--decode-etm", "--binary", ".*"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, pmu_event_option) {
   TEST_REQUIRE_PMU_COUNTER();
   TEST_REQUIRE_HW_COUNTER();
@@ -1135,6 +1202,7 @@ TEST(record_cmd, pmu_event_option) {
   TEST_IN_ROOT(ASSERT_TRUE(RunRecordCmd({"-e", event_string})));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, exclude_perf_option) {
   ASSERT_TRUE(RunRecordCmd({"--exclude-perf"}));
   if (IsRoot()) {
@@ -1155,6 +1223,7 @@ TEST(record_cmd, exclude_perf_option) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, tp_filter_option) {
   TEST_REQUIRE_HOST_ROOT();
   TEST_REQUIRE_TRACEPOINT_EVENTS();
@@ -1175,6 +1244,7 @@ TEST(record_cmd, tp_filter_option) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, ParseAddrFilterOption) {
   auto option_to_str = [](const std::string& option) {
     auto filters = ParseAddrFilterOption(option);
@@ -1207,6 +1277,7 @@ TEST(record_cmd, ParseAddrFilterOption) {
   ASSERT_EQ(option_to_str("start 0x12345678,stop 0x1234567a"), "start 0x12345678,stop 0x1234567a");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, kprobe_option) {
   TEST_REQUIRE_ROOT();
   EventSelectionSet event_selection_set(false);
@@ -1221,6 +1292,7 @@ TEST(record_cmd, kprobe_option) {
   ASSERT_TRUE(RunRecordCmd({"--group", "kprobes:do_sys_openat2"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_filter_options) {
   ASSERT_TRUE(
       RunRecordCmd({"--exclude-pid", "1,2", "--exclude-tid", "3,4", "--exclude-process-name",
@@ -1230,6 +1302,7 @@ TEST(record_cmd, record_filter_options) {
                     "processB", "--include-thread-name", "threadB", "--include-uid", "5,6"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, keep_failed_unwinding_result_option) {
   OMIT_TEST_ON_NON_NATIVE_ABIS();
   std::vector<std::unique_ptr<Workload>> workloads;
@@ -1239,6 +1312,7 @@ TEST(record_cmd, keep_failed_unwinding_result_option) {
       {"-p", pid, "-g", "--keep-failed-unwinding-result", "--keep-failed-unwinding-debug-info"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, kernel_address_warning) {
   TEST_REQUIRE_NON_ROOT();
   const std::string warning_msg = "Access to kernel symbol addresses is restricted.";
@@ -1263,6 +1337,7 @@ TEST(record_cmd, kernel_address_warning) {
   ASSERT_EQ(output.find(warning_msg, pos + warning_msg.size()), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, add_meta_info_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RunRecordCmd({"--add-meta-info", "key1=value1", "--add-meta-info", "key2=value2"},
@@ -1284,6 +1359,7 @@ TEST(record_cmd, add_meta_info_option) {
   ASSERT_FALSE(RunRecordCmd({"--add-meta-info", "=value1"}, tmpfile.path));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, device_meta_info) {
 #if defined(__ANDROID__)
   TemporaryFile tmpfile;
@@ -1303,6 +1379,7 @@ TEST(record_cmd, device_meta_info) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, add_counter_option) {
   TEST_REQUIRE_HW_COUNTER();
   TemporaryFile tmpfile;
@@ -1324,10 +1401,12 @@ TEST(record_cmd, add_counter_option) {
   ASSERT_TRUE(has_sample);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, user_buffer_size_option) {
   ASSERT_TRUE(RunRecordCmd({"--user-buffer-size", "256M"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, record_process_name) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RecordCmd()->Run({"-e", GetDefaultEvent(), "-o", tmpfile.path, "sleep", SLEEP_SEC}));
@@ -1346,6 +1425,7 @@ TEST(record_cmd, record_process_name) {
   ASSERT_TRUE(has_comm);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(record_cmd, delay_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(RecordCmd()->Run(
