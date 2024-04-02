@@ -29,6 +29,7 @@
 namespace fs = std::filesystem;
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, PrepareVdsoFile) {
   std::string content;
   ASSERT_TRUE(android::base::ReadFileToString("/proc/self/maps", &content));
@@ -46,6 +47,7 @@ TEST(environment, PrepareVdsoFile) {
   ASSERT_NE(dso->GetDebugFilePath(), "[vdso]");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetHardwareFromCpuInfo) {
   std::string cpu_info =
       "CPU revision : 10\n\n"
@@ -54,6 +56,7 @@ TEST(environment, GetHardwareFromCpuInfo) {
             GetHardwareFromCpuInfo(cpu_info));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, MappedFileOnlyExistInMemory) {
   ASSERT_TRUE(MappedFileOnlyExistInMemory(""));
   ASSERT_TRUE(MappedFileOnlyExistInMemory("[stack]"));
@@ -66,6 +69,7 @@ TEST(environment, MappedFileOnlyExistInMemory) {
   ASSERT_FALSE(MappedFileOnlyExistInMemory("/system/lib64/libc.so"));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, SetPerfEventLimits) {
 #if defined(__ANDROID__)
   if (GetAndroidVersion() <= kAndroidVersionP) {
@@ -101,10 +105,12 @@ TEST(environment, SetPerfEventLimits) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetKernelVersion) {
   ASSERT_TRUE(GetKernelVersion());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetModuleBuildId) {
   BuildId build_id;
   fs::path dir(GetTestData("sysfs/module/fake_kernel_module/notes"));
@@ -114,6 +120,7 @@ TEST(environment, GetModuleBuildId) {
   ASSERT_EQ(build_id, BuildId("3e0ba155286f3454"));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetKernelAndModuleMmaps) {
   TEST_REQUIRE_ROOT();
   KernelMmap kernel_mmap;
@@ -124,12 +131,14 @@ TEST(environment, GetKernelAndModuleMmaps) {
   ASSERT_GT(kernel_mmap.start_addr, 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetProcessUid) {
   std::optional<uid_t> uid = GetProcessUid(getpid());
   ASSERT_TRUE(uid.has_value());
   ASSERT_EQ(uid.value(), getuid());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetAppType) {
   TEST_REQUIRE_APPS();
   ASSERT_EQ(GetAppType("com.android.simpleperf.debuggable"), "debuggable");
@@ -137,12 +146,14 @@ TEST(environment, GetAppType) {
   ASSERT_EQ(GetAppType("com.android.simpleperf.app_not_exist"), "not_exist");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetMemorySize) {
   auto value = GetMemorySize();
   ASSERT_TRUE(value);
   ASSERT_GT(value.value(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(environment, GetARMCpuModels) {
 #if defined(__aarch64__) && defined(__ANDROID__)
   auto models = GetARMCpuModels();

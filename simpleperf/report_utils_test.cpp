@@ -27,6 +27,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(ProguardMappingRetrace, smoke) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -151,6 +152,7 @@ class CallChainReportBuilderTest : public testing::Test {
   };
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, default_option) {
   // Test default option: remove_art_frame = true, convert_jit_frame = true.
   // The callchain shouldn't include interpreter frames. And the JIT frame is
@@ -170,6 +172,7 @@ TEST_F(CallChainReportBuilderTest, default_option) {
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, not_convert_jit_frame) {
   // Test option: remove_art_frame = true, convert_jit_frame = false.
   // The callchain shouldn't include interpreter frames. And the JIT frame isn't
@@ -190,6 +193,7 @@ TEST_F(CallChainReportBuilderTest, not_convert_jit_frame) {
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, not_remove_art_frame) {
   // Test option: remove_art_frame = false, convert_jit_frame = true.
   // The callchain should include interpreter frames. And the JIT frame is
@@ -222,6 +226,7 @@ TEST_F(CallChainReportBuilderTest, not_remove_art_frame) {
   ASSERT_EQ(entries[5].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, remove_jit_frame_called_by_dex_frame) {
   // Test option: remove_art_frame = true, convert_jit_frame = true.
   // The callchain should remove the JIT frame called by a dex frame having the same symbol name.
@@ -242,6 +247,7 @@ TEST_F(CallChainReportBuilderTest, remove_jit_frame_called_by_dex_frame) {
   ASSERT_EQ(entries[0].execution_type, CallChainExecutionType::INTERPRETED_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, remove_art_frame_only_near_jvm_method) {
   // Test option: remove_art_frame = true, convert_jit_frame = true.
   // The callchain should not remove ART symbols not near a JVM method.
@@ -277,6 +283,7 @@ TEST_F(CallChainReportBuilderTest, remove_art_frame_only_near_jvm_method) {
   ASSERT_EQ(entries[2].execution_type, CallChainExecutionType::INTERPRETED_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, keep_art_jni_method) {
   // Test option: remove_art_frame = true.
   // The callchain should remove art_jni_trampoline, but keep jni methods.
@@ -305,6 +312,7 @@ TEST_F(CallChainReportBuilderTest, keep_art_jni_method) {
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::INTERPRETED_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, add_proguard_mapping_file) {
   std::vector<uint64_t> fake_ips = {
       0x2200,  // 2200,  // obfuscated_class.obfuscated_java_method
@@ -364,6 +372,7 @@ TEST_F(CallChainReportBuilderTest, add_proguard_mapping_file) {
   ASSERT_EQ(entries[2].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, not_remove_synthesized_frame_by_default) {
   std::vector<uint64_t> fake_ips = {
       0x2200,  // 2200,  // obfuscated_class.obfuscated_java_method
@@ -400,6 +409,7 @@ TEST_F(CallChainReportBuilderTest, not_remove_synthesized_frame_by_default) {
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, remove_synthesized_frame_with_env_variable) {
   // Windows doesn't support setenv and unsetenv. So don't test on it.
 #if !defined(__WIN32)
@@ -435,6 +445,7 @@ TEST_F(CallChainReportBuilderTest, remove_synthesized_frame_with_env_variable) {
 #endif  // !defined(__WIN32)
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, add_proguard_mapping_file_for_jit_method_with_signature) {
   std::vector<uint64_t> fake_ips = {
       0x3200,  // 3200,  // void ctep.v(cteo, ctgc, ctbn)
@@ -460,6 +471,7 @@ TEST_F(CallChainReportBuilderTest, add_proguard_mapping_file_for_jit_method_with
   ASSERT_EQ(entries[0].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest,
        add_proguard_mapping_file_for_compiled_java_method_with_signature) {
   TemporaryFile tmpfile;
@@ -492,6 +504,7 @@ TEST_F(CallChainReportBuilderTest,
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, convert_jit_frame_for_jit_method_with_signature) {
   std::vector<uint64_t> fake_ips = {
       0x2200,  // 2200,  // ctep.v
@@ -540,6 +553,7 @@ TEST_F(CallChainReportBuilderTest, convert_jit_frame_for_jit_method_with_signatu
   ASSERT_EQ(entries[1].execution_type, CallChainExecutionType::JIT_JVM_METHOD);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainReportBuilderTest, remove_method_name) {
   // Test excluding method names.
   CallChainReportBuilder builder(thread_tree);
@@ -588,6 +602,7 @@ class ThreadReportBuilderTest : public testing::Test {
   ThreadTree thread_tree;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadReportBuilderTest, no_setting) {
   ThreadReportBuilder builder;
   ThreadEntry* thread = thread_tree.FindThread(1);
@@ -595,6 +610,7 @@ TEST_F(ThreadReportBuilderTest, no_setting) {
   ASSERT_TRUE(IsReportEqual(report, ThreadReport(1, 1, "thread1")));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadReportBuilderTest, aggregate_threads) {
   ThreadReportBuilder builder;
   ASSERT_TRUE(builder.AggregateThreads({"thread-pool.*"}));
@@ -609,6 +625,7 @@ TEST_F(ThreadReportBuilderTest, aggregate_threads) {
   ASSERT_TRUE(IsReportEqual(report, ThreadReport(1, 2, "thread-pool.*")));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadReportBuilderTest, aggregate_threads_bad_regex) {
   ThreadReportBuilder builder;
   ASSERT_FALSE(builder.AggregateThreads({"?thread-pool*"}));

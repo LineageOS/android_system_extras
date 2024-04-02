@@ -30,6 +30,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 class RecordFilterTest : public ::testing::Test {
  public:
   RecordFilterTest() : filter(thread_tree) {}
@@ -58,10 +59,12 @@ class RecordFilterTest : public ::testing::Test {
   std::unique_ptr<SampleRecord> record;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, no_filter) {
   ASSERT_TRUE(filter.Check(GetRecord(0, 0)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, cpu) {
   filter.AddCpus({1});
   SampleRecord& r = GetRecord(0, 0);
@@ -71,18 +74,21 @@ TEST_F(RecordFilterTest, cpu) {
   ASSERT_FALSE(filter.Check(r));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, exclude_pid) {
   filter.AddPids({1}, true);
   ASSERT_FALSE(filter.Check(GetRecord(1, 1)));
   ASSERT_TRUE(filter.Check(GetRecord(2, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, exclude_tid) {
   filter.AddTids({1}, true);
   ASSERT_FALSE(filter.Check(GetRecord(1, 1)));
   ASSERT_TRUE(filter.Check(GetRecord(1, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, exclude_process_name_regex) {
   ASSERT_TRUE(filter.AddProcessNameRegex("processA", true));
   thread_tree.SetThreadName(1, 1, "processA1");
@@ -91,6 +97,7 @@ TEST_F(RecordFilterTest, exclude_process_name_regex) {
   ASSERT_TRUE(filter.Check(GetRecord(2, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, exclude_thread_name_regex) {
   ASSERT_TRUE(filter.AddThreadNameRegex("threadA", true));
   thread_tree.SetThreadName(1, 1, "processA_threadA");
@@ -100,6 +107,7 @@ TEST_F(RecordFilterTest, exclude_thread_name_regex) {
 }
 
 #if defined(__linux__)
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, exclude_uid) {
   pid_t pid = getpid();
   std::optional<uint32_t> uid = GetProcessUid(pid);
@@ -112,18 +120,21 @@ TEST_F(RecordFilterTest, exclude_uid) {
 }
 #endif  // defined(__linux__)
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, include_pid) {
   filter.AddPids({1}, false);
   ASSERT_TRUE(filter.Check(GetRecord(1, 1)));
   ASSERT_FALSE(filter.Check(GetRecord(2, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, include_tid) {
   filter.AddTids({1}, false);
   ASSERT_TRUE(filter.Check(GetRecord(1, 1)));
   ASSERT_FALSE(filter.Check(GetRecord(1, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, include_process_name_regex) {
   ASSERT_TRUE(filter.AddProcessNameRegex("processA", false));
   thread_tree.SetThreadName(1, 1, "processA1");
@@ -132,6 +143,7 @@ TEST_F(RecordFilterTest, include_process_name_regex) {
   ASSERT_FALSE(filter.Check(GetRecord(2, 2)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, include_thread_name_regex) {
   ASSERT_TRUE(filter.AddThreadNameRegex("threadA", false));
   thread_tree.SetThreadName(1, 1, "processA_threadA");
@@ -141,6 +153,7 @@ TEST_F(RecordFilterTest, include_thread_name_regex) {
 }
 
 #if defined(__linux__)
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, include_uid) {
   pid_t pid = getpid();
   std::optional<uint32_t> uid = GetProcessUid(pid);
@@ -152,6 +165,7 @@ TEST_F(RecordFilterTest, include_uid) {
 }
 #endif  // defined(__linux__)
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, global_time_filter) {
   ASSERT_TRUE(
       SetFilterData("GLOBAL_BEGIN 1000\n"
@@ -179,6 +193,7 @@ TEST_F(RecordFilterTest, global_time_filter) {
   ASSERT_FALSE(filter.Check(r));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, process_time_filter) {
   ASSERT_TRUE(
       SetFilterData("PROCESS_BEGIN 1 1000\n"
@@ -202,6 +217,7 @@ TEST_F(RecordFilterTest, process_time_filter) {
   ASSERT_FALSE(filter.Check(r));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, thread_time_filter) {
   ASSERT_TRUE(
       SetFilterData("THREAD_BEGIN 1 1000\n"
@@ -225,6 +241,7 @@ TEST_F(RecordFilterTest, thread_time_filter) {
   ASSERT_FALSE(filter.Check(r));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, clock_in_time_filter) {
   // If there is no filter data, any clock is fine.
   ASSERT_TRUE(filter.CheckClock("monotonic"));
@@ -239,6 +256,7 @@ TEST_F(RecordFilterTest, clock_in_time_filter) {
   ASSERT_FALSE(filter.CheckClock("monotonic"));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, error_in_time_filter) {
   // no timestamp error
   ASSERT_FALSE(SetFilterData("GLOBAL_BEGIN"));
@@ -290,6 +308,7 @@ class ParseRecordFilterCommand : public Command {
 
 }  // namespace
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFilterTest, parse_options) {
   ParseRecordFilterCommand filter_cmd(filter);
 

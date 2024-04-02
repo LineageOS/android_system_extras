@@ -59,15 +59,18 @@ static ::testing::AssertionResult RunMonitorCmd(std::vector<std::string> v, std:
   return (result ? ::testing::AssertionSuccess() : ::testing::AssertionFailure());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, no_options) {
   std::string output;
   ASSERT_FALSE(RunMonitorCmd({}, output));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, no_event) {
   ASSERT_FALSE(MonitorCmd()->Run({"-a", "--duration", "1"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, global) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -75,6 +78,7 @@ TEST(monitor_cmd, global) {
   ASSERT_GT(output.size(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, no_perf) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -82,6 +86,7 @@ TEST(monitor_cmd, no_perf) {
   ASSERT_GT(output.size(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, with_callchain) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -89,6 +94,7 @@ TEST(monitor_cmd, with_callchain) {
   ASSERT_GT(output.size(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, with_callchain_fp) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -96,6 +102,7 @@ TEST(monitor_cmd, with_callchain_fp) {
   ASSERT_GT(output.size(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, with_callchain_dwarf) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -103,18 +110,21 @@ TEST(monitor_cmd, with_callchain_dwarf) {
   ASSERT_GT(output.size(), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, frequency) {
   TEST_REQUIRE_ROOT();
   std::string output;
   ASSERT_TRUE(RunMonitorCmd({"-a", "-f", "1"}, output));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, count) {
   TEST_REQUIRE_ROOT();
   std::string output;
   ASSERT_TRUE(RunMonitorCmd({"-a", "-c", "10000000"}, output));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, cpu_percent) {
   TEST_REQUIRE_ROOT();
   std::string output;
@@ -124,6 +134,7 @@ TEST(monitor_cmd, cpu_percent) {
   ASSERT_FALSE(RunMonitorCmd({"-a", "--cpu-percent", "101"}, output));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(monitor_cmd, record_filter_options) {
   TEST_REQUIRE_ROOT();
   std::string output;

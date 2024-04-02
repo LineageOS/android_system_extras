@@ -32,6 +32,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, GetBuildIdFromNoteSection) {
   BuildId build_id;
   std::vector<char> data;
@@ -62,6 +63,7 @@ TEST(read_elf, GetBuildIdFromNoteSection) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, GetBuildIdFromElfFile) {
   BuildId build_id;
   ElfStatus status;
@@ -71,6 +73,7 @@ TEST(read_elf, GetBuildIdFromElfFile) {
   ASSERT_EQ(build_id, BuildId(elf_file_build_id));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, GetBuildIdFromEmbeddedElfFile) {
   BuildId build_id;
   ElfStatus status;
@@ -103,6 +106,7 @@ void CheckElfFileSymbols(const std::map<std::string, ElfFileSymbol>& symbols) {
   CheckFunctionSymbols(symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, parse_symbols_from_elf_file_with_correct_build_id) {
   std::map<std::string, ElfFileSymbol> symbols;
   ElfStatus status;
@@ -113,6 +117,7 @@ TEST(read_elf, parse_symbols_from_elf_file_with_correct_build_id) {
   CheckElfFileSymbols(symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, parse_symbols_from_elf_file_without_build_id) {
   std::map<std::string, ElfFileSymbol> symbols;
   ElfStatus status;
@@ -133,6 +138,7 @@ TEST(read_elf, parse_symbols_from_elf_file_without_build_id) {
   CheckElfFileSymbols(symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, parse_symbols_from_elf_file_with_wrong_build_id) {
   BuildId build_id("01010101010101010101");
   std::map<std::string, ElfFileSymbol> symbols;
@@ -141,6 +147,7 @@ TEST(read_elf, parse_symbols_from_elf_file_with_wrong_build_id) {
   ASSERT_EQ(ElfStatus::BUILD_ID_MISMATCH, status);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, ParseSymbolsFromEmbeddedElfFile) {
   std::map<std::string, ElfFileSymbol> symbols;
   ElfStatus status;
@@ -152,6 +159,7 @@ TEST(read_elf, ParseSymbolsFromEmbeddedElfFile) {
   CheckElfFileSymbols(symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, ParseSymbolFromMiniDebugInfoElfFile) {
   std::map<std::string, ElfFileSymbol> symbols;
   ElfStatus status;
@@ -162,6 +170,7 @@ TEST(read_elf, ParseSymbolFromMiniDebugInfoElfFile) {
   CheckFunctionSymbols(symbols);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, arm_mapping_symbol) {
   ASSERT_TRUE(IsArmMappingSymbol("$a"));
   ASSERT_FALSE(IsArmMappingSymbol("$b"));
@@ -169,6 +178,7 @@ TEST(read_elf, arm_mapping_symbol) {
   ASSERT_FALSE(IsArmMappingSymbol("$a_no_dot"));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, ElfFile_Open) {
   auto IsValidElfPath = [](const std::string& path) {
     ElfStatus status;
@@ -183,6 +193,7 @@ TEST(read_elf, ElfFile_Open) {
   ASSERT_EQ(ElfStatus::NO_ERROR, IsValidElfPath(GetTestData(ELF_FILE)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, check_symbol_for_plt_section) {
   std::map<std::string, ElfFileSymbol> symbols;
   ElfStatus status;
@@ -193,6 +204,7 @@ TEST(read_elf, check_symbol_for_plt_section) {
   ASSERT_NE(symbols.find("@plt"), symbols.end());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, read_elf_with_broken_section_table) {
   std::string elf_path = GetTestData("libsgmainso-6.4.36.so");
   std::map<std::string, ElfFileSymbol> symbols;
@@ -211,6 +223,7 @@ TEST(read_elf, read_elf_with_broken_section_table) {
   ASSERT_EQ(file_offset_of_min_vaddr, 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, ReadMinExecutableVaddr) {
   ElfStatus status;
   auto elf = ElfFile::Open(GetTestData("libc.so"), &status);
@@ -221,6 +234,7 @@ TEST(read_elf, ReadMinExecutableVaddr) {
   ASSERT_EQ(file_offset_of_min_vaddr, 0x29000u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, NoUndefinedSymbol) {
   // Check if we read undefined symbols (like dlerror) from libc.so.
   bool has_dlerror = false;
@@ -237,6 +251,7 @@ TEST(read_elf, NoUndefinedSymbol) {
   ASSERT_FALSE(has_dlerror);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, VaddrToOff) {
   auto elf = ElfFile::Open(GetTestData(ELF_FILE));
   ASSERT_TRUE(elf != nullptr);
@@ -247,6 +262,7 @@ TEST(read_elf, VaddrToOff) {
   ASSERT_FALSE(elf->VaddrToOff(0x420000, &off));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(read_elf, GetSectionHeader) {
   auto elf = ElfFile::Open(GetTestData(ELF_FILE));
   ASSERT_TRUE(elf != nullptr);

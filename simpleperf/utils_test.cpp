@@ -25,6 +25,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, ConvertBytesToValue) {
   char buf[8];
   for (int i = 0; i < 8; ++i) {
@@ -36,6 +37,7 @@ TEST(utils, ConvertBytesToValue) {
   ASSERT_EQ(0x0706050403020100ULL, ConvertBytesToValue(buf, 8));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, ArchiveHelper) {
   std::unique_ptr<ArchiveHelper> ahelper = ArchiveHelper::CreateInstance(GetTestData(APK_FILE));
   ASSERT_TRUE(ahelper);
@@ -61,6 +63,7 @@ TEST(utils, ArchiveHelper) {
   ASSERT_FALSE(ArchiveHelper::CreateInstance("/dev/zero"));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, GetCpusFromString) {
   ASSERT_EQ(GetCpusFromString("0-2"), std::make_optional<std::set<int>>({0, 1, 2}));
   ASSERT_EQ(GetCpusFromString("0,2-3"), std::make_optional<std::set<int>>({0, 2, 3}));
@@ -72,11 +75,13 @@ TEST(utils, GetCpusFromString) {
   ASSERT_EQ(GetCpusFromString("3,2-1"), std::nullopt);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, GetTidsFromString) {
   ASSERT_EQ(GetTidsFromString("0,12,9", false), std::make_optional(std::set<pid_t>({0, 9, 12})));
   ASSERT_EQ(GetTidsFromString("-2", false), std::nullopt);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, GetPidsFromStrings) {
   ASSERT_EQ(GetPidsFromStrings({"0,12", "9"}, false, false),
             std::make_optional(std::set<pid_t>({0, 9, 12})));
@@ -91,6 +96,7 @@ TEST(utils, GetPidsFromStrings) {
 #endif  // defined(__linux__)
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, LineReader) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -106,6 +112,7 @@ TEST(utils, LineReader) {
   ASSERT_TRUE(reader.ReadLine() == nullptr);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(utils, ReadableCount) {
   ASSERT_EQ(ReadableCount(0), "0");
   ASSERT_EQ(ReadableCount(204), "204");

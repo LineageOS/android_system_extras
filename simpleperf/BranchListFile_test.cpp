@@ -20,6 +20,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(BranchListFile, etm_branch_to_proto_string) {
   std::vector<bool> branch;
   for (size_t i = 0; i < 100; i++) {

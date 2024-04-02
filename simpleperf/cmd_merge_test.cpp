@@ -46,6 +46,7 @@ static std::string GetReport(const std::string& record_file) {
   return data;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(merge_cmd, input_output_options) {
   // missing arguments
   ASSERT_FALSE(MergeCmd()->Run({}));
@@ -63,6 +64,7 @@ TEST(merge_cmd, input_output_options) {
   ASSERT_TRUE(MergeCmd()->Run({"-i", input_file, "-i", input_file, "-o", tmpfile.path}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(merge_cmd, merge_two_files) {
   std::string input_file1 = GetTestData("perf_merge1.data");
   std::string input_file2 = GetTestData("perf_merge2.data");
