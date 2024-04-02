@@ -28,6 +28,7 @@ static std::unique_ptr<Command> BootRecordCmd() {
   return CreateCommandInstance("boot-record");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_boot_record, smoke) {
   TEST_REQUIRE_ROOT();
   ASSERT_TRUE(BootRecordCmd()->Run({"--enable", "-a -g --duration 1"}));

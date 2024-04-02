@@ -39,6 +39,7 @@ static bool KernelSymbolsMatch(const KernelSymbol& sym1, const KernelSymbol& sym
          ModulesMatch(sym1.module, sym2.module);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kallsyms, ProcessKernelSymbols) {
   std::string data =
       "ffffffffa005c4e4 d __warned.41698   [libsas]\n"
@@ -64,6 +65,7 @@ TEST(kallsyms, ProcessKernelSymbols) {
       data, std::bind(&KernelSymbolsMatch, std::placeholders::_1, expected_symbol)));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kallsyms, ProcessKernelSymbols_ignore_arm_mapping_symbols) {
   std::string data =
       "aaaaaaaaaaaaaaaa t $x.9 [coresight_etm4x]\n"
@@ -84,17 +86,20 @@ TEST(kallsyms, ProcessKernelSymbols_ignore_arm_mapping_symbols) {
 }
 
 #if defined(__ANDROID__)
+// @CddTest = 6.1/C-0-2
 TEST(kallsyms, GetKernelStartAddress) {
   TEST_REQUIRE_ROOT();
   ASSERT_NE(GetKernelStartAddress(), 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kallsyms, LoadKernelSymbols) {
   TEST_REQUIRE_ROOT();
   std::string kallsyms;
   ASSERT_TRUE(LoadKernelSymbols(&kallsyms));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kallsyms, print_warning) {
   TEST_REQUIRE_NON_ROOT();
   const std::string warning_msg = "Access to kernel symbol addresses is restricted.";

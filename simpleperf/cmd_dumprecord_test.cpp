@@ -26,22 +26,27 @@ static std::unique_ptr<Command> DumpCmd() {
   return CreateCommandInstance("dump");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, record_file_option) {
   ASSERT_TRUE(DumpCmd()->Run({GetTestData("perf.data")}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, input_option) {
   ASSERT_TRUE(DumpCmd()->Run({"-i", GetTestData("perf.data")}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, dump_data_generated_by_linux_perf) {
   ASSERT_TRUE(DumpCmd()->Run({GetTestData(PERF_DATA_GENERATED_BY_LINUX_PERF)}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, dump_callchain_records) {
   ASSERT_TRUE(DumpCmd()->Run({GetTestData(PERF_DATA_WITH_CALLCHAIN_RECORD)}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, dump_callchain_of_sample_records) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());
@@ -51,6 +56,7 @@ TEST(cmd_dump, dump_callchain_of_sample_records) {
   ASSERT_NE(data.find("__ioctl (/system/lib64/libc.so[+70b6c])"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, dump_tracepoint_fields_of_sample_records) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());
@@ -66,6 +72,7 @@ TEST(cmd_dump, dump_tracepoint_fields_of_sample_records) {
             std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, etm_data) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());
@@ -78,6 +85,7 @@ TEST(cmd_dump, etm_data) {
   ASSERT_NE(data.find("OCSD_GEN_TRC_ELEM_INSTR_RANGE"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_dump, dump_arm_regs_recorded_in_arm64) {
   ASSERT_TRUE(DumpCmd()->Run({GetTestData("perf_with_arm_regs.data")}));
 }

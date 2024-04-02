@@ -44,6 +44,7 @@ bool CheckUnwindMaps(UnwindMaps& maps, const MapSet& map_set) {
   return true;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(OfflineUnwinder, UnwindMaps) {
   // 1. Create fake map entries.
   std::unique_ptr<Dso> fake_dso = Dso::CreateDso(DSO_UNKNOWN_FILE, "unknown");
@@ -90,6 +91,7 @@ TEST(OfflineUnwinder, UnwindMaps) {
   ASSERT_TRUE(CheckUnwindMaps(maps, map_set));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(OfflineUnwinder, CollectMetaInfo) {
   std::unordered_map<std::string, std::string> info_map;
   OfflineUnwinder::CollectMetaInfo(&info_map);
@@ -100,6 +102,7 @@ TEST(OfflineUnwinder, CollectMetaInfo) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(OfflineUnwinder, ARM64PackMask) {
   std::unordered_map<std::string, std::string> info_map;
   info_map[OfflineUnwinder::META_KEY_ARM64_PAC_MASK] = "0xff00000000";

@@ -20,6 +20,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(RegEx, smoke) {
   auto re = RegEx::Create("b+");
   ASSERT_EQ(re->GetPattern(), "b+");
@@ -42,6 +43,7 @@ TEST(RegEx, smoke) {
   ASSERT_EQ(re->Replace("ababb", "c").value(), "acac");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(RegEx, invalid_pattern) {
   ASSERT_TRUE(RegEx::Create("?hello") == nullptr);
 }

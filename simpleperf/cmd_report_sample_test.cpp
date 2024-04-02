@@ -29,16 +29,19 @@ static std::unique_ptr<Command> ReportSampleCmd() {
   return CreateCommandInstance("report-sample");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, text) {
   ASSERT_TRUE(ReportSampleCmd()->Run({"-i", GetTestData(PERF_DATA_WITH_SYMBOLS)}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, output_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(
       ReportSampleCmd()->Run({"-i", GetTestData(PERF_DATA_WITH_SYMBOLS), "-o", tmpfile.path}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_callchain_option) {
   TemporaryFile tmpfile;
   ASSERT_TRUE(ReportSampleCmd()->Run(
@@ -58,6 +61,7 @@ static void GetProtobufReport(const std::string& test_data_file, std::string* pr
   ASSERT_TRUE(android::base::ReadFileToString(tmpfile2.path, protobuf_report));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, protobuf_option) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_SYMBOLS, &data);
@@ -66,6 +70,7 @@ TEST(cmd_report_sample, protobuf_option) {
   ASSERT_NE(data.find("file:"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, no_skipped_file_id) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_WRONG_IP_IN_CALLCHAIN, &data);
@@ -73,12 +78,14 @@ TEST(cmd_report_sample, no_skipped_file_id) {
   ASSERT_EQ(data.find("unknown"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, sample_has_event_count) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_SYMBOLS, &data);
   ASSERT_NE(data.find("event_count:"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, has_thread_record) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_SYMBOLS, &data);
@@ -86,6 +93,7 @@ TEST(cmd_report_sample, has_thread_record) {
   ASSERT_NE(data.find("thread_name: t2"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, trace_offcpu) {
   std::string data;
   GetProtobufReport("perf_with_trace_offcpu_v2.data", &data);
@@ -101,6 +109,7 @@ TEST(cmd_report_sample, trace_offcpu) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, have_clear_callchain_end_in_protobuf_output) {
   std::string data;
   GetProtobufReport("perf_with_trace_offcpu_v2.data", &data, {"--show-callchain"});
@@ -108,6 +117,7 @@ TEST(cmd_report_sample, have_clear_callchain_end_in_protobuf_output) {
   ASSERT_EQ(data.find("_start_main"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, app_device_info_in_meta_info) {
   std::string data;
   GetProtobufReport("perf_with_meta_info.data", &data);
@@ -117,6 +127,7 @@ TEST(cmd_report_sample, app_device_info_in_meta_info) {
   ASSERT_NE(data.find("android_build_type: userdebug"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, remove_unknown_kernel_symbols) {
   std::string data;
   // Test --remove-unknown-kernel-symbols on perf.data with kernel_symbols_available=false.
@@ -148,6 +159,7 @@ TEST(cmd_report_sample, remove_unknown_kernel_symbols) {
   ASSERT_NE(data.find("path: /system/lib64/libc.so"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_art_frames_option) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_INTERPRETER_FRAMES, &data, {"--show-callchain"});
@@ -157,6 +169,7 @@ TEST(cmd_report_sample, show_art_frames_option) {
   ASSERT_NE(data.find("artMterpAsmInstructionStart"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_execution_type_option) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data,
@@ -174,6 +187,7 @@ TEST(cmd_report_sample, show_execution_type_option) {
   ASSERT_NE(data.find("execution_type: art_method"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_symbols_before_and_after_demangle) {
   std::string data;
   GetProtobufReport(PERF_DATA_WITH_INTERPRETER_FRAMES, &data, {"--show-callchain"});
@@ -183,6 +197,7 @@ TEST(cmd_report_sample, show_symbols_before_and_after_demangle) {
             std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, symdir_option) {
   std::string data;
   GetProtobufReport(PERF_DATA_FOR_BUILD_ID_CHECK, &data);
@@ -192,6 +207,7 @@ TEST(cmd_report_sample, symdir_option) {
   ASSERT_NE(data.find("symbol: main"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_art_jni_methods) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data, {"--show-callchain"});
@@ -200,6 +216,7 @@ TEST(cmd_report_sample, show_art_jni_methods) {
   ASSERT_EQ(data.find("art_jni_trampoline"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, show_unwinding_result) {
   std::string data;
   GetProtobufReport("perf_with_failed_unwinding_debug_info.data", &data,
@@ -207,6 +224,7 @@ TEST(cmd_report_sample, show_unwinding_result) {
   ASSERT_NE(data.find("error_code: ERROR_INVALID_MAP"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, proguard_mapping_file_option) {
   std::string data;
   // Symbols aren't de-obfuscated without proguard mapping file.
@@ -226,6 +244,7 @@ TEST(cmd_report_sample, proguard_mapping_file_option) {
             std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, exclude_include_pid_options) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data, {"--exclude-pid", "31850"});
@@ -235,6 +254,7 @@ TEST(cmd_report_sample, exclude_include_pid_options) {
   ASSERT_NE(data.find("thread_id: 31850"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, exclude_include_tid_options) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data, {"--exclude-tid", "31881"});
@@ -244,6 +264,7 @@ TEST(cmd_report_sample, exclude_include_tid_options) {
   ASSERT_NE(data.find("thread_id: 31881"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, exclude_include_process_name_options) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data,
@@ -255,6 +276,7 @@ TEST(cmd_report_sample, exclude_include_process_name_options) {
   ASSERT_NE(data.find("thread_id: 31881"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, exclude_include_thread_name_options) {
   std::string data;
   GetProtobufReport("perf_display_bitmaps.data", &data,
@@ -266,6 +288,7 @@ TEST(cmd_report_sample, exclude_include_thread_name_options) {
   ASSERT_NE(data.find("thread_id: 31850"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, filter_file_option) {
   std::string filter_data =
       "GLOBAL_BEGIN 684943449406175\n"
@@ -278,6 +301,7 @@ TEST(cmd_report_sample, filter_file_option) {
   ASSERT_EQ(data.find("thread_id: 31850"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_report_sample, remove_gaps_option) {
   auto get_sample_count = [](const std::string& s) {
     size_t count = 0;
