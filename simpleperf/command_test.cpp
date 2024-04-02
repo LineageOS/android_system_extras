@@ -27,6 +27,7 @@ class MockCommand : public Command {
   bool Run(const std::vector<std::string>&) override { return true; }
 };
 
+// @CddTest = 6.1/C-0-2
 TEST(command, CreateCommandInstance) {
   ASSERT_TRUE(CreateCommandInstance("mock1") == nullptr);
   RegisterCommand("mock1", [] { return std::unique_ptr<Command>(new MockCommand); });
@@ -35,6 +36,7 @@ TEST(command, CreateCommandInstance) {
   ASSERT_TRUE(CreateCommandInstance("mock1") == nullptr);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(command, GetAllCommands) {
   size_t command_count = GetAllCommandNames().size();
   RegisterCommand("mock1", [] { return std::unique_ptr<Command>(new MockCommand); });
@@ -43,6 +45,7 @@ TEST(command, GetAllCommands) {
   ASSERT_EQ(command_count, GetAllCommandNames().size());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(command, GetValueForOption) {
   MockCommand command;
   uint64_t value;
@@ -70,6 +73,7 @@ TEST(command, GetValueForOption) {
   ASSERT_DOUBLE_EQ(double_value, 3.2);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(command, PreprocessOptions) {
   MockCommand cmd;
   OptionValueMap options;
@@ -156,6 +160,7 @@ TEST(command, PreprocessOptions) {
                                      &ordered_options, nullptr));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(command, OptionValueMap) {
   OptionValue value;
   value.uint_value = 10;

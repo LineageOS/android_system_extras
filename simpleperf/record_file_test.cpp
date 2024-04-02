@@ -35,6 +35,7 @@
 using namespace simpleperf;
 using namespace simpleperf::PerfFileFormat;
 
+// @CddTest = 6.1/C-0-2
 class RecordFileTest : public ::testing::Test {
  protected:
   void SetUp() override { close(tmpfile_.release()); }
@@ -54,6 +55,7 @@ class RecordFileTest : public ::testing::Test {
   EventAttrIds attr_ids_;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFileTest, smoke) {
   // Write to a record file.
   std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
@@ -102,6 +104,7 @@ TEST_F(RecordFileTest, smoke) {
   ASSERT_TRUE(reader->Close());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFileTest, record_more_than_one_attr) {
   // Write to a record file.
   std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
@@ -126,6 +129,7 @@ TEST_F(RecordFileTest, record_more_than_one_attr) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFileTest, write_meta_info_feature_section) {
   // Write to a record file.
   std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
@@ -150,6 +154,7 @@ TEST_F(RecordFileTest, write_meta_info_feature_section) {
   ASSERT_EQ(reader->GetMetaInfoFeature(), info_map);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFileTest, write_debug_unwind_feature_section) {
   // Write to a record file.
   std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
@@ -180,6 +185,7 @@ TEST_F(RecordFileTest, write_debug_unwind_feature_section) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(RecordFileTest, write_file2_feature_section) {
   // Write to a record file.
   std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);

@@ -22,6 +22,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(get_all_events, smoke) {
   std::vector<std::string> events = GetAllEvents();
   ASSERT_GT(events.size(), 0u);
@@ -36,6 +37,7 @@ static void DoSomeWork() {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(counter, add_event) {
   std::unique_ptr<PerfEventSet> perf(
       PerfEventSet::CreateInstance(PerfEventSet::Type::kPerfForCounting));
@@ -61,6 +63,7 @@ TEST(counter, add_event) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(counter, different_targets) {
   auto test_function = [](std::function<void(PerfEventSet*)> set_target_func) {
     std::unique_ptr<PerfEventSet> perf(
@@ -87,6 +90,7 @@ TEST(counter, different_targets) {
       [](PerfEventSet* perf) { ASSERT_TRUE(perf->MonitorThreadsInCurrentProcess({getpid()})); });
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(counter, start_stop_multiple_times) {
   const size_t TEST_COUNT = 10;
   std::unique_ptr<PerfEventSet> perf(
@@ -116,6 +120,7 @@ TEST(counter, start_stop_multiple_times) {
   }
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(counter, no_change_after_stop) {
   std::unique_ptr<PerfEventSet> perf(
       PerfEventSet::CreateInstance(PerfEventSet::Type::kPerfForCounting));
