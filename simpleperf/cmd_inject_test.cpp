@@ -59,6 +59,7 @@ static void CheckMatchingExpectedData(const std::string& name, std::string& data
   ASSERT_EQ(data, expected_data);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, smoke) {
   std::string data;
   ASSERT_TRUE(RunInjectCmd({}, &data));
@@ -67,6 +68,7 @@ TEST(cmd_inject, smoke) {
   CheckMatchingExpectedData("perf_inject.data", data);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, binary_option) {
   // Test that data for etm_test_loop is generated when selected by --binary.
   std::string data;
@@ -86,10 +88,12 @@ TEST(cmd_inject, binary_option) {
   ASSERT_EQ(data.find("etm_test_loop"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, exclude_perf_option) {
   ASSERT_TRUE(RunInjectCmd({"--exclude-perf"}, nullptr));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, output_option) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -100,6 +104,7 @@ TEST(cmd_inject, output_option) {
   CheckMatchingExpectedData("perf_inject.data", autofdo_data);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, skip_empty_output_file) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -110,6 +115,7 @@ TEST(cmd_inject, skip_empty_output_file) {
   tmpfile.DoNotRemove();
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, inject_kernel_data) {
   const std::string recording_file =
       GetTestData(std::string("etm") + OS_PATH_SEPARATOR + "perf_kernel.data");
@@ -132,6 +138,7 @@ TEST(cmd_inject, inject_kernel_data) {
   ASSERT_EQ(output, autofdo_output);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, unformatted_trace) {
   std::string data;
   std::string perf_with_unformatted_trace =
@@ -142,6 +149,7 @@ TEST(cmd_inject, unformatted_trace) {
   CheckMatchingExpectedData("perf_inject.data", data);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, multiple_input_files) {
   std::string data;
   std::string perf_data = GetTestData(PERF_DATA_ETM_TEST_LOOP);
@@ -165,6 +173,7 @@ TEST(cmd_inject, multiple_input_files) {
   ASSERT_NE(data.find("106c->1074:200"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, merge_branch_list_files) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -178,6 +187,7 @@ TEST(cmd_inject, merge_branch_list_files) {
   ASSERT_NE(autofdo_data.find("106c->1074:200"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, report_warning_when_overflow) {
   CapturedStderr capture;
   std::vector<std::unique_ptr<TemporaryFile>> branch_list_files;
@@ -217,6 +227,7 @@ TEST(cmd_inject, report_warning_when_overflow) {
   ASSERT_NE(autofdo_data.find("106c->1074:18446744073709551615"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, accept_missing_aux_data) {
   // Recorded with "-e cs-etm:u --user-buffer-size 64k sleep 1".
   std::string perf_data = GetTestData("etm/perf_with_missing_aux_data.data");
@@ -225,6 +236,7 @@ TEST(cmd_inject, accept_missing_aux_data) {
   ASSERT_TRUE(RunInjectCmd({"--output", "branch-list", "-i", perf_data, "-o", tmpfile.path}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, read_lbr_data) {
   // Convert perf.data to AutoFDO text format.
   std::string perf_data_path = GetTestData("lbr/perf_lbr.data");
@@ -264,6 +276,7 @@ TEST(cmd_inject, read_lbr_data) {
   ASSERT_NE(data.find("194d->1940:706"), data.npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, inject_small_binary) {
   // etm_test_loop_small, a binary compiled with
   // "-Wl,-z,noseparate-code", where the file is smaller than its text

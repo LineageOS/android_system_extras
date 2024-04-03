@@ -26,6 +26,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 class MapRecordReaderTest : public ::testing::Test {
  protected:
   bool CreateMapRecordReader() {
@@ -54,12 +55,14 @@ class MapRecordReaderTest : public ::testing::Test {
   size_t comm_record_count_ = 0;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(MapRecordReaderTest, ReadKernelMaps) {
   ASSERT_TRUE(CreateMapRecordReader());
   ASSERT_TRUE(reader_->ReadKernelMaps());
   ASSERT_GT(map_record_count_, 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(MapRecordReaderTest, ReadProcessMaps) {
   ASSERT_TRUE(CreateMapRecordReader());
   ASSERT_TRUE(reader_->ReadProcessMaps(getpid(), 0));
@@ -67,6 +70,7 @@ TEST_F(MapRecordReaderTest, ReadProcessMaps) {
   ASSERT_GT(comm_record_count_, 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(MapRecordReaderTest, MapRecordThread) {
 #ifdef __ANDROID__
   std::string tmpdir = "/data/local/tmp";

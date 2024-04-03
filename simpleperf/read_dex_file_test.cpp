@@ -27,6 +27,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(read_dex_file, smoke) {
   std::vector<Symbol> symbols;
   auto symbol_callback = [&](DexFileSymbol* symbol) {

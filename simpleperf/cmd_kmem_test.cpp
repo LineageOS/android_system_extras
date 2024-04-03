@@ -85,15 +85,18 @@ static bool RunKmemRecordCmd(std::vector<std::string> v, const char* output_file
   return KmemCmd()->Run(v);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, record_slab) {
   TEST_IN_ROOT(ASSERT_TRUE(RunKmemRecordCmd({"--slab"})));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, record_fp_callchain_sampling) {
   TEST_IN_ROOT(ASSERT_TRUE(RunKmemRecordCmd({"--slab", "-g"})));
   TEST_IN_ROOT(ASSERT_TRUE(RunKmemRecordCmd({"--slab", "--call-graph", "fp"})));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, record_and_report) {
   TemporaryFile tmp_file;
   TEST_IN_ROOT({
@@ -104,6 +107,7 @@ TEST(kmem_cmd, record_and_report) {
   });
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, record_and_report_callgraph) {
   TemporaryFile tmp_file;
   TEST_IN_ROOT({
@@ -116,6 +120,7 @@ TEST(kmem_cmd, record_and_report_callgraph) {
 
 #endif
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, report) {
   ReportResult result;
   KmemReportFile(PERF_DATA_WITH_KMEM_SLAB_CALLGRAPH_RECORD, {}, &result);
@@ -124,6 +129,7 @@ TEST(kmem_cmd, report) {
   ASSERT_NE(result.content.find("__alloc_skb"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, report_all_sort_options) {
   ReportResult result;
   KmemReportFile(
@@ -134,6 +140,7 @@ TEST(kmem_cmd, report_all_sort_options) {
   ASSERT_NE(result.content.find("GfpFlags"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(kmem_cmd, report_callgraph) {
   ReportResult result;
   KmemReportFile(PERF_DATA_WITH_KMEM_SLAB_CALLGRAPH_RECORD, {"-g"}, &result);

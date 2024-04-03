@@ -26,6 +26,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, read) {
   int fd[2];
   ASSERT_EQ(0, pipe(fd));
@@ -65,6 +66,7 @@ TEST(IOEventLoop, read) {
   close(fd[1]);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, write) {
   int fd[2];
   ASSERT_EQ(0, pipe(fd));
@@ -101,6 +103,7 @@ TEST(IOEventLoop, write) {
   ASSERT_EQ(100, count);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, signal) {
   IOEventLoop loop;
   int count = 0;
@@ -147,10 +150,12 @@ void TestPeriodicEvents(int period_in_us, int iterations) {
   ASSERT_LT(time_used, max_time_in_sec);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, periodic) {
   TestPeriodicEvents(1000, 100);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, one_time_event) {
   int duration_in_us = 1000;
   timeval tv = {};
@@ -179,6 +184,7 @@ TEST(IOEventLoop, one_time_event) {
   ASSERT_LT(time_used, max_time_in_sec);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, read_and_del_event) {
   int fd[2];
   ASSERT_EQ(0, pipe(fd));
@@ -204,6 +210,7 @@ TEST(IOEventLoop, read_and_del_event) {
   close(fd[1]);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, disable_enable_event) {
   int fd[2];
   ASSERT_EQ(0, pipe(fd));
@@ -241,6 +248,7 @@ TEST(IOEventLoop, disable_enable_event) {
   close(fd[1]);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, disable_enable_periodic_event) {
   timeval tv;
   tv.tv_sec = 0;
@@ -267,11 +275,13 @@ TEST(IOEventLoop, disable_enable_periodic_event) {
   ASSERT_EQ(2u, periodic_count);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, exit_before_loop) {
   IOEventLoop loop;
   ASSERT_TRUE(loop.ExitLoop());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(IOEventLoop, priority) {
   int low_priority_fd[2];
   ASSERT_EQ(0, pipe(low_priority_fd));

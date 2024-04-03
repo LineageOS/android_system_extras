@@ -23,6 +23,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(probe_events, ParseKprobeEventName) {
   ProbeEvent event;
   ASSERT_TRUE(ProbeEvents::ParseKprobeEventName("p:myprobe do_sys_open", &event));

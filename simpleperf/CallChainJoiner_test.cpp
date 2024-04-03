@@ -33,6 +33,7 @@ static bool JoinCallChain(LRUCache& cache, uint32_t tid, const std::vector<uint6
   return tmp_ip == expected_output_ip && tmp_sp == expected_output_sp;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(LRUCache, different_nodes) {
   LRUCache cache(sizeof(CacheNode) * 2, 1);
   ASSERT_EQ(cache.Stat().max_node_count, 2u);
@@ -65,6 +66,7 @@ TEST(LRUCache, different_nodes) {
   ASSERT_NE(cache.FindNode(1, ip[0], sp2[0]), nullptr);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(LRUCache, extend_chains) {
   // matched_node_count_to_extend_callchain = 1
   // c -> b
@@ -93,6 +95,7 @@ TEST(LRUCache, extend_chains) {
   ASSERT_EQ(cache3.Stat().used_node_count, 4u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(LRUCache, avoid_ip_sp_loop) {
   LRUCache cache(sizeof(CacheNode) * 2, 1);
   std::vector<uint64_t> ip = {0xa, 0xb};
@@ -104,6 +107,7 @@ TEST(LRUCache, avoid_ip_sp_loop) {
   ASSERT_EQ(cache.Stat().recycled_node_count, 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(LRUCache, one_chain) {
   LRUCache cache(sizeof(CacheNode) * 4, 1);
   ASSERT_EQ(cache.Stat().max_node_count, 4u);
@@ -125,6 +129,7 @@ TEST(LRUCache, one_chain) {
   ASSERT_EQ(cache.Stat().recycled_node_count, 0u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(LRUCache, many_chains) {
   LRUCache cache(sizeof(CacheNode) * 12, 1);
   // 4 -> 3 -> 2 -> 1
@@ -149,6 +154,7 @@ TEST(LRUCache, many_chains) {
   ASSERT_EQ(cache.FindNode(0, 0xa, 0xa), nullptr);
 }
 
+// @CddTest = 6.1/C-0-2
 class CallChainJoinerTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -164,6 +170,7 @@ class CallChainJoinerTest : public ::testing::Test {
   std::unique_ptr<ScopedTempFiles> scoped_temp_files_;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainJoinerTest, smoke) {
   CallChainJoiner joiner(sizeof(CacheNode) * 1024, 1, true);
   for (pid_t pid = 0; pid < 10; ++pid) {
@@ -230,6 +237,7 @@ TEST_F(CallChainJoinerTest, smoke) {
   ASSERT_EQ(joiner.GetStat().after_join_max_chain_length, 5u);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainJoinerTest, no_original_chains) {
   CallChainJoiner joiner(sizeof(CacheNode) * 1024, 1, false);
   ASSERT_TRUE(joiner.AddCallChain(0, 0, CallChainJoiner::ORIGINAL_OFFLINE, {1}, {1}));
@@ -249,6 +257,7 @@ TEST_F(CallChainJoinerTest, no_original_chains) {
   joiner.DumpStat();
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(CallChainJoinerTest, no_chains) {
   CallChainJoiner joiner(sizeof(CacheNode) * 1024, 1, false);
   ASSERT_TRUE(joiner.JoinCallChains());

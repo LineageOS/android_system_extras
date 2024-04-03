@@ -132,6 +132,7 @@ class SampleTreeTest : public testing::Test {
   std::unique_ptr<TestSampleTreeBuilder> sample_tree_builder;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, ip_in_map) {
   sample_tree_builder->AddSample(1, 1, 1, false);
   sample_tree_builder->AddSample(1, 1, 2, false);
@@ -142,6 +143,7 @@ TEST_F(SampleTreeTest, ip_in_map) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, different_pid) {
   sample_tree_builder->AddSample(1, 1, 1, false);
   sample_tree_builder->AddSample(2, 2, 1, false);
@@ -152,6 +154,7 @@ TEST_F(SampleTreeTest, different_pid) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, different_tid) {
   sample_tree_builder->AddSample(1, 1, 1, false);
   sample_tree_builder->AddSample(1, 11, 1, false);
@@ -162,6 +165,7 @@ TEST_F(SampleTreeTest, different_tid) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, different_comm) {
   sample_tree_builder->AddSample(1, 1, 1, false);
   thread_tree.SetThreadName(1, 1, "p1t1_comm2");
@@ -173,6 +177,7 @@ TEST_F(SampleTreeTest, different_comm) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, different_map) {
   sample_tree_builder->AddSample(1, 1, 1, false);
   sample_tree_builder->AddSample(1, 1, 6, false);
@@ -183,6 +188,7 @@ TEST_F(SampleTreeTest, different_map) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, unmapped_sample) {
   sample_tree_builder->AddSample(1, 1, 0, false);
   sample_tree_builder->AddSample(1, 1, 31, false);
@@ -194,6 +200,7 @@ TEST_F(SampleTreeTest, unmapped_sample) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(SampleTreeTest, map_kernel) {
   sample_tree_builder->AddSample(1, 1, 10, true);
   sample_tree_builder->AddSample(1, 1, 10, false);
@@ -204,6 +211,7 @@ TEST_F(SampleTreeTest, map_kernel) {
   CheckSamples(expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(sample_tree, overlapped_map) {
   ThreadTree thread_tree;
   TestSampleTreeBuilder sample_tree_builder(&thread_tree);
@@ -226,6 +234,7 @@ TEST(sample_tree, overlapped_map) {
   CheckSamples(sample_tree_builder.GetSamples(), expected_samples);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(thread_tree, symbol_ULLONG_MAX) {
   ThreadTree thread_tree;
   thread_tree.ShowIpForUnknownSymbol();

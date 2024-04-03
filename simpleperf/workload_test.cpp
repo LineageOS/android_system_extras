@@ -24,6 +24,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(workload, success) {
   IOEventLoop loop;
   ASSERT_TRUE(loop.AddSignalEvent(SIGCHLD, [&]() { return loop.ExitLoop(); }));
@@ -34,6 +35,7 @@ TEST(workload, success) {
   ASSERT_TRUE(loop.RunLoop());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(workload, execvp_failure) {
   auto workload = Workload::CreateWorkload({"/dev/null"});
   ASSERT_TRUE(workload != nullptr);
@@ -54,6 +56,7 @@ static void run_signaled_workload() {
   exit(0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(workload, signaled_warning) {
   ASSERT_EXIT(run_signaled_workload(), testing::ExitedWithCode(0),
               "child process was terminated by signal");
@@ -72,6 +75,7 @@ static void run_exit_nonzero_workload() {
   exit(0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(workload, exit_nonzero_warning) {
   ASSERT_EXIT(run_exit_nonzero_workload(), testing::ExitedWithCode(0),
               "child process exited with exit code");

@@ -20,6 +20,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 TEST(EventSelectionSet, set_sample_rate_for_new_events) {
   EventSelectionSet event_selection_set(false);
   ASSERT_TRUE(event_selection_set.AddEventType("cpu-clock:u"));
@@ -43,6 +44,7 @@ TEST(EventSelectionSet, set_sample_rate_for_new_events) {
   ASSERT_EQ(attrs[3].attr.sample_freq, 200);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(EventSelectionSet, add_event_with_sample_rate) {
   EventSelectionSet event_selection_set(false);
   ASSERT_TRUE(event_selection_set.AddEventType("cpu-clock:u"));
@@ -57,6 +59,7 @@ TEST(EventSelectionSet, add_event_with_sample_rate) {
   ASSERT_EQ(attrs[1].attr.sample_period, 1);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(EventSelectionSet, set_cpus_for_new_events) {
   EventSelectionSet event_selection_set(false);
   std::vector<int> online_cpus = GetOnlineCpus();

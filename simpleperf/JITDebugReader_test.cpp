@@ -32,6 +32,7 @@
 using namespace simpleperf;
 using namespace simpleperf::JITDebugReader_impl;
 
+// @CddTest = 6.1/C-0-2
 TEST(TempSymFile, smoke) {
   TemporaryFile tmpfile;
   std::unique_ptr<TempSymFile> symfile = TempSymFile::Create(tmpfile.path, false);
@@ -51,6 +52,7 @@ TEST(TempSymFile, smoke) {
   ASSERT_EQ(strncmp(test_data.c_str(), buf, test_data.size()), 0);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(JITDebugReader, read_dex_file_in_memory) {
   // 1. Create dex file in memory. Use mmap instead of malloc, to avoid the pointer from
   // being modified by memory tag (or pointer authentication?) on ARM64.

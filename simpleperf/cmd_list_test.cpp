@@ -21,6 +21,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 class ListCommandTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
@@ -31,22 +32,27 @@ class ListCommandTest : public ::testing::Test {
   std::unique_ptr<Command> list_cmd;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ListCommandTest, no_options) {
   ASSERT_TRUE(list_cmd->Run({}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ListCommandTest, one_option) {
   ASSERT_TRUE(list_cmd->Run({"sw"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ListCommandTest, multiple_options) {
   ASSERT_TRUE(list_cmd->Run({"hw", "tracepoint"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ListCommandTest, show_features_option) {
   ASSERT_TRUE(list_cmd->Run({"--show-features"}));
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ListCommandTest, pmu_option) {
   ASSERT_TRUE(list_cmd->Run({"pmu"}));
 }

@@ -35,6 +35,7 @@ static std::unique_ptr<Command> DebugUnwindCmd() {
   return CreateCommandInstance("debug-unwind");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, unwind_sample_option) {
   std::string input_data = GetTestData(PERF_DATA_NO_UNWIND);
   CaptureStdout capture;
@@ -44,6 +45,7 @@ TEST(cmd_debug_unwind, unwind_sample_option) {
   ASSERT_NE(capture.Finish().find("sample_time: 1516379654300997"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, sample_time_option) {
   std::string input_data = GetTestData(PERF_DATA_NO_UNWIND);
   CaptureStdout capture;
@@ -58,6 +60,7 @@ TEST(cmd_debug_unwind, sample_time_option) {
   ASSERT_NE(output.find("sample_time: 1516379655959122"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, output_option) {
   std::string input_data = GetTestData(PERF_DATA_NO_UNWIND);
   TemporaryFile tmpfile;
@@ -69,6 +72,7 @@ TEST(cmd_debug_unwind, output_option) {
   ASSERT_NE(output.find("sample_time: 1516379654300997"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, symfs_option) {
   std::string input_data = GetTestData(NATIVELIB_IN_APK_PERF_DATA);
   CaptureStdout capture;
@@ -80,6 +84,7 @@ TEST(cmd_debug_unwind, symfs_option) {
             std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, unwind_with_ip_zero_in_callchain) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());
@@ -88,6 +93,7 @@ TEST(cmd_debug_unwind, unwind_with_ip_zero_in_callchain) {
   ASSERT_NE(capture.Finish().find("sample_time: 152526249937103"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, unwind_embedded_lib_in_apk) {
   // Check if we can unwind through a native library embedded in an apk. In the profiling data
   // file, there is a sample with ip address pointing to
@@ -107,6 +113,7 @@ TEST(cmd_debug_unwind, unwind_embedded_lib_in_apk) {
   ASSERT_NE(output.find("dso_2: /bionic/lib64/libc.so"), std::string::npos) << output;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, unwind_sample_in_unwinding_debug_info_file) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());
@@ -116,6 +123,7 @@ TEST(cmd_debug_unwind, unwind_sample_in_unwinding_debug_info_file) {
   ASSERT_NE(output.find("symbol_5: android.os.Handler.post"), std::string::npos) << output;
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, skip_sample_print_option) {
   std::string input_data = GetTestData(PERF_DATA_NO_UNWIND);
   CaptureStdout capture;
@@ -128,6 +136,7 @@ TEST(cmd_debug_unwind, skip_sample_print_option) {
   ASSERT_NE(output.find("unwinding_sample_count: 8"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, generate_test_file) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -143,6 +152,7 @@ TEST(cmd_debug_unwind, generate_test_file) {
   ASSERT_NE(output.find("symbol_2: android.os.Handler.enqueueMessage"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, generate_test_file_with_build_id) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -157,6 +167,7 @@ TEST(cmd_debug_unwind, generate_test_file_with_build_id) {
   ASSERT_STREQ(build_ids[0].filename, "/apex/com.android.runtime/lib64/bionic/libc.so");
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, generate_report) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -169,6 +180,7 @@ TEST(cmd_debug_unwind, generate_report) {
   ASSERT_NE(output.find("symbol_2: android.os.Handler.enqueueMessage"), std::string::npos);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_debug_unwind, unwind_sample_for_small_map_range) {
   CaptureStdout capture;
   ASSERT_TRUE(capture.Start());

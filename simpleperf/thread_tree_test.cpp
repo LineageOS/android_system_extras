@@ -22,6 +22,7 @@
 
 using namespace simpleperf;
 
+// @CddTest = 6.1/C-0-2
 class ThreadTreeTest : public ::testing::Test {
  protected:
   void AddMap(uint64_t start, uint64_t end, const std::string& name) {
@@ -76,6 +77,7 @@ class ThreadTreeTest : public ::testing::Test {
   ThreadTree thread_tree_;
 };
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, maps_smoke) {
   AddMap(0, 5, "0");
   AddMap(10, 15, "1");
@@ -100,6 +102,7 @@ TEST_F(ThreadTreeTest, maps_smoke) {
   CheckMaps();
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, jit_maps_before_fork) {
   // Maps for JIT symfiles can arrive before fork records.
   thread_tree_.AddThreadMap(0, 0, 0, 1, 0, "0", map_flags::PROT_JIT_SYMFILE_MAP);
@@ -114,6 +117,7 @@ TEST_F(ThreadTreeTest, jit_maps_before_fork) {
   ASSERT_EQ(map->flags, map_flags::PROT_JIT_SYMFILE_MAP);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, reused_tid) {
   // Process 1 has thread 1 and 2.
   thread_tree_.ForkThread(1, 2, 1, 1);
@@ -123,12 +127,14 @@ TEST_F(ThreadTreeTest, reused_tid) {
   thread_tree_.ForkThread(2, 2, 1, 1);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, reused_tid_without_thread_exit) {
   // Similar to the above test, but the thread exit record is missing.
   thread_tree_.ForkThread(1, 2, 1, 1);
   thread_tree_.ForkThread(2, 2, 1, 1);
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, add_symbols_for_process) {
   std::string symbol_map(
       "0x2000 0x20 two\n"
@@ -144,6 +150,7 @@ TEST_F(ThreadTreeTest, add_symbols_for_process) {
   ASSERT_STREQ("three", FindSymbol(1, 1, 0x302f)->Name());
 }
 
+// @CddTest = 6.1/C-0-2
 TEST_F(ThreadTreeTest, invalid_fork) {
   // tid == ptid
   ASSERT_FALSE(thread_tree_.ForkThread(1, 2, 1, 2));

@@ -90,6 +90,7 @@ static void RecordApp(const std::string& package_name, const std::string& apk_pa
 
 #endif  // defined(__ANDROID__)
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_api, java_app) {
 #if defined(__ANDROID__)
   RecordApp("simpleperf.demo.java_api", GetTestData("java_api.apk"));
@@ -98,6 +99,7 @@ TEST(cmd_api, java_app) {
 #endif
 }
 
+// @CddTest = 6.1/C-0-2
 TEST(cmd_api, native_app) {
 #if defined(__ANDROID__)
   RecordApp("simpleperf.demo.cpp_api", GetTestData("cpp_api.apk"));
