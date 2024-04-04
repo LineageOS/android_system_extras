@@ -151,6 +151,9 @@ $ ./report_html.py --add_disassembly
 # Adding disassembly for all binaries can cost a lot of time. So we can choose to only add
 # disassembly for selected binaries.
 $ ./report_html.py --add_disassembly --binary_filter libgame.so
+# Add disassembly and source code for binaries belonging to an app with package name
+# com.example.myapp.
+$ ./report_html.py --add_source_code --add_disassembly --binary_filter com.example.myapp
 
 # report_html.py accepts more than one recording data file.
 $ ./report_html.py -i perf1.data perf2.data
