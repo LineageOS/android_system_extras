@@ -1027,7 +1027,10 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--disassemble-job-size', type=int, default=1024*1024,
                         help='address range for one disassemble job')
     parser.add_argument('--binary_filter', nargs='+', help="""Annotate source code and disassembly
-                        only for selected binaries.""")
+                        only for selected binaries, whose recorded paths contains [BINARY_FILTER] as
+                        a substring. Example: to select binaries belonging to an app with package
+                        name 'com.example.myapp', use `--binary_filter com.example.myapp`.
+                        """)
     parser.add_argument(
         '-j', '--jobs', type=int, default=os.cpu_count(),
         help='Use multithreading to speed up disassembly and source code annotation.')
