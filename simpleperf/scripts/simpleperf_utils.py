@@ -844,6 +844,7 @@ class Objdump(object):
                 real_path]
         if arch == 'arm' and 'llvm-objdump' in objdump_path:
             args += ['--print-imm-hex']
+        logging.debug('disassembling: %s', ' '.join(args))
         try:
             subproc = subprocess.Popen(args, stdout=subprocess.PIPE)
             (stdoutdata, _) = subproc.communicate()
