@@ -75,6 +75,9 @@ std::vector<int> GetOnlineCpus() {
 
 static void GetAllModuleFiles(const std::string& path,
                               std::unordered_map<std::string, std::string>* module_file_map) {
+  if (!IsDir(path)) {
+    return;
+  }
   for (const auto& name : GetEntriesInDir(path)) {
     std::string entry_path = path + "/" + name;
     if (IsRegularFile(entry_path) && android::base::EndsWith(name, ".ko")) {
@@ -94,9 +97,13 @@ static std::vector<KernelMmap> GetModulesInUse() {
   }
   std::unordered_map<std::string, std::string> module_file_map;
 #if defined(__ANDROID__)
-  // Search directories listed in "File locations" section in
-  // https://source.android.com/devices/architecture/kernel/modular-kernels.
-  for (const auto& path : {"/vendor/lib/modules", "/odm/lib/modules", "/lib/modules"}) {
+  // On Android, kernel modules are stored in /system/lib/modules, /vendor/lib/modules,
+  // /odm/lib/modules.
+  // See https://source.android.com/docs/core/architecture/partitions/gki-partitions and
+  // https://source.android.com/docs/core/architecture/partitions/vendor-odm-dlkm-partition.
+  // They can also be stored in vendor_kernel_ramdisk.img, which isn't accessible from userspace.
+  // See https://source.android.com/docs/core/architecture/kernel/kernel-module-support.
+  for (const auto& path : {"/system/lib/modules", "/vendor/lib/modules", "/odm/lib/modules"}) {
     GetAllModuleFiles(path, &module_file_map);
   }
 #else

@@ -875,8 +875,8 @@ class KernelModuleDso : public Dso {
     if (elf) {
       status = elf->ParseSymbols(symbol_callback);
     }
-    ReportReadElfSymbolResult(status, path_, GetDebugFilePath(),
-                              symbols_.empty() ? android::base::WARNING : android::base::DEBUG);
+    // Don't warn when a kernel module is missing. As a backup, we read symbols from /proc/kallsyms.
+    ReportReadElfSymbolResult(status, path_, GetDebugFilePath(), android::base::DEBUG);
     SortAndFixSymbols(symbols);
     return symbols;
   }
@@ -896,6 +896,10 @@ class KernelModuleDso : public Dso {
     // 2. Find a module symbol in .text section, get its address in memory from /proc/kallsyms,
     // and its vaddr_in_file from the kernel module file. Then other symbols in .text section can
     // be mapped in the same way. Below we use the second method.
+
+    if (!IsRegularFile(GetDebugFilePath())) {
+      return;
+    }
 
     // 1. Select a module symbol in /proc/kallsyms.
     kernel_dso_->LoadSymbols();

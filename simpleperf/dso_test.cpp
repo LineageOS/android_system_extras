@@ -294,8 +294,9 @@ TEST(dso, kernel_module_CalculateMinVaddr) {
   ASSERT_TRUE(kernel_dso);
   const uint64_t module_memory_start = 0xffffffa9bc790000ULL;
   const uint64_t module_memory_size = 0x8d7000ULL;
+  TemporaryFile tmpfile;
   auto module_dso =
-      Dso::CreateKernelModuleDso("fake_module.ko", module_memory_start,
+      Dso::CreateKernelModuleDso(tmpfile.path, module_memory_start,
                                  module_memory_start + module_memory_size, kernel_dso.get());
   ASSERT_TRUE(module_dso);
 
