@@ -57,8 +57,6 @@ pub struct Config {
     pub build_fingerprint: String,
     /// Interval between collections.
     pub collection_interval: Duration,
-    /// Length of time each collection lasts for.
-    pub sampling_period: Duration,
     /// An optional filter to limit which binaries to or not to profile.
     pub binary_filter: String,
     /// Maximum size of the trace directory.
@@ -75,7 +73,6 @@ impl Config {
                 "collection_interval",
                 600,
             )?),
-            sampling_period: Duration::from_millis(get_device_config("sampling_period", 500)?),
             binary_filter: get_device_config("binary_filter", DEFAULT_BINARY_FILTER.to_string())?,
             max_trace_limit: get_device_config(
                 "max_trace_limit",
@@ -121,6 +118,13 @@ where
     let config =
         flags_rust::GetServerConfigurableFlag(PROFCOLLECT_CONFIG_NAMESPACE, key, &default_value);
     Ok(T::from_str(&config)?)
+}
+
+pub fn get_sampling_period() -> Duration {
+    let default_period = 500;
+    Duration::from_millis(
+        get_device_config("sampling_period", default_period).unwrap_or(default_period),
+    )
 }
 
 fn get_property<T>(key: &str, default_value: T) -> Result<T>

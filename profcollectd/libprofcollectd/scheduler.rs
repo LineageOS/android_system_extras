@@ -25,7 +25,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::config::{Config, LOG_FILE, PROFILE_OUTPUT_DIR, TRACE_OUTPUT_DIR};
+use crate::config::{get_sampling_period, Config, LOG_FILE, PROFILE_OUTPUT_DIR, TRACE_OUTPUT_DIR};
 use crate::trace_provider::{self, TraceProvider};
 use anyhow::{anyhow, ensure, Context, Result};
 
@@ -73,7 +73,7 @@ impl Scheduler {
                             trace_provider.lock().unwrap().trace(
                                 &TRACE_OUTPUT_DIR,
                                 "periodic",
-                                &config.sampling_period,
+                                &get_sampling_period(),
                                 &config.binary_filter,
                             );
                         }
@@ -100,7 +100,7 @@ impl Scheduler {
             trace_provider.lock().unwrap().trace(
                 &TRACE_OUTPUT_DIR,
                 tag,
-                &config.sampling_period,
+                &get_sampling_period(),
                 &config.binary_filter,
             );
         }
