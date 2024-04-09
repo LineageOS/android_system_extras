@@ -982,10 +982,11 @@ class ReportGenerator(object):
         self.hw.open_tag('script').add(
             "google.charts.load('current', {'packages': ['corechart', 'table']});").close_tag()
         self.hw.open_tag('style', type='text/css').add("""
-            .colForLine { width: 50px; }
-            .colForCount { width: 100px; }
+            .colForLine { width: 50px; text-align: right; }
+            .colForCount { width: 100px; text-align: right; }
             .tableCell { font-size: 17px; }
             .boldTableCell { font-weight: bold; font-size: 17px; }
+            .textRight { text-align: right; }
             """).close_tag()
         self.hw.close_tag('head')
         self.hw.open_tag('body')
