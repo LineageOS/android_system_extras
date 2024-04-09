@@ -379,10 +379,10 @@ class ChartView {
         };
         if (isClockEvent(this.eventInfo)) {
             this.getSampleWeight = function (eventCount) {
-                return (eventCount / 1000000.0).toFixed(3) + ' ms';
+                return (eventCount / 1000000.0).toFixed(3).toLocaleString() + ' ms';
             };
         } else {
-            this.getSampleWeight = (eventCount) => '' + eventCount;
+            this.getSampleWeight = (eventCount) => eventCount.toLocaleString();
         }
     }
 
@@ -622,10 +622,10 @@ class SampleTableWeightSelectorView {
             return (eventCount) => (eventCount * 100.0 / this.eventCount).toFixed(2) + '%';
         }
         if (this.curOption == 'event_count') {
-            return (eventCount) => '' + eventCount;
+            return (eventCount) => eventCount.toLocaleString();
         }
         if (this.curOption == 'event_count_in_ms') {
-            return (eventCount) => (eventCount / 1000000.0).toFixed(3);
+            return (eventCount) => (eventCount / 1000000.0).toFixed(3).toLocaleString();
         }
     }
 
@@ -706,7 +706,7 @@ class SampleTableView {
                     data: data,
                     responsive: true,
                     columnDefs: [
-                        { orderSequence: [ 'desc' ], targets: [0, 1, 2] },
+                        { orderSequence: [ 'desc' ], className: 'textRight', targets: [0, 1, 2] },
                     ],
                 });
                 dataTable.column(7).visible(false);
@@ -1082,13 +1082,13 @@ class SampleWeightSelectorView {
         }
         if (this.curOption == 'event_count') {
             return function(eventCount, _) {
-                return '' + eventCount;
+                return eventCount.toLocaleString();
             };
         }
         if (this.curOption == 'event_count_in_ms') {
             return function(eventCount, _) {
                 let timeInMs = eventCount / 1000000.0;
-                return timeInMs.toFixed(3) + ' ms';
+                return timeInMs.toFixed(3).toLocaleString() + ' ms';
             };
         }
     }
@@ -1590,12 +1590,9 @@ class SourceCodeView {
             data.addColumn('string', 'Self');
             data.addColumn('string', 'Code');
             data.addRows(rows);
-            for (let i = 0; i < rows.length; ++i) {
-                data.setProperty(i, 0, 'className', 'colForLine');
-                for (let j = 1; j <= 2; ++j) {
-                    data.setProperty(i, j, 'className', 'colForCount');
-                }
-            }
+            data.setColumnProperty(0, 'className', 'colForLine');
+            data.setColumnProperty(1, 'className', 'colForCount');
+            data.setColumnProperty(2, 'className', 'colForCount');
             this.div.append(getHtml('pre', {text: sourceFile.path}));
             let wrapperDiv = $('<div>');
             wrapperDiv.appendTo(this.div);
@@ -1687,11 +1684,8 @@ class DisassemblyView {
         data.addColumn('string', 'Self');
         data.addColumn('string', 'Code');
         data.addRows(rows);
-        for (let i = 0; i < rows.length; ++i) {
-            for (let j = 0; j < 2; ++j) {
-                data.setProperty(i, j, 'className', 'colForCount');
-            }
-        }
+        data.setColumnProperty(0, 'className', 'colForCount');
+        data.setColumnProperty(1, 'className', 'colForCount');
         let wrapperDiv = $('<div>');
         wrapperDiv.appendTo(this.div);
         let table = new google.visualization.Table(wrapperDiv.get(0));
