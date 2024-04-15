@@ -792,6 +792,11 @@ class RecordingAppHelper {
     };
     ProcessSymbolsInPerfDataFile(GetDataPath(), callback);
     if (!success) {
+      if (IsInEmulator() && !HasSample()) {
+        // In emulator, the monitored app may not have a chance to run.
+        GTEST_LOG_(INFO) << "No samples are recorded. Skip checking symbols.";
+        return true;
+      }
       DumpData();
     }
     return success;
@@ -802,6 +807,24 @@ class RecordingAppHelper {
   std::string GetDataPath() const { return perf_data_file_.path; }
 
  private:
+  bool HasSample() {
+    std::unique_ptr<RecordFileReader> reader = RecordFileReader::CreateInstance(GetDataPath());
+    if (!reader) {
+      return false;
+    }
+    bool has_sample = false;
+    auto process_record = [&](std::unique_ptr<Record> r) {
+      if (r->type() == PERF_RECORD_SAMPLE) {
+        has_sample = true;
+      }
+      return true;
+    };
+    if (!reader->ReadDataSection(process_record)) {
+      return false;
+    }
+    return has_sample;
+  }
+
   AppHelper app_helper_;
   TemporaryFile perf_data_file_;
 };
