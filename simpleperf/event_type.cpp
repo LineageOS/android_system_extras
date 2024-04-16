@@ -104,7 +104,11 @@ class TracepointStringFinder : public EventTypeFinder {
  protected:
   void LoadTypes() override {
     for (const auto& line : android::base::Split(s_, "\n")) {
-      std::vector<std::string> items = android::base::Split(line, " ");
+      std::string str = android::base::Trim(line);
+      if (str.empty()) {
+        continue;
+      }
+      std::vector<std::string> items = android::base::Split(str, " ");
       CHECK_EQ(items.size(), 2u);
       std::string event_name = items[0];
       uint64_t id;
