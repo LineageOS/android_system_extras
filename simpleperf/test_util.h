@@ -201,3 +201,5 @@ class AppHelper {
   std::vector<std::string> installed_packages_;
   std::unique_ptr<Workload> app_start_proc_;
 };
+
+bool IsInEmulator();
