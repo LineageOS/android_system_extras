@@ -117,18 +117,23 @@ static bool HasNonZeroInstructionEventCount() {
   return false;
 }
 
+bool IsInEmulator() {
+  std::string fingerprint = android::base::GetProperty("ro.system.build.fingerprint", "");
+  return android::base::StartsWith(fingerprint, "google/sdk_gphone") ||
+         android::base::StartsWith(fingerprint, "google/sdk_gpc") ||
+         android::base::StartsWith(fingerprint, "generic/cf") ||
+         android::base::StartsWith(fingerprint, "generic/aosp_cf");
+}
+
 bool HasHardwareCounter() {
   static int has_hw_counter = -1;
   if (has_hw_counter == -1) {
     has_hw_counter = 1;
     auto arch = GetTargetArch();
-    std::string fingerprint = android::base::GetProperty("ro.system.build.fingerprint", "");
-    bool is_emulator = android::base::StartsWith(fingerprint, "google/sdk_gphone") ||
-                       android::base::StartsWith(fingerprint, "google/sdk_gpc") ||
-                       android::base::StartsWith(fingerprint, "generic/cf");
+
     bool in_native_abi = IsInNativeAbi() == std::optional(true);
 
-    if (arch == ARCH_X86_64 || arch == ARCH_X86_32 || !in_native_abi || is_emulator) {
+    if (arch == ARCH_X86_64 || arch == ARCH_X86_32 || !in_native_abi || IsInEmulator()) {
       // On x86 and x86_64, or when we are not in native abi, it's likely to run on an emulator or
       // vm without hardware perf counters. It's hard to enumerate them all. So check the support
       // at runtime.
