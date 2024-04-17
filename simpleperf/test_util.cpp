@@ -176,7 +176,12 @@ bool HasPmuCounter() {
 bool HasTracepointEvents() {
   static int has_tracepoint_events = -1;
   if (has_tracepoint_events == -1) {
-    has_tracepoint_events = (GetTraceFsDir() != nullptr) ? 1 : 0;
+    has_tracepoint_events = 0;
+    if (const char* dir = GetTraceFsDir(); dir != nullptr) {
+      if (IsDir(std::string(dir) + "/events/sched/sched_switch")) {
+        has_tracepoint_events = 1;
+      }
+    }
   }
   return has_tracepoint_events == 1;
 }
