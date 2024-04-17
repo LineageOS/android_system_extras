@@ -229,6 +229,7 @@ void ETMRecorder::BuildEtmConfig() {
       }
       if (cycles_supported) {
         etm_event_config_ |= 1ULL << ETM_OPT_CYCACC;
+        etm_config_reg_ |= 1U << ETM4_CFG_BIT_CCI;
 
         if (cycle_threshold_) {
           cc_threshold_config_ |= cycle_threshold_;
