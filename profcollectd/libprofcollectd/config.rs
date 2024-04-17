@@ -27,7 +27,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
-const PROFCOLLECT_CONFIG_NAMESPACE: &str = "profcollect_native_boot";
+const PROFCOLLECT_CONFIG_NAMESPACE: &str = "aconfig_flags.profcollect_native_boot";
 const PROFCOLLECT_NODE_ID_PROPERTY: &str = "persist.profcollectd.node_id";
 
 const DEFAULT_BINARY_FILTER: &str =
