@@ -55,6 +55,7 @@ struct EventType {
   bool IsHardwareEvent() const {
     return type == PERF_TYPE_HARDWARE || type == PERF_TYPE_HW_CACHE || type == PERF_TYPE_RAW;
   }
+  bool IsTracepointEvent() const { return type == PERF_TYPE_TRACEPOINT; }
 
   std::vector<int> GetPmuCpumask();
 
