@@ -246,8 +246,8 @@ static void PrintRawEventTypes(const std::string& type_desc) {
 }
 
 static bool IsEventTypeSupported(const EventType& event_type) {
-  // Because PMU events are provided by kernel, we assume it's supported.
-  if (event_type.IsPmuEvent()) {
+  // PMU and tracepoint events are provided by kernel. So we assume they're supported.
+  if (event_type.IsPmuEvent() || event_type.IsTracepointEvent()) {
     return true;
   }
   perf_event_attr attr = CreateDefaultPerfEventAttr(event_type);
