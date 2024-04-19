@@ -20,7 +20,7 @@ package android;
 // Keep in sync with proto files on EDI backend. Otherwise, new fields will
 // go ignored.
 
-// Next: 6
+// Next: 7
 message DynamicPartitionsDeviceInfoProto {
     bool enabled = 1;
     bool retrofit = 2;
@@ -57,4 +57,14 @@ message DynamicPartitionsDeviceInfoProto {
         uint64 alignment_offset = 5 [json_name = "alignment_offset"];
     }
     repeated BlockDevice block_devices = 5 [json_name = "block_devices"];
+
+    // Next: 4
+    message SuperDevice {
+        string name = 1;
+        /** Used space in bytes */
+        uint64 used_size = 2 [json_name = "used_size"];
+        /** Total size of the super in bytes */
+        uint64 total_size = 3 [json_name = "total_size"];
+    }
+    SuperDevice super_device = 6 [json_name = "super_device"];
 }
