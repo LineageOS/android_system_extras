@@ -81,20 +81,15 @@ branch with count info for binary2
 
 We need to split perf_inject.data, and make sure one file only contains info for one binary.
 
-Then we can use [AutoFDO](https://github.com/google/autofdo) to create profile. AutoFDO only works
-for binaries having an executable segment as its first loadable segment. But binaries built in
-Android may not follow this rule. Simpleperf inject command knows how to work around this problem.
-But there is a check in AutoFDO forcing binaries to start with an executable segment. We need to
-disable the check in AutoFDO, by commenting out L127-L136 in
-https://github.com/google/autofdo/commit/188db2834ce74762ed17108ca344916994640708#diff-2d132ecbb5e4f13e0da65419f6d1759dd27d6b696786dd7096c0c34d499b1710R127-R136.
-Then we can use `create_llvm_prof` in AutoFDO to create profiles used by clang.
+Then we can use [AutoFDO](https://github.com/google/autofdo) to create profile. Follow README.md
+in AutoFDO to build create_llvm_prof, then use `create_llvm_prof` to create profiles for clang.
 
 ```sh
 # perf_inject_binary1.data is split from perf_inject.data, and only contains branch info for binary1.
-host $ autofdo/create_llvm_prof -profile perf_inject_binary1.data -profiler text -binary path_of_binary1 -out a.prof -format binary
+host $ create_llvm_prof -profile perf_inject_binary1.data -profiler text -binary path_of_binary1 -out a.prof -format binary
 
 # perf_inject_kernel.data is split from perf_inject.data, and only contains branch info for [kernel.kallsyms].
-host $ autofdo/create_llvm_prof -profile perf_inject_kernel.data -profiler text -binary vmlinux -out a.prof -format binary
+host $ create_llvm_prof -profile perf_inject_kernel.data -profiler text -binary vmlinux -out a.prof -format binary
 ```
 
 Then we can use a.prof for PGO during compilation, via `-fprofile-sample-use=a.prof`.
@@ -121,14 +116,13 @@ Step 2: Run `etm_test_loop` on device, and collect ETM data for its running.
 (host) <AOSP>$ adb push out/target/product/generic_arm64/system/bin/etm_test_loop /data/local/tmp
 (host) <AOSP>$ adb root
 (host) <AOSP>$ adb shell
-(device) / # cd /data/local/tmp
-(device) /data/local/tmp # chmod a+x etm_test_loop
-(device) /data/local/tmp # simpleperf record -e cs-etm:u ./etm_test_loop
-simpleperf I cmd_record.cpp:729] Recorded for 0.0370068 seconds. Start post processing.
-simpleperf I cmd_record.cpp:799] Aux data traced: 1689136
-(device) /data/local/tmp # simpleperf inject -i perf.data --output branch-list -o branch_list.data
-simpleperf W dso.cpp:557] failed to read min virtual address of [vdso]: File not found
-(device) /data/local/tmp # exit
+(device) / $ cd /data/local/tmp
+(device) /data/local/tmp $ chmod a+x etm_test_loop
+(device) /data/local/tmp $ simpleperf record -e cs-etm:u ./etm_test_loop
+simpleperf I cmd_record.cpp:809] Recorded for 0.033556 seconds. Start post processing.
+simpleperf I cmd_record.cpp:879] Aux data traced: 1,134,720
+(device) /data/local/tmp $ simpleperf inject -i perf.data --output branch-list -o branch_list.data
+(device) /data/local/tmp $ exit
 (host) <AOSP>$ adb pull /data/local/tmp/branch_list.data
 ```
 
@@ -137,53 +131,57 @@ Step 3: Convert ETM data to AutoFDO data.
 ```sh
 # Build simpleperf tool on host.
 (host) <AOSP>$ make simpleperf_ndk
-(host) <AOSP>$ simpleperf_ndk64 inject -i branch_list.data -o perf_inject_etm_test_loop.data --symdir out/target/product/generic_arm64/symbols/system/bin
-simpleperf W cmd_inject.cpp:505] failed to build instr ranges for binary [vdso]: File not found
+(host) <AOSP>$ simpleperf inject -i branch_list.data -o perf_inject_etm_test_loop.data --symdir out/target/product/generic_arm64/symbols/system/bin
 (host) <AOSP>$ cat perf_inject_etm_test_loop.data
-13
-1000-1010:1
-1014-1050:1
+14
+4000-4010:1
+4014-4048:1
 ...
-112c->0:1
+418c->0:1
+// build_id: 0xa6fc5b506adf9884cdb680b4893c505a00000000
 // /data/local/tmp/etm_test_loop
 
 (host) <AOSP>$ create_llvm_prof -profile perf_inject_etm_test_loop.data -profiler text -binary out/target/product/generic_arm64/symbols/system/bin/etm_test_loop -out etm_test_loop.afdo -format binary
 (host) <AOSP>$ ls -lh etm_test_loop.afdo
-rw-r--r-- 1 user group 241 Aug 29 16:04 etm_test_loop.afdo
+rw-r--r-- 1 user group 241 Apr 30 09:52 etm_test_loop.afdo
 ```
 
 Step 4: Use AutoFDO data to build optimized binary.
 
 ```sh
-(host) <AOSP>$ mkdir toolchain/pgo-profiles/sampling/
 (host) <AOSP>$ cp etm_test_loop.afdo toolchain/pgo-profiles/sampling/
 (host) <AOSP>$ vi toolchain/pgo-profiles/sampling/Android.bp
-# edit Android.bp to add a fdo_profile module
-# soong_namespace {}
+# Edit Android.bp to add a fdo_profile module:
 #
 # fdo_profile {
-#    name: "etm_test_loop_afdo",
-#    profile: ["etm_test_loop.afdo"],
+#    name: "etm_test_loop",
+#    profile: "etm_test_loop.afdo"
 # }
-```
-
-`soong_namespace` is added to support fdo_profile modules with the same name
-
-In a product config mk file, update `PRODUCT_AFDO_PROFILES` with
-
-```make
-PRODUCT_AFDO_PROFILES += etm_test_loop://toolchain/pgo-profiles/sampling:etm_test_loop_afdo
-```
-
-```sh
+(host) <AOSP>$ vi toolchain/pgo-profiles/sampling/afdo_profiles.mk
+# Edit afdo_profiles.mk to add etm_test_loop profile mapping:
+#
+# AFDO_PROFILES += keystore2://toolchain/pgo-profiles/sampling:keystore2 \
+#  ...
+#  server_configurable_flags://toolchain/pgo-profiles/sampling:server_configurable_flags \
+#  etm_test_loop://toolchain/pgo-profiles/sampling:etm_test_loop
+#
 (host) <AOSP>$ vi system/extras/simpleperf/runtest/Android.bp
-# edit Android.bp to enable afdo for etm_test_loop.
+# Edit Android.bp to enable afdo for etm_test_loop:
+#
 # cc_binary {
 #    name: "etm_test_loop",
 #    srcs: ["etm_test_loop.cpp"],
 #    afdo: true,
 # }
 (host) <AOSP>$ make etm_test_loop
+```
+
+We can check if `etm_test_loop.afdo` is used when building etm_test_loop.
+
+```sh
+(host) <AOSP>$ gzip -d out/verbose.log.gz
+(host) <AOSP>$ cat out/verbose.log | grep etm_test_loop.afdo
+   ... -fprofile-sample-use=toolchain/pgo-profiles/sampling/etm_test_loop.afdo ...
 ```
 
 If comparing the disassembly of `out/target/product/generic_arm64/symbols/system/bin/etm_test_loop`
