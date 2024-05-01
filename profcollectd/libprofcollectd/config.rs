@@ -166,3 +166,11 @@ pub fn clear_data() -> Result<()> {
     remove_files(&REPORT_OUTPUT_DIR)?;
     Ok(())
 }
+pub fn clear_processed_files() -> Result<()> {
+    read_dir(&PROFILE_OUTPUT_DIR as &Path)?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|e| e.is_file() && e != (&CONFIG_FILE as &Path))
+        .try_for_each(remove_file)?;
+    Ok(())
+}
