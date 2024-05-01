@@ -42,6 +42,19 @@ fi
 
 if [[ ${dir} == *.apk ]]; then
   trap 'cleanup_trap' EXIT
+
+  if { zipalign --help 2>&1 | grep -q "\-P <pagesize_kb>"; }; then
+    echo "=== APK zip-alignment ==="
+    zipalign -v -c -P 16 4 ${dir} | egrep 'lib/arm64-v8a|lib/x86_64|Verification'
+    echo "========================="
+  else
+    echo "NOTICE: Zip alignment check requires build-tools version 35.0.0-rc3 or higher."
+    echo "  You can install the latest build-tools by running the below command"
+    echo "  and updating your \$PATH:"
+    echo
+    echo "    sdkmanager \"build-tools;35.0.0-rc3\""
+  fi
+
   dir_filename=$(basename ${dir})
   tmp=$(mktemp -d -t ${dir_filename%.apk}_out_XXXXX)
   unzip ${dir} lib/arm64-v8a/* lib/x86_64/* -d ${tmp} >/dev/null 2>&1
@@ -52,6 +65,11 @@ RED="\e[31m"
 GREEN="\e[32m"
 ENDCOLOR="\e[0m"
 
+unaligned_libs=()
+
+echo
+echo "=== ELF alignment ==="
+
 matches="$(find ${dir} -name "*.so" -type f)"
 IFS=$'\n'
 for match in $matches; do
@@ -60,5 +78,13 @@ for match in $matches; do
     echo -e "${match}: ${GREEN}ALIGNED${ENDCOLOR} ($res)"
   else
     echo -e "${match}: ${RED}UNALIGNED${ENDCOLOR} ($res)"
+    unaligned_libs+=(${match})
   fi
 done
+
+if [ ${#unaligned_libs[@]} -gt 0 ]; then
+  echo -e "${RED}Found ${#unaligned_libs[@]} unaligned libs${ENDCOLOR}"
+elif [ -n "${dir_filename}" ]; then
+  echo -e "ELF Verification Successful"
+fi
+echo "====================="
