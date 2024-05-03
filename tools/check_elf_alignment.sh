@@ -57,7 +57,7 @@ if [[ ${dir} == *.apk ]]; then
 
   dir_filename=$(basename ${dir})
   tmp=$(mktemp -d -t ${dir_filename%.apk}_out_XXXXX)
-  unzip ${dir} lib/arm64-v8a/* lib/x86_64/* -d ${tmp} >/dev/null 2>&1
+  unzip ${dir} lib/* -d ${tmp} >/dev/null 2>&1
   dir=${tmp}
 fi
 
@@ -83,7 +83,7 @@ for match in $matches; do
 done
 
 if [ ${#unaligned_libs[@]} -gt 0 ]; then
-  echo -e "${RED}Found ${#unaligned_libs[@]} unaligned libs${ENDCOLOR}"
+  echo -e "${RED}Found ${#unaligned_libs[@]} unaligned libs (only arm64-v8a/x86_64 libs need to be aligned).${ENDCOLOR}"
 elif [ -n "${dir_filename}" ]; then
   echo -e "ELF Verification Successful"
 fi
