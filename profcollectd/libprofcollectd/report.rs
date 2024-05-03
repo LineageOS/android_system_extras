@@ -29,7 +29,7 @@ use zip::write::FileOptions;
 use zip::CompressionMethod::Deflated;
 use zip::ZipWriter;
 
-use crate::config::Config;
+use crate::config::{clear_processed_files, Config};
 
 pub const NO_USAGE_SETTING: i32 = -1;
 
@@ -80,6 +80,7 @@ pub fn pack_report(
         zip.write_all(usage_setting.to_string().as_bytes())?;
     }
     zip.finish()?;
+    clear_processed_files()?;
 
     Ok(report_filename)
 }
