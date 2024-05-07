@@ -233,6 +233,8 @@ bool EventSelectionSet::BuildAndCheckEventSelection(const std::string& event_nam
       // enabling/disabling etm devices. So don't adjust frequency by default.
       selection->event_attr.freq = 0;
       selection->event_attr.sample_period = 1;
+      // An ETM event can't be enabled without mmap aux buffer. So disable it by default.
+      selection->event_attr.disabled = 1;
     } else {
       selection->event_attr.freq = 1;
       // Set default sample freq here may print msg "Adjust sample freq to max allowed sample
@@ -459,6 +461,17 @@ void EventSelectionSet::SetEnableCondition(bool enable_on_open, bool enable_on_e
       selection.event_attr.enable_on_exec = enable_on_exec;
     }
   }
+}
+
+bool EventSelectionSet::IsEnabledOnExec() const {
+  for (const auto& group : groups_) {
+    for (const auto& selection : group.selections) {
+      if (!selection.event_attr.enable_on_exec) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 void EventSelectionSet::SampleIdAll() {
@@ -931,6 +944,38 @@ bool EventSelectionSet::SetEnableEvents(bool enable) {
     for (auto& sel : group.selections) {
       for (auto& fd : sel.event_fds) {
         if (!fd->SetEnableEvent(enable)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+bool EventSelectionSet::EnableETMEvents() {
+  for (auto& group : groups_) {
+    for (auto& sel : group.selections) {
+      if (!sel.event_type_modifier.event_type.IsEtmEvent()) {
+        continue;
+      }
+      for (auto& fd : sel.event_fds) {
+        if (!fd->SetEnableEvent(true)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+bool EventSelectionSet::DisableETMEvents() {
+  for (auto& group : groups_) {
+    for (auto& sel : group.selections) {
+      if (!sel.event_type_modifier.event_type.IsEtmEvent()) {
+        continue;
+      }
+      for (auto& fd : sel.event_fds) {
+        if (!fd->SetEnableEvent(false)) {
           return false;
         }
       }
