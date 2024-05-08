@@ -235,6 +235,9 @@ class EventSelectionSet {
   std::optional<SampleRate> sample_rate_;
   std::optional<std::vector<int>> cpus_;
 
+  std::set<int> etm_event_cpus_;
+  std::set<int>::const_iterator etm_event_cpus_it_;
+
   DISALLOW_COPY_AND_ASSIGN(EventSelectionSet);
 };
 
