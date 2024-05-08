@@ -85,7 +85,7 @@ pub fn init_service(schedule_now: bool) -> Result<()> {
 }
 
 fn get_profcollectd_service() -> Result<binder::Strong<dyn IProfCollectd::IProfCollectd>> {
-    binder::get_interface(PROFCOLLECTD_SERVICE_NAME)
+    binder::wait_for_interface(PROFCOLLECTD_SERVICE_NAME)
         .context("Failed to get profcollectd binder service, is profcollectd running?")
 }
 
