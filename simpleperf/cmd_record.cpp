@@ -805,6 +805,12 @@ bool RecordCommand::DoRecording(Workload* workload) {
     return false;
   }
   time_stat_.stop_recording_time = GetSystemClock();
+  if (event_selection_set_.HasAuxTrace()) {
+    // Disable ETM events to flush the last ETM data.
+    if (!event_selection_set_.DisableETMEvents()) {
+      return false;
+    }
+  }
   if (!event_selection_set_.SyncKernelBuffer()) {
     return false;
   }
