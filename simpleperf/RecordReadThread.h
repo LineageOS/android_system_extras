@@ -211,6 +211,7 @@ class RecordReadThread {
   std::unique_ptr<std::thread> read_thread_;
   std::vector<KernelRecordReader> kernel_record_readers_;
   pid_t exclude_pid_ = -1;
+  bool has_etm_events_ = false;
 
   std::unordered_set<EventFd*> event_fds_disabled_by_kernel_;
 
