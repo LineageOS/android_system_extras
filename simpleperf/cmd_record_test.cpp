@@ -1196,8 +1196,7 @@ TEST(record_cmd, cycle_threshold) {
     GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
     return;
   }
-  ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-cycles",
-                            "--cycle-threshold", "8"}));
+  ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--record-cycles", "--cycle-threshold", "8"}));
 }
 
 // @CddTest = 6.1/C-0-2
@@ -1207,6 +1206,15 @@ TEST(record_cmd, binary_option) {
     return;
   }
   ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--decode-etm", "--binary", ".*"}));
+}
+
+// @CddTest = 6.1/C-0-2
+TEST(record_cmd, etm_flush_interval_option) {
+  if (!ETMRecorder::GetInstance().CheckEtmSupport().ok()) {
+    GTEST_LOG_(INFO) << "Omit this test since etm isn't supported on this device";
+    return;
+  }
+  ASSERT_TRUE(RunRecordCmd({"-e", "cs-etm", "--etm-flush-interval", "10"}));
 }
 
 // @CddTest = 6.1/C-0-2

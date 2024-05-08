@@ -51,6 +51,8 @@ inline const OptionFormatMap& GetRecordCmdOptionFormats() {
         {"--cycle-threshold", {OptionValueType::UINT, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--decode-etm", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--delay", {OptionValueType::UINT, OptionType::SINGLE, AppRunnerType::ALLOWED}},
+        {"--etm-flush-interval",
+         {OptionValueType::UINT, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--record-timestamp", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--record-cycles", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--duration", {OptionValueType::DOUBLE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
