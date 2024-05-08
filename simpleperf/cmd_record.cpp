@@ -631,7 +631,7 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
   } else {
     need_to_check_targets = true;
   }
-  if (delay_in_ms_ != 0) {
+  if (delay_in_ms_ != 0 || event_selection_set_.HasAuxTrace()) {
     event_selection_set_.SetEnableCondition(false, false);
   }
 
@@ -755,6 +755,12 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
     }
   }
   if (event_selection_set_.HasAuxTrace()) {
+    // ETM events can only be enabled successfully after MmapEventFiles().
+    if (delay_in_ms_ == 0 && !event_selection_set_.IsEnabledOnExec()) {
+      if (!event_selection_set_.EnableETMEvents()) {
+        return false;
+      }
+    }
     // ETM data is dumped to kernel buffer only when there is no thread traced by ETM. It happens
     // either when all monitored threads are scheduled off cpu, or when all etm perf events are
     // disabled.
@@ -762,8 +768,7 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
     // makes less than expected data, especially in system wide recording. So add a periodic event
     // to flush etm data by temporarily disable all perf events.
     auto etm_flush = [this]() {
-      return event_selection_set_.SetEnableEvents(false) &&
-             event_selection_set_.SetEnableEvents(true);
+      return event_selection_set_.DisableETMEvents() && event_selection_set_.EnableETMEvents();
     };
     if (!loop->AddPeriodicEvent(SecondToTimeval(kDefaultEtmDataFlushPeriodInSec), etm_flush)) {
       return false;
@@ -800,6 +805,12 @@ bool RecordCommand::DoRecording(Workload* workload) {
     return false;
   }
   time_stat_.stop_recording_time = GetSystemClock();
+  if (event_selection_set_.HasAuxTrace()) {
+    // Disable ETM events to flush the last ETM data.
+    if (!event_selection_set_.DisableETMEvents()) {
+      return false;
+    }
+  }
   if (!event_selection_set_.SyncKernelBuffer()) {
     return false;
   }
