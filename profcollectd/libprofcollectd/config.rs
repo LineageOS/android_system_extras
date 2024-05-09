@@ -82,9 +82,9 @@ impl Config {
     }
 }
 
-impl ToString for Config {
-    fn to_string(&self) -> String {
-        serde_json::to_string(self).expect("Failed to deserialise configuration.")
+impl std::fmt::Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).expect("Failed to deserialise configuration."))
     }
 }
 
