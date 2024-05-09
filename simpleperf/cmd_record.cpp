@@ -22,6 +22,7 @@
 #include <sys/utsname.h>
 #include <time.h>
 #include <unistd.h>
+#include <chrono>
 #include <filesystem>
 #include <optional>
 #include <set>
@@ -111,8 +112,8 @@ static constexpr size_t DEFAULT_CALL_CHAIN_JOINER_CACHE_SIZE = 8 * kMegabyte;
 static constexpr size_t kDefaultAuxBufferSize = 4 * kMegabyte;
 
 // On Pixel 3, it takes about 1ms to enable ETM, and 16-40ms to disable ETM and copy 4M ETM data.
-// So make default period to 100ms.
-static constexpr double kDefaultEtmDataFlushPeriodInSec = 0.1;
+// So make default interval to 100ms.
+static constexpr uint32_t kDefaultEtmDataFlushIntervalInMs = 100;
 
 struct TimeStat {
   uint64_t prepare_recording_time = 0;
@@ -316,6 +317,8 @@ RECORD_FILTER_OPTION_HELP_MSG_FOR_RECORDING
 "--record-timestamp               Generate timestamp packets in ETM stream.\n"
 "--record-cycles                  Generate cycle count packets in ETM stream.\n"
 "--cycle-threshold <threshold>    Set cycle count counter threshold for ETM cycle count packets.\n"
+"--etm-flush-interval <interval>  Set the interval between ETM data flushes from the ETR buffer\n"
+"                                 to the perf event buffer (in milliseconds). Default is 100 ms.\n"
 "\n"
 "Other options:\n"
 "--exit-with-parent            Stop recording when the thread starting simpleperf dies.\n"
@@ -480,6 +483,7 @@ RECORD_FILTER_OPTION_HELP_MSG_FOR_RECORDING
 
   std::unique_ptr<ETMBranchListGenerator> etm_branch_list_generator_;
   std::unique_ptr<RegEx> binary_name_regex_;
+  std::chrono::milliseconds etm_flush_interval_{kDefaultEtmDataFlushIntervalInMs};
 };
 
 std::string RecordCommand::LongHelpString() const {
@@ -631,7 +635,7 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
   } else {
     need_to_check_targets = true;
   }
-  if (delay_in_ms_ != 0) {
+  if (delay_in_ms_ != 0 || event_selection_set_.HasAuxTrace()) {
     event_selection_set_.SetEnableCondition(false, false);
   }
 
@@ -755,6 +759,12 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
     }
   }
   if (event_selection_set_.HasAuxTrace()) {
+    // ETM events can only be enabled successfully after MmapEventFiles().
+    if (delay_in_ms_ == 0 && !event_selection_set_.IsEnabledOnExec()) {
+      if (!event_selection_set_.EnableETMEvents()) {
+        return false;
+      }
+    }
     // ETM data is dumped to kernel buffer only when there is no thread traced by ETM. It happens
     // either when all monitored threads are scheduled off cpu, or when all etm perf events are
     // disabled.
@@ -762,10 +772,9 @@ bool RecordCommand::PrepareRecording(Workload* workload) {
     // makes less than expected data, especially in system wide recording. So add a periodic event
     // to flush etm data by temporarily disable all perf events.
     auto etm_flush = [this]() {
-      return event_selection_set_.SetEnableEvents(false) &&
-             event_selection_set_.SetEnableEvents(true);
+      return event_selection_set_.DisableETMEvents() && event_selection_set_.EnableETMEvents();
     };
-    if (!loop->AddPeriodicEvent(SecondToTimeval(kDefaultEtmDataFlushPeriodInSec), etm_flush)) {
+    if (!loop->AddPeriodicEvent(SecondToTimeval(etm_flush_interval_.count() / 1000.0), etm_flush)) {
       return false;
     }
 
@@ -800,6 +809,12 @@ bool RecordCommand::DoRecording(Workload* workload) {
     return false;
   }
   time_stat_.stop_recording_time = GetSystemClock();
+  if (event_selection_set_.HasAuxTrace()) {
+    // Disable ETM events to flush the last ETM data.
+    if (!event_selection_set_.DisableETMEvents()) {
+      return false;
+    }
+  }
   if (!event_selection_set_.SyncKernelBuffer()) {
     return false;
   }
@@ -1040,6 +1055,10 @@ bool RecordCommand::ParseOptions(const std::vector<std::string>& args,
 
   if (options.PullBoolValue("--decode-etm")) {
     etm_branch_list_generator_ = ETMBranchListGenerator::Create(system_wide_collection_);
+  }
+  uint32_t interval = 0;
+  if (options.PullUintValue("--etm-flush-interval", &interval) && interval != 0) {
+    etm_flush_interval_ = std::chrono::milliseconds(interval);
   }
 
   if (options.PullBoolValue("--record-timestamp")) {

@@ -408,6 +408,7 @@ bool RecordReadThread::HandleAddEventFds(IOEventLoop& loop,
             success = false;
             break;
           }
+          has_etm_events_ = true;
         }
         cpu_map[fd->Cpu()] = fd;
       } else {
@@ -620,6 +621,9 @@ void RecordReadThread::PushRecordToRecordBuffer(KernelRecordReader* kernel_recor
 }
 
 void RecordReadThread::ReadAuxDataFromKernelBuffer(bool* has_data) {
+  if (!has_etm_events_) {
+    return;
+  }
   for (auto& reader : kernel_record_readers_) {
     EventFd* event_fd = reader.GetEventFd();
     if (event_fd->HasAuxBuffer()) {
@@ -659,6 +663,14 @@ void RecordReadThread::ReadAuxDataFromKernelBuffer(bool* has_data) {
 }
 
 bool RecordReadThread::SendDataNotificationToMainThread() {
+  if (has_etm_events_) {
+    // For ETM recording, the default buffer size is large enough to hold ETM data for several
+    // seconds. To reduce impact of processing ETM data (especially when --decode-etm is used),
+    // delay processing ETM data until the buffer is half full.
+    if (record_buffer_.GetFreeSize() >= record_buffer_.size() / 2) {
+      return true;
+    }
+  }
   if (!has_data_notification_.load(std::memory_order_relaxed)) {
     has_data_notification_ = true;
     char unused = 0;

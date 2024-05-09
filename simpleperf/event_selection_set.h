@@ -122,6 +122,7 @@ class EventSelectionSet {
   std::map<int, size_t> GetHardwareCountersForCpus() const;
 
   void SetEnableCondition(bool enable_on_open, bool enable_on_exec);
+  bool IsEnabledOnExec() const;
   void SampleIdAll();
   // Only set sample rate for events that haven't set sample rate.
   void SetSampleRateForNewEvents(const SampleRate& rate);
@@ -179,6 +180,8 @@ class EventSelectionSet {
       double check_interval_in_sec = DEFAULT_PERIOD_TO_CHECK_MONITORED_TARGETS_IN_SEC);
 
   bool SetEnableEvents(bool enable);
+  bool EnableETMEvents();
+  bool DisableETMEvents();
 
  private:
   struct EventSelection {
@@ -231,6 +234,9 @@ class EventSelectionSet {
   std::vector<AddrFilter> addr_filters_;
   std::optional<SampleRate> sample_rate_;
   std::optional<std::vector<int>> cpus_;
+
+  std::set<int> etm_event_cpus_;
+  std::set<int>::const_iterator etm_event_cpus_it_;
 
   DISALLOW_COPY_AND_ASSIGN(EventSelectionSet);
 };
