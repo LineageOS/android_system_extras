@@ -1057,7 +1057,7 @@ bool RecordCommand::ParseOptions(const std::vector<std::string>& args,
     etm_branch_list_generator_ = ETMBranchListGenerator::Create(system_wide_collection_);
   }
   uint32_t interval = 0;
-  if (options.PullUintValue("--etm-flush-interval", &interval)) {
+  if (options.PullUintValue("--etm-flush-interval", &interval) && interval != 0) {
     etm_flush_interval_ = std::chrono::milliseconds(interval);
   }
 
