@@ -142,3 +142,36 @@ any file in memory.
 
 the pinlist.meta depends on the apk contents and needs to be regenrated if
 you are pushing a new version of your apk.
+
+## Tips for better pinning
+
+Take the steps listed below before generating your pinlist to improve its quality.
+
+### Disable disk read-ahead before generating the pinlist
+
+Disk read-ahead will add pages to your pinlist that are not actually accessed.
+Disable disk read-ahead to reduce the size of your pinned memory by dropping
+unnecessary regions from the pinlist.
+
+Before invoking `pintool --gen-probe`, disable disk read-ahead:
+```
+echo 1 > /sys/block/<block_device>/queue/read_ahead_kb
+```
+Replace <block_device> with the filesystem where the path to your `.apk` or library is hosted. You can find this information in the output of `df`.
+
+If you are unsure if read ahead is currently enabled, you can just query the value instead:
+```
+cat /sys/block/<block_device>/queue/read_ahead_kb
+```
+
+This setting is reverted to the default after a reboot.
+
+### Drop the page cache before generating the pinlist
+
+Before taking a probe, it is a good idea to drop the page cache to reduce the amount of pages that
+are unrelated to your CUJ and start fresh loading new memory.
+
+In order to drop the page cache you can run this command:
+```
+echo 3 > /proc/sys/vm/drop_caches
+```
