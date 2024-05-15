@@ -683,46 +683,56 @@ class AutoFDOWriter {
       const AutoFDOBinaryInfo& binary = binary_map_[key];
       // AutoFDO text format needs file_offsets instead of virtual addrs in a binary. And it uses
       // below formula: vaddr = file_offset + GetFirstLoadSegmentVaddr().
-      uint64_t first_load_segment_addr = binary.first_load_segment_addr;
+      uint64_t base_addr = binary.first_load_segment_addr;
 
-      auto to_offset = [&](uint64_t vaddr) -> uint64_t {
-        if (vaddr == 0) {
-          return 0;
+      // Write range_count_map. Sort the output by addrs.
+      std::vector<AddrPair> addr_pairs;
+      for (const auto& p : binary.range_count_map) {
+        AddrPair addrs = p.first;
+        if (addrs.first >= base_addr && addrs.second >= base_addr) {
+          addrs.first -= base_addr;
+          addrs.second -= base_addr;
+          addr_pairs.emplace_back(addrs);
         }
-        CHECK_GE(vaddr, first_load_segment_addr);
-        return vaddr - first_load_segment_addr;
-      };
-
-      // Write range_count_map.
-      std::map<AddrPair, uint64_t> range_count_map(binary.range_count_map.begin(),
-                                                   binary.range_count_map.end());
-      fprintf(output_fp.get(), "%zu\n", range_count_map.size());
-      for (const auto& pair2 : range_count_map) {
-        const AddrPair& addr_range = pair2.first;
-        uint64_t count = pair2.second;
-
-        fprintf(output_fp.get(), "%" PRIx64 "-%" PRIx64 ":%" PRIu64 "\n",
-                to_offset(addr_range.first), to_offset(addr_range.second), count);
+      }
+      std::sort(addr_pairs.begin(), addr_pairs.end());
+      fprintf(output_fp.get(), "%zu\n", addr_pairs.size());
+      for (const auto& addrs : addr_pairs) {
+        fprintf(output_fp.get(), "%" PRIx64 "-%" PRIx64 ":%" PRIu64 "\n", addrs.first, addrs.second,
+                binary.range_count_map.find(addrs)->second);
       }
 
-      // Write addr_count_map.
-      std::map<uint64_t, uint64_t> address_count_map(binary.address_count_map.begin(),
-                                                     binary.address_count_map.end());
-      fprintf(output_fp.get(), "%zu\n", address_count_map.size());
-      for (const auto& [addr, count] : address_count_map) {
-        fprintf(output_fp.get(), "%" PRIx64 ":%" PRIu64 "\n", to_offset(addr), count);
+      // Write addr_count_map. Sort the output by addrs.
+      std::vector<uint64_t> addrs;
+      for (const auto& p : binary.address_count_map) {
+        uint64_t addr = p.first;
+        if (addr >= base_addr) {
+          addr -= base_addr;
+          addrs.push_back(addr);
+        }
+      }
+      std::sort(addrs.begin(), addrs.end());
+      fprintf(output_fp.get(), "%zu\n", addrs.size());
+      for (const auto& addr : addrs) {
+        fprintf(output_fp.get(), "%" PRIx64 ":%" PRIu64 "\n", addr,
+                binary.address_count_map.find(addr)->second);
       }
 
-      // Write branch_count_map.
-      std::map<AddrPair, uint64_t> branch_count_map(binary.branch_count_map.begin(),
-                                                    binary.branch_count_map.end());
-      fprintf(output_fp.get(), "%zu\n", branch_count_map.size());
-      for (const auto& pair2 : branch_count_map) {
-        const AddrPair& branch = pair2.first;
-        uint64_t count = pair2.second;
-
-        fprintf(output_fp.get(), "%" PRIx64 "->%" PRIx64 ":%" PRIu64 "\n", to_offset(branch.first),
-                to_offset(branch.second), count);
+      // Write branch_count_map. Sort the output by addrs.
+      addr_pairs.clear();
+      for (const auto& p : binary.branch_count_map) {
+        AddrPair addrs = p.first;
+        if (addrs.first >= base_addr) {
+          addrs.first -= base_addr;
+          addrs.second = (addrs.second >= base_addr) ? (addrs.second - base_addr) : 0;
+          addr_pairs.emplace_back(addrs);
+        }
+      }
+      std::sort(addr_pairs.begin(), addr_pairs.end());
+      fprintf(output_fp.get(), "%zu\n", addr_pairs.size());
+      for (const auto& addrs : addr_pairs) {
+        fprintf(output_fp.get(), "%" PRIx64 "->%" PRIx64 ":%" PRIu64 "\n", addrs.first,
+                addrs.second, binary.branch_count_map.find(addrs)->second);
       }
 
       // Write the binary path in comment.
