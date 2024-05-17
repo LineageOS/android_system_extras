@@ -686,53 +686,49 @@ class AutoFDOWriter {
       uint64_t base_addr = binary.first_load_segment_addr;
 
       // Write range_count_map. Sort the output by addrs.
-      std::vector<AddrPair> addr_pairs;
-      for (const auto& p : binary.range_count_map) {
-        AddrPair addrs = p.first;
-        if (addrs.first >= base_addr && addrs.second >= base_addr) {
-          addrs.first -= base_addr;
-          addrs.second -= base_addr;
-          addr_pairs.emplace_back(addrs);
+      std::vector<std::pair<AddrPair, uint64_t>> range_counts;
+      for (std::pair<AddrPair, uint64_t> p : binary.range_count_map) {
+        if (p.first.first >= base_addr && p.first.second >= base_addr) {
+          p.first.first -= base_addr;
+          p.first.second -= base_addr;
+          range_counts.emplace_back(p);
         }
       }
-      std::sort(addr_pairs.begin(), addr_pairs.end());
-      fprintf(output_fp.get(), "%zu\n", addr_pairs.size());
-      for (const auto& addrs : addr_pairs) {
-        fprintf(output_fp.get(), "%" PRIx64 "-%" PRIx64 ":%" PRIu64 "\n", addrs.first, addrs.second,
-                binary.range_count_map.find(addrs)->second);
+      std::sort(range_counts.begin(), range_counts.end());
+      fprintf(output_fp.get(), "%zu\n", range_counts.size());
+      for (const auto& p : range_counts) {
+        fprintf(output_fp.get(), "%" PRIx64 "-%" PRIx64 ":%" PRIu64 "\n", p.first.first,
+                p.first.second, p.second);
       }
 
       // Write addr_count_map. Sort the output by addrs.
-      std::vector<uint64_t> addrs;
-      for (const auto& p : binary.address_count_map) {
-        uint64_t addr = p.first;
-        if (addr >= base_addr) {
-          addr -= base_addr;
-          addrs.push_back(addr);
+      std::vector<std::pair<uint64_t, uint64_t>> address_counts;
+      for (std::pair<uint64_t, uint64_t> p : binary.address_count_map) {
+        if (p.first >= base_addr) {
+          p.first -= base_addr;
+          address_counts.emplace_back(p);
         }
       }
-      std::sort(addrs.begin(), addrs.end());
-      fprintf(output_fp.get(), "%zu\n", addrs.size());
-      for (const auto& addr : addrs) {
-        fprintf(output_fp.get(), "%" PRIx64 ":%" PRIu64 "\n", addr,
-                binary.address_count_map.find(addr)->second);
+      std::sort(address_counts.begin(), address_counts.end());
+      fprintf(output_fp.get(), "%zu\n", address_counts.size());
+      for (const auto& p : address_counts) {
+        fprintf(output_fp.get(), "%" PRIx64 ":%" PRIu64 "\n", p.first, p.second);
       }
 
       // Write branch_count_map. Sort the output by addrs.
-      addr_pairs.clear();
-      for (const auto& p : binary.branch_count_map) {
-        AddrPair addrs = p.first;
-        if (addrs.first >= base_addr) {
-          addrs.first -= base_addr;
-          addrs.second = (addrs.second >= base_addr) ? (addrs.second - base_addr) : 0;
-          addr_pairs.emplace_back(addrs);
+      std::vector<std::pair<AddrPair, uint64_t>> branch_counts;
+      for (std::pair<AddrPair, uint64_t> p : binary.branch_count_map) {
+        if (p.first.first >= base_addr) {
+          p.first.first -= base_addr;
+          p.first.second = (p.first.second >= base_addr) ? (p.first.second - base_addr) : 0;
+          branch_counts.emplace_back(p);
         }
       }
-      std::sort(addr_pairs.begin(), addr_pairs.end());
-      fprintf(output_fp.get(), "%zu\n", addr_pairs.size());
-      for (const auto& addrs : addr_pairs) {
-        fprintf(output_fp.get(), "%" PRIx64 "->%" PRIx64 ":%" PRIu64 "\n", addrs.first,
-                addrs.second, binary.branch_count_map.find(addrs)->second);
+      std::sort(branch_counts.begin(), branch_counts.end());
+      fprintf(output_fp.get(), "%zu\n", branch_counts.size());
+      for (const auto& p : branch_counts) {
+        fprintf(output_fp.get(), "%" PRIx64 "->%" PRIx64 ":%" PRIu64 "\n", p.first.first,
+                p.first.second, p.second);
       }
 
       // Write the binary path in comment.
