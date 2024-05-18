@@ -75,7 +75,7 @@ IFS=$'\n'
 for match in $matches; do
   [[ $(file "${match}") == *"ELF"* ]] || continue
   res="$(objdump -p "${match}" | grep LOAD | awk '{ print $NF }' | head -1)"
-  if [[ $res =~ "2**14" ]] || [[ $res =~ "2**16" ]]; then
+  if [[ $res =~ 2**(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,}) ]]; then
     echo -e "${match}: ${GREEN}ALIGNED${ENDCOLOR} ($res)"
   else
     echo -e "${match}: ${RED}UNALIGNED${ENDCOLOR} ($res)"
