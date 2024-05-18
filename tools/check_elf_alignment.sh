@@ -70,10 +70,11 @@ unaligned_libs=()
 echo
 echo "=== ELF alignment ==="
 
-matches="$(find "${dir}" -name "*.so" -type f)"
+matches="$(find "${dir}" -type f \( -name "*.so" -or -executable \))"
 IFS=$'\n'
 for match in $matches; do
-  res="$(objdump -p ${match} | grep LOAD | awk '{ print $NF }' | head -1)"
+  [[ $(file "${match}") == *"ELF"* ]] || continue
+  res="$(objdump -p "${match}" | grep LOAD | awk '{ print $NF }' | head -1)"
   if [[ $res =~ "2**14" ]] || [[ $res =~ "2**16" ]]; then
     echo -e "${match}: ${GREEN}ALIGNED${ENDCOLOR} ($res)"
   else
