@@ -39,21 +39,18 @@ Setting the frequency value to `0` disables collection for the corresponding eve
 
 #### Custom configuration
 
-In adb root:
+Under adb root:
 
 ```
 # Record every 60s (By default, record every 10m). The actual interval will be longer than the
 # set value if the device goes to hibernation.
-oriole:/ # setprop persist.device_config.profcollect_native_boot.collection_interval 60
+oriole:/ # device_config put profcollect_native_boot collection_interval 60
 
 # Each time recording, record ETM data for 1s (By default, it's 0.5s).
-oriole:/ # setprop persist.device_config.profcollect_native_boot.sampling_period 1000
+oriole:/ # device_config put profcollect_native_boot sampling_period 1000
 
 # Set ETM data storage limit to 50G (By default, it is 512M).
-oriole:/ # setprop persist.device_config.profcollect_native_boot.max_trace_limit 53687091200
-
-# Enable ETM data collection (By default, it's decided by the server).
-oriole:/ # setprop persist.device_config.profcollect_native_boot.enabled true
+oriole:/ # device_config put profcollect_native_boot max_trace_limit 53687091200
 
 # After adjusting configuration, need to restart profcollectd
 oriole:/ # setprop ctl.stop profcollectd
