@@ -16,7 +16,7 @@ usage() {
   echo "Shared libraries are reported ALIGNED when their ELF regions are"
   echo "16 KB or 64 KB aligned. Otherwise they are reported as UNALIGNED."
   echo
-  echo "Usage: ${progname} [input-path|input-APK]"
+  echo "Usage: ${progname} [input-path|input-APK|input-APEX]"
 }
 
 if [ ${#} -ne 1 ]; then
@@ -58,6 +58,15 @@ if [[ "${dir}" == *.apk ]]; then
   dir_filename=$(basename "${dir}")
   tmp=$(mktemp -d -t "${dir_filename%.apk}_out_XXXXX")
   unzip "${dir}" lib/* -d "${tmp}" >/dev/null 2>&1
+  dir="${tmp}"
+fi
+
+if [[ "${dir}" == *.apex ]]; then
+  trap 'cleanup_trap' EXIT
+
+  dir_filename=$(basename "${dir}")
+  tmp=$(mktemp -d -t "${dir_filename%.apex}_out_XXXXX")
+  deapexer extract "${dir}" "${tmp}" >/dev/null 2>&1
   dir="${tmp}"
 fi
 
