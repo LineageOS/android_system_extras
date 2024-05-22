@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import curses
 import operator
@@ -8,7 +8,7 @@ import re
 import subprocess
 import sys
 import threading
-import Queue
+import queue
 
 STATS_UPDATE_INTERVAL = 0.2
 PAGE_SIZE = 4096
@@ -68,21 +68,21 @@ class PagecacheStats():
 
   def print_stats(self):
     # Create new merged dict
-    sorted_added = sorted(self._file_pages.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_added = sorted(list(self._file_pages.items()), key=operator.itemgetter(1), reverse=True)
     row_format = "{:<70}{:<12}{:<14}{:<9}"
-    print row_format.format('NAME', 'ADDED (MB)', 'REMOVED (MB)', 'SIZE (MB)')
+    print(row_format.format('NAME', 'ADDED (MB)', 'REMOVED (MB)', 'SIZE (MB)'))
     for filename, added in sorted_added:
       filesize = self._file_size[filename]
       added = self._file_pages[filename][0]
       removed = self._file_pages[filename][1]
-      if (filename > 64):
+      if (len(filename) > 64):
         filename = filename[-64:]
-      print row_format.format(filename, self.pages_to_mb(added), self.pages_to_mb(removed), self.bytes_to_mb(filesize))
+      print(row_format.format(filename, self.pages_to_mb(added), self.pages_to_mb(removed), self.bytes_to_mb(filesize)))
 
-    print row_format.format('TOTAL', self.pages_to_mb(self._total_pages_added), self.pages_to_mb(self._total_pages_removed), '')
+    print(row_format.format('TOTAL', self.pages_to_mb(self._total_pages_added), self.pages_to_mb(self._total_pages_removed), ''))
 
   def print_stats_curses(self, pad):
-    sorted_added = sorted(self._file_pages.items(), key=operator.itemgetter(1), reverse=True)
+    sorted_added = sorted(list(self._file_pages.items()), key=operator.itemgetter(1), reverse=True)
     height, width = pad.getmaxyx()
     pad.clear()
     pad.addstr(0, 2, 'NAME'.ljust(68), curses.A_REVERSE)
@@ -94,7 +94,7 @@ class PagecacheStats():
       filesize = self._file_size[filename]
       added  = self._file_pages[filename][0]
       removed = self._file_pages[filename][1]
-      if (filename > 64):
+      if (len(filename) > 64):
         filename = filename[-64:]
       pad.addstr(y, 2, filename)
       pad.addstr(y, 70, self.pages_to_mb(added).rjust(10))
@@ -122,7 +122,7 @@ class FileReaderThread(threading.Thread):
 
     Args:
       file_object: The file or pipe to read from.
-      output_queue: A Queue.Queue object that will receive the data
+      output_queue: A queue.Queue object that will receive the data
       text_file: If True, the file will be read one line at a time, and
           chunk_size will be ignored.  If False, line breaks are ignored and
           chunk_size must be set to a positive integer.
@@ -204,10 +204,10 @@ class AdbUtils():
                                            shell=False, universal_newlines=True)
     except OSError as error:
       # This usually means that the adb executable was not found in the path.
-      print >> sys.stderr, ('\nThe command "%s" failed with the following error:'
-                            % ' '.join(adb_command))
-      print >> sys.stderr, '    %s' % str(error)
-      print >> sys.stderr, 'Is adb in your path?'
+      print('\nThe command "%s" failed with the following error:'
+                            % ' '.join(adb_command), file=sys.stderr)
+      print('    %s' % str(error), file=sys.stderr)
+      print('Is adb in your path?', file=sys.stderr)
       adb_return_code = error.errno
       adb_output = error
     except subprocess.CalledProcessError as error:
@@ -265,11 +265,11 @@ def get_inode_data(datafile, dumpfile, adb_serial):
         'find /apex /system /system_ext /product /data /vendor ' +
         '-exec stat -c "%d %i %s %n" {} \;', adb_serial)
     if stat_dump is None:
-      print 'Could not retrieve inode data from device.'
+      print('Could not retrieve inode data from device.')
       sys.exit(1)
 
     if dumpfile is not None:
-      print 'Storing inode data in ' + dumpfile
+      print('Storing inode data in ' + dumpfile)
       f = open(dumpfile, 'w')
       f.write(stat_dump)
       f.close()
@@ -285,8 +285,8 @@ def read_and_parse_trace_file(trace_file, pagecache_stats, app_name):
 
 def read_and_parse_trace_data_live(stdout, stderr, pagecache_stats, app_name):
   # Start reading trace data
-  stdout_queue = Queue.Queue(maxsize=128)
-  stderr_queue = Queue.Queue()
+  stdout_queue = queue.Queue(maxsize=128)
+  stderr_queue = queue.Queue()
 
   stdout_thread = FileReaderThread(stdout, stdout_queue,
                                    text_file=True, chunk_size=64)
@@ -316,13 +316,13 @@ def read_and_parse_trace_data_live(stdout, stderr, pagecache_stats, app_name):
            not stdout_queue.empty() or not stderr_queue.empty()):
       while not stderr_queue.empty():
         # Pass along errors from adb.
-        line = stderr_queue.get()
+        line = stderr_queue.get().decode("utf-8")
         sys.stderr.write(line)
       while True:
         try:
-          line = stdout_queue.get(True, STATS_UPDATE_INTERVAL)
+          line = stdout_queue.get(True, STATS_UPDATE_INTERVAL).decode("utf-8")
           parse_atrace_line(line, pagecache_stats, app_name)
-        except Queue.Empty:
+        except (queue.Empty, KeyboardInterrupt):
           break
 
       key = ''
@@ -335,9 +335,9 @@ def read_and_parse_trace_data_live(stdout, stderr, pagecache_stats, app_name):
         pagecache_stats.reset_stats()
 
       pagecache_stats.print_stats_curses(pagecache_pad)
-  except Exception, e:
+  except Exception as e:
     curses.endwin()
-    print e
+    print(e)
   finally:
     curses.endwin()
     # The threads should already have stopped, so this is just for cleanup.
@@ -383,7 +383,7 @@ def main():
 
   if options.trace_file is not None:
     if not os.path.isfile(options.trace_file):
-      print >> sys.stderr, ('Couldn\'t load trace file.')
+      print('Couldn\'t load trace file.', file=sys.stderr)
       sys.exit(1)
     trace_file = open(options.trace_file, 'r')
     read_and_parse_trace_file(trace_file, pagecache_stats, options.app_name)
@@ -396,7 +396,7 @@ def main():
       atrace = subprocess.Popen(trace_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
           stderr=subprocess.PIPE)
     except OSError as error:
-      print >> sys.stderr, ('The command failed')
+      print('The command failed', file=sys.stderr)
       sys.exit(1)
 
     read_and_parse_trace_data_live(atrace.stdout, atrace.stderr, pagecache_stats, options.app_name)
