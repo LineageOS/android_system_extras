@@ -756,3 +756,26 @@ cc_fuzz {
     dictionary: "simpleperf_dict.dict",
     corpus: ["testdata/**/*.data"],
 }
+
+cc_fuzz {
+    name: "simpleperf_writer_fuzzer",
+    defaults: [
+        "simpleperf_static_libs",
+    ],
+    host_supported: true,
+    srcs: [
+        "simpleperf_writer_fuzzer.cpp",
+    ],
+    static_libs: [
+        "libsimpleperf",
+    ],
+    target: {
+        linux: {
+            // Fuzzer may not be able to load libdexfile. So statically link it.
+            static_libs: ["libdexfile_static"],
+        },
+        windows: {
+            enabled: false,
+        },
+    },
+}
