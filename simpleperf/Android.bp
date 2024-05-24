@@ -753,5 +753,6 @@ cc_fuzz {
             enabled: false,
         },
     },
+    dictionary: "simpleperf_dict.dict",
     corpus: ["testdata/**/*.data"],
 }
