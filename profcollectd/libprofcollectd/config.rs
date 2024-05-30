@@ -31,7 +31,7 @@ use std::time::Duration;
 const PROFCOLLECT_CONFIG_NAMESPACE: &str = "aconfig_flags.profcollect_native_boot";
 const PROFCOLLECT_NODE_ID_PROPERTY: &str = "persist.profcollectd.node_id";
 
-const DEFAULT_BINARY_FILTER: &str = "(^/(system|apex/.+|vendor)/(bin|lib|lib64)/.+)|\
+const DEFAULT_BINARY_FILTER: &str = "(^/(system|apex/.+|vendor)/(bin|lib64)/.+)|\
     (^/data/app/.+\\.so$)|kernel.kallsyms";
 pub const REPORT_RETENTION_SECS: u64 = 14 * 24 * 60 * 60; // 14 days.
 
