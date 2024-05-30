@@ -50,7 +50,6 @@ impl TraceProvider for SimpleperfEtmTraceProvider {
             event_name,
             "--duration",
             &duration,
-            "--decode-etm",
             "--exclude-perf",
             "--binary",
             binary_filter,
