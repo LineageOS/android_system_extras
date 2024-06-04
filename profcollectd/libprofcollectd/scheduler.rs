@@ -189,7 +189,7 @@ fn check_space_limit(path: &Path, config: &Config) -> Result<bool> {
         })
     };
 
-    if dir_size(path)? > config.max_trace_limit {
+    if dir_size(path)? > config.max_trace_limit_mb * 1024 * 1024 {
         log::error!("trace storage exhausted.");
         return Ok(false);
     }
