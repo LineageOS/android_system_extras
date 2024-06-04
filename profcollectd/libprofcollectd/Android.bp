@@ -43,14 +43,14 @@ rust_library {
         "profcollectd_aidl_interface-rust", // Move to rlib once b/179041242 is fixed.
         "libandroid_logger",
         "libanyhow",
-        "libbinder_rs", // Remove once b/179041241 is fixed.
+        "libbinder_rs",
         "libchrono",
         "liblog_rust",
         "libmacaddr",
         "libonce_cell",
         "librand",
         "librustutils",
-        "libserde", // Remove once b/179041241 is fixed.
+        "libserde",
         "libserde_json",
         "libuuid",
         "libzip",
