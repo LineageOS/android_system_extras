@@ -149,7 +149,6 @@ cc_defaults {
                 "libcutils",
                 "libprocinfo",
                 "libevent",
-                "libc++fs",
                 "librustc_demangle_static",
             ],
         },
@@ -196,7 +195,6 @@ cc_defaults {
                 "libunwindstack",
             ],
             static_libs: [
-                "libc++fs",
                 "libdexfile_support",
                 "librustc_demangle_static",
             ],
