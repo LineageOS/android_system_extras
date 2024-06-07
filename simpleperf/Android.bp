@@ -48,6 +48,9 @@ cc_defaults {
             ],
         },
     },
+    sanitize: {
+        hwaddress: false,
+    },
 }
 
 cc_defaults {
