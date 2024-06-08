@@ -27,6 +27,7 @@
 #include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
+#include <android-base/properties.h>
 #include <android-base/strings.h>
 
 #include "ETMConstants.h"
@@ -132,7 +133,16 @@ expected<bool, std::string> ETMRecorder::CheckEtmSupport() {
     }
   }
   if (!FindSinkConfig()) {
-    return unexpected("can't find etr device, which moves etm data to memory");
+    // Trigger a manual probe of etr. Then wait and recheck.
+    std::string prop_name = "profcollectd.etr.probe";
+    bool res = android::base::SetProperty(prop_name, "1");
+    if (!res) {
+      LOG(ERROR) << "fails to setprop" << prop_name;
+    }
+    usleep(200000);  // Wait for 200ms.
+    if (!FindSinkConfig()) {
+      return unexpected("can't find etr device, which moves etm data to memory");
+    }
   }
   etm_supported_ = true;
   return true;
