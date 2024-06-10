@@ -122,7 +122,7 @@ where
 }
 
 pub fn get_sampling_period() -> Duration {
-    let default_period = 500;
+    let default_period = 1500;
     Duration::from_millis(
         get_device_config("sampling_period", default_period).unwrap_or(default_period),
     )
