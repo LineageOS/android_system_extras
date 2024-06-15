@@ -701,9 +701,13 @@ class SampleTableView {
                 let table = this.tableDiv.find('table');
                 let dataTable = table.DataTable({
                     lengthMenu: [10, 20, 50, 100, -1],
-                    order: [0, 'desc'],
+                    pageLength: 100,
+                    order: [[0, 'desc'], [1, 'desc'], [2, 'desc']],
                     data: data,
                     responsive: true,
+                    columnDefs: [
+                        { orderSequence: [ 'desc' ], targets: [0, 1, 2] },
+                    ],
                 });
                 dataTable.column(7).visible(false);
 
@@ -1215,18 +1219,21 @@ class FlameGraphView {
         let map = new Map();
         for (let node of nodes) {
             for (let child of node.c) {
-                let subNodes = map.get(child.f);
+                let funcName = getFuncName(child.f);
+                let subNodes = map.get(funcName);
                 if (subNodes) {
                     subNodes.push(child);
                 } else {
-                    map.set(child.f, [child]);
+                    map.set(funcName, [child]);
                 }
             }
         }
+        const funcNames = [...map.keys()].sort();
         let res = [];
-        for (let subNodes of map.values()) {
+        funcNames.forEach(function (funcName) {
+            const subNodes = map.get(funcName);
             res.push(subNodes.length == 1 ? subNodes[0] : subNodes);
-        }
+        });
         return res;
     }
 

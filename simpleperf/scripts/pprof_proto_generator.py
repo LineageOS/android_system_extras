@@ -30,7 +30,7 @@ import os.path
 import re
 import sys
 
-from simpleperf_report_lib import ReportLib
+from simpleperf_report_lib import GetReportLib
 from simpleperf_utils import (Addr2Nearestline, BaseArgumentParser, BinaryFinder, extant_dir,
                               flatten_arg_list, log_exit, ReadElf, ToolFinder)
 try:
@@ -292,8 +292,7 @@ class PprofProfileGenerator(object):
         self.binary_finder = BinaryFinder(config['binary_cache_dir'], self.read_elf)
 
     def load_record_file(self, record_file):
-        self.lib = ReportLib()
-        self.lib.SetRecordFile(record_file)
+        self.lib = GetReportLib(record_file)
 
         if self.config['binary_cache_dir']:
             self.lib.SetSymfs(self.config['binary_cache_dir'])
@@ -312,7 +311,7 @@ class PprofProfileGenerator(object):
         ]
         meta_info = self.lib.MetaInfo()
         if "app_versioncode" in meta_info:
-          comments.append("App Version Code:\n" + meta_info["app_versioncode"])
+            comments.append("App Version Code:\n" + meta_info["app_versioncode"])
         for comment in comments:
             self.profile.comment.append(self.get_string_id(comment))
         if "timestamp" in meta_info:
@@ -653,6 +652,7 @@ def main():
     profile = generator.gen(args.jobs)
     store_pprof_profile(config['output_file'], profile)
     logging.info("Report is generated at '%s' successfully." % config['output_file'])
+    logging.info('Before uploading to the continuous PProf UI, use gzip to compress the file.')
 
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@
 #include <logwrap/logwrap.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <utils/misc.h>
@@ -161,6 +162,9 @@ bool OptionsToStringForApiLevel(unsigned int first_api_level, const EncryptionOp
     if (options.use_hw_wrapped_key) {
         *options_string += "+wrappedkey_v0";
     }
+    if (options.dusize_4k) {
+        *options_string += "+dusize_4k";
+    }
 
     EncryptionOptions options_check;
     if (!ParseOptionsForApiLevel(first_api_level, *options_string, &options_check)) {
@@ -207,6 +211,7 @@ bool ParseOptionsForApiLevel(unsigned int first_api_level, const std::string& op
     // Default to v2 after Q
     options->version = first_api_level > __ANDROID_API_Q__ ? 2 : 1;
     options->flags = 0;
+    options->dusize_4k = false;
     options->use_hw_wrapped_key = false;
     if (parts.size() > 2 && !parts[2].empty()) {
         auto flags = android::base::Split(parts[2], "+");
@@ -221,6 +226,8 @@ bool ParseOptionsForApiLevel(unsigned int first_api_level, const std::string& op
                 options->flags |= FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32;
             } else if (flag == "wrappedkey_v0") {
                 options->use_hw_wrapped_key = true;
+            } else if (flag == "dusize_4k") {
+                options->dusize_4k = true;
             } else {
                 LOG(ERROR) << "Unknown flag: " << flag;
                 return false;
@@ -284,6 +291,15 @@ static std::string PolicyDebugString(const EncryptionPolicy& policy) {
     return ss.str();
 }
 
+static int GetFilesystemBlockSize(const std::string& path) {
+    struct statvfs info;
+    if (statvfs(path.c_str(), &info) == 0) {
+        return info.f_bsize;
+    }
+    PLOG(ERROR) << "Error retrieving filesystem information from " << path;
+    return getpagesize();
+}
+
 bool EnsurePolicy(const EncryptionPolicy& policy, const std::string& directory) {
     union {
         fscrypt_policy_v1 v1;
@@ -317,6 +333,16 @@ bool EnsurePolicy(const EncryptionPolicy& policy, const std::string& directory) 
             kern_policy.v2.contents_encryption_mode = policy.options.contents_mode;
             kern_policy.v2.filenames_encryption_mode = policy.options.filenames_mode;
             kern_policy.v2.flags = policy.options.flags;
+            // Configure the data unit size if one was explicitly specified and it doesn't match the
+            // default data unit size of the filesystem.
+            //
+            // We don't configure a data unit size if one wasn't explicitly specified, since the
+            // kernel might not support it.  We also don't configure a data unit size that's already
+            // the filesystem default, since this allows dusize_4k to be added to the fstab of an
+            // existing device using 4K filesystem blocks without changing the policy.
+            if (policy.options.dusize_4k && GetFilesystemBlockSize(directory) != 4096) {
+                kern_policy.v2.log2_data_unit_size = 12;
+            }
             policy.key_raw_ref.copy(reinterpret_cast<char*>(kern_policy.v2.master_key_identifier),
                                     FSCRYPT_KEY_IDENTIFIER_SIZE);
             break;

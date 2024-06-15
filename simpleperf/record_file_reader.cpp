@@ -830,9 +830,8 @@ bool RecordFileReader::BuildAuxDataLocation() {
     auto location_it = aux_data_location_.find(auxtrace.data->cpu);
     if (location_it != aux_data_location_.end()) {
       const AuxDataLocation& prev_location = location_it->second.back();
-      uint64_t prev_aux_end = prev_location.aux_offset + prev_location.aux_size;
       // The AuxTraceRecords should be sorted by aux_offset for each cpu.
-      if (prev_aux_end > location.aux_offset) {
+      if (prev_location.aux_offset > location.aux_offset) {
         LOG(ERROR) << "invalid auxtrace feature section";
         return false;
       }

@@ -17,11 +17,12 @@
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import tempfile
 from typing import Dict, List, Optional, Set
 
-from simpleperf_report_lib import ReportLib
-from simpleperf_utils import ReadElf
+from simpleperf_report_lib import ReportLib, ProtoFileReportLib
+from simpleperf_utils import get_host_binary_path, ReadElf
 from . test_utils import TestBase, TestHelper
 
 
@@ -377,3 +378,95 @@ class TestReportLib(TestBase):
         self.assertEqual(symbol.symbol_name, "_raw_spin_unlock_irq")
         self.assertEqual(symbol.symbol_addr, 0xffffffc008fb3e0c)
         self.assertEqual(symbol.symbol_len, 0x4c)
+
+
+class TestProtoFileReportLib(TestBase):
+    def test_smoke(self):
+        report_lib = ProtoFileReportLib()
+        report_lib.SetRecordFile(TestHelper.testdata_path('display_bitmaps.proto_data'))
+        sample_count = 0
+        while True:
+            sample = report_lib.GetNextSample()
+            if sample is None:
+                report_lib.Close()
+                break
+            sample_count += 1
+            event = report_lib.GetEventOfCurrentSample()
+            self.assertEqual(event.name, 'cpu-clock')
+            report_lib.GetSymbolOfCurrentSample()
+            report_lib.GetCallChainOfCurrentSample()
+        self.assertEqual(sample_count, 525)
+
+    def convert_perf_data_to_proto_file(self, perf_data_path: str) -> str:
+        simpleperf_path = get_host_binary_path('simpleperf')
+        proto_file_path = 'perf.trace'
+        subprocess.check_call([simpleperf_path, 'report-sample', '--show-callchain', '--protobuf',
+                               '--remove-gaps', '0', '-i', perf_data_path, '-o', proto_file_path])
+        return proto_file_path
+
+    def test_set_trace_offcpu_mode(self):
+        report_lib = ProtoFileReportLib()
+        # GetSupportedTraceOffCpuModes() before SetRecordFile() triggers RuntimeError.
+        with self.assertRaises(RuntimeError):
+            report_lib.GetSupportedTraceOffCpuModes()
+        # SetTraceOffCpuModes() before SetRecordFile() triggers RuntimeError.
+        with self.assertRaises(RuntimeError):
+            report_lib.SetTraceOffCpuMode('on-cpu')
+
+        mode_dict = {
+            'on-cpu': {
+                'cpu-clock:u': (208, 52000000),
+                'sched:sched_switch': (0, 0),
+            },
+            'off-cpu': {
+                'cpu-clock:u': (0, 0),
+                'sched:sched_switch': (91, 344124304),
+            },
+            'on-off-cpu': {
+                'cpu-clock:u': (208, 52000000),
+                'sched:sched_switch': (91, 344124304),
+            },
+            'mixed-on-off-cpu': {
+                'cpu-clock:u': (299, 396124304),
+                'sched:sched_switch': (0, 0),
+            },
+        }
+
+        proto_file_path = self.convert_perf_data_to_proto_file(
+                                TestHelper.testdata_path('perf_with_trace_offcpu_v2.data'))
+        report_lib.SetRecordFile(proto_file_path)
+        self.assertEqual(set(report_lib.GetSupportedTraceOffCpuModes()), set(mode_dict.keys()))
+        for mode, expected_values in mode_dict.items():
+            report_lib.Close()
+            report_lib = ProtoFileReportLib()
+            report_lib.SetRecordFile(proto_file_path)
+            report_lib.SetTraceOffCpuMode(mode)
+
+            cpu_clock_period = 0
+            cpu_clock_samples = 0
+            sched_switch_period = 0
+            sched_switch_samples = 0
+            while report_lib.GetNextSample():
+                sample = report_lib.GetCurrentSample()
+                event = report_lib.GetEventOfCurrentSample()
+                if event.name == 'cpu-clock:u':
+                    cpu_clock_period += sample.period
+                    cpu_clock_samples += 1
+                else:
+                    self.assertEqual(event.name, 'sched:sched_switch')
+                    sched_switch_period += sample.period
+                    sched_switch_samples += 1
+            self.assertEqual(cpu_clock_samples, expected_values['cpu-clock:u'][0])
+            self.assertEqual(cpu_clock_period, expected_values['cpu-clock:u'][1])
+            self.assertEqual(sched_switch_samples, expected_values['sched:sched_switch'][0])
+            self.assertEqual(sched_switch_period, expected_values['sched:sched_switch'][1])
+
+        # Check trace-offcpu modes on a profile not recorded with --trace-offcpu.
+        report_lib.Close()
+        report_lib = ProtoFileReportLib()
+        proto_file_path = self.convert_perf_data_to_proto_file(
+                                TestHelper.testdata_path('perf.data'))
+        report_lib.SetRecordFile(proto_file_path)
+        self.assertEqual(report_lib.GetSupportedTraceOffCpuModes(), [])
+        with self.assertRaises(RuntimeError):
+            report_lib.SetTraceOffCpuMode('on-cpu')

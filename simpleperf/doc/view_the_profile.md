@@ -39,18 +39,27 @@ pprof.
 This will print some debug logs about Failed to read symbols: this is usually OK, unless those
 symbols are hotspots.
 
-Upload pprof.profile to http://pprof/ UI:
+The continuous pprof server has a file upload size limit of 50MB. To get around this limit, compress
+the profile before uploading:
+
+```
+gzip pprof.profile
+```
+
+After compressing, you can upload the `pprof.profile.gz` file to either http://pprof/ or
+http://pprofng/. Both websites have an 'Upload' tab for this purpose. Alternatively, you can use
+the following `pprof` command to upload the compressed profile:
 
 ```
 # Upload all threads in profile, grouped by threadpool.
 # This is usually a good default, combining threads with similar names.
-pprof --flame --tagroot threadpool pprof.profile
+pprof --flame --tagroot threadpool pprof.profile.gz
 
 # Upload all threads in profile, grouped by individual thread name.
-pprof --flame --tagroot thread pprof.profile
+pprof --flame --tagroot thread pprof.profile.gz
 
 # Upload all threads in profile, without grouping by thread.
-pprof --flame pprof.profile
+pprof --flame pprof.profile.gz
 This will output a URL, example: https://pprof.corp.google.com/?id=589a60852306144c880e36429e10b166
 ```
 
@@ -58,6 +67,7 @@ This will output a URL, example: https://pprof.corp.google.com/?id=589a608523061
 
 We can view Android profiles using Firefox Profiler: https://profiler.firefox.com/. This does not
 require Firefox installation -- Firefox Profiler is just a website, you can open it in any browser.
+There is also an internal Google-Hosted Firefox Profiler, at go/profiler or go/firefox-profiler.
 
 ![Example](./pictures/firefox_profiler.png)
 

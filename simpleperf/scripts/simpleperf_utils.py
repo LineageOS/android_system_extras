@@ -869,6 +869,8 @@ class Objdump(object):
         """ Disassemble code for multiple addr ranges in a binary. sorted_addr_ranges should be
             sorted by addr_range.start.
         """
+        if not sorted_addr_ranges:
+            return []
         real_path, arch = dso_info
         objdump_path = self.objdump_paths.get(arch)
         if not objdump_path:
@@ -878,7 +880,12 @@ class Objdump(object):
             self.objdump_paths[arch] = objdump_path
 
         # Run objdump.
-        args = [objdump_path, '-dlC', '--no-show-raw-insn', real_path]
+        start_addr = sorted_addr_ranges[0].start
+        stop_addr = max(addr_range.end for addr_range in sorted_addr_ranges)
+        args = [objdump_path, '-dlC', '--no-show-raw-insn',
+                '--start-address=0x%x' % start_addr,
+                '--stop-address=0x%x' % stop_addr,
+                real_path]
         if arch == 'arm' and 'llvm-objdump' in objdump_path:
             args += ['--print-imm-hex']
         try:

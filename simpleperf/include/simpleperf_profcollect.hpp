@@ -16,10 +16,11 @@
 
 extern "C" {
 
-bool HasDriverSupport();
-bool HasDeviceSupport();
-bool Record(const char* event_name, const char* output, float duration, const char* binary_filter);
-bool Inject(const char* traceInput, const char* profileOutput, const char* binary_filter);
+bool IsETMDriverAvailable();
+bool IsETMDeviceAvailable();
+bool IsLBRAvailable();
+bool RunRecordCmd(const char** args, int arg_count);
+bool RunInjectCmd(const char** args, int arg_count);
 void SetLogFile(const char* filename);
 void ResetLogFile();
 }

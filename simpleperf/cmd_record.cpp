@@ -315,6 +315,7 @@ RECORD_FILTER_OPTION_HELP_MSG_FOR_RECORDING
 "                                 matching binary_name regex.\n"
 "--record-timestamp               Generate timestamp packets in ETM stream.\n"
 "--record-cycles                  Generate cycle count packets in ETM stream.\n"
+"--cycle-threshold <threshold>    Set cycle count counter threshold for ETM cycle count packets.\n"
 "\n"
 "Other options:\n"
 "--exit-with-parent            Stop recording when the thread starting simpleperf dies.\n"
@@ -1053,6 +1054,12 @@ bool RecordCommand::ParseOptions(const std::vector<std::string>& args,
 
   if (!options.PullUintValue("--delay", &delay_in_ms_)) {
     return false;
+  }
+
+  size_t cyc_threshold;
+  if (options.PullUintValue("--cycle-threshold", &cyc_threshold)) {
+    ETMRecorder& recorder = ETMRecorder::GetInstance();
+    recorder.SetCycleThreshold(cyc_threshold);
   }
 
   if (!options.PullDoubleValue("--duration", &duration_in_sec_, 1e-9)) {
@@ -2195,6 +2202,13 @@ void RecordCommand::CollectHitFileInfo(const SampleRecord& r, std::unordered_set
   const ThreadEntry* thread = thread_tree_.FindThreadOrNew(r.tid_data.pid, r.tid_data.tid);
   size_t kernel_ip_count;
   std::vector<uint64_t> ips = r.GetCallChain(&kernel_ip_count);
+  if ((r.sample_type & PERF_SAMPLE_BRANCH_STACK) != 0) {
+    for (uint64_t i = 0; i < r.branch_stack_data.stack_nr; ++i) {
+      const auto& item = r.branch_stack_data.stack[i];
+      ips.push_back(item.from);
+      ips.push_back(item.to);
+    }
+  }
   for (size_t i = 0; i < ips.size(); i++) {
     const MapEntry* map = thread_tree_.FindMap(thread, ips[i], i < kernel_ip_count);
     Dso* dso = map->dso;

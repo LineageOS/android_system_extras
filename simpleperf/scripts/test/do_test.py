@@ -59,6 +59,7 @@ from . report_html_test import *
 from . report_lib_test import *
 from . report_sample_test import *
 from . run_simpleperf_on_device_test import *
+from . sample_filter_test import *
 from . stackcollapse_test import *
 from . tools_test import *
 from . test_utils import TestHelper
@@ -130,10 +131,12 @@ def get_test_type(test: str) -> Optional[str]:
                          'TestDebugUnwindReporter',
                          'TestInferno',
                          'TestPprofProtoGenerator',
+                         'TestProtoFileReportLib',
                          'TestPurgatorio',
                          'TestReportHtml',
                          'TestReportLib',
                          'TestReportSample',
+                         'TestSampleFilter',
                          'TestStackCollapse',
                          'TestTools',
                          'TestGeckoProfileGenerator'):
