@@ -156,7 +156,8 @@ struct PartitionInfo {
         uint32_t attribute_flags = 0;
         std::string attributes = parts[1];
         if (attributes == "readonly") {
-            attribute_flags |= LP_PARTITION_ATTR_READONLY;
+            //attribute_flags |= LP_PARTITION_ATTR_READONLY;
+            return Error() << "LP_PARTITION_ATTR_READONLY";
         } else if (attributes != "none") {
             return Error() << "Attribute not recognized: " << attributes;
         }

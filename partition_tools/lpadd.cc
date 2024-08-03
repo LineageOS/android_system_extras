@@ -464,6 +464,11 @@ int main(int argc, char* argv[]) {
         return usage(argv[0]);
     }
 
+    if (readonly) {
+        std::cerr << "readonly\n\n";
+        return 1;
+    }
+
     std::string super_path = argv[optind++];
     std::string partition_name = argv[optind++];
     std::string group_name = argv[optind++];
