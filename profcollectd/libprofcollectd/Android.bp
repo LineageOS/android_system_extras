@@ -47,7 +47,6 @@ rust_library {
         "libchrono",
         "liblog_rust",
         "libmacaddr",
-        "libonce_cell",
         "librand",
         "librustutils",
         "libserde",

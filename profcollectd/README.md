@@ -75,8 +75,8 @@ oriole:/data/misc/profcollectd/trace # ls
 To check if ETM data can be collected successfully:
 ```
 # Trigger one collection manually.
-oriole:/ # profcollectctl once
-Trace once
+oriole:/ # profcollectctl trace
+Performing system-wide trace
 
 # Check trace directory to see if there is a recent manual trace file.
 oriole:/ # ls /data/misc/profcollectd/trace/

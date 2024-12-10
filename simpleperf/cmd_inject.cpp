@@ -51,11 +51,12 @@ struct AddrPairHash {
 
 enum class OutputFormat {
   AutoFDO,
+  BOLT,
   BranchList,
 };
 
 struct AutoFDOBinaryInfo {
-  uint64_t first_load_segment_addr = 0;
+  std::vector<ElfSegment> executable_segments;
   std::unordered_map<uint64_t, uint64_t> address_count_map;
   std::unordered_map<AddrPair, uint64_t, AddrPairHash> range_count_map;
   std::unordered_map<AddrPair, uint64_t, AddrPairHash> branch_count_map;
@@ -101,22 +102,31 @@ struct AutoFDOBinaryInfo {
       }
     }
   }
+
+  std::optional<uint64_t> VaddrToOffset(uint64_t vaddr) const {
+    for (const auto& segment : executable_segments) {
+      if (segment.vaddr <= vaddr && vaddr < segment.vaddr + segment.file_size) {
+        return vaddr - segment.vaddr + segment.file_offset;
+      }
+    }
+    return std::nullopt;
+  }
 };
 
 using AutoFDOBinaryCallback = std::function<void(const BinaryKey&, AutoFDOBinaryInfo&)>;
 using ETMBinaryCallback = std::function<void(const BinaryKey&, ETMBinary&)>;
 using LBRDataCallback = std::function<void(LBRData&)>;
 
-static uint64_t GetFirstLoadSegmentVaddr(const Dso* dso) {
+static std::vector<ElfSegment> GetExecutableSegments(const Dso* dso) {
+  std::vector<ElfSegment> segments;
   ElfStatus status;
   if (auto elf = ElfFile::Open(dso->GetDebugFilePath(), &status); elf) {
-    for (const auto& segment : elf->GetProgramHeader()) {
-      if (segment.is_load) {
-        return segment.vaddr;
-      }
-    }
+    segments = elf->GetProgramHeader();
+    auto not_executable = [](const ElfSegment& s) { return !s.is_executable; };
+    segments.erase(std::remove_if(segments.begin(), segments.end(), not_executable),
+                   segments.end());
   }
-  return 0;
+  return segments;
 }
 
 // Base class for reading perf.data and generating AutoFDO or branch list data.
@@ -169,6 +179,11 @@ class PerfDataReader {
     if (!reader_->LoadBuildIdAndFileFeatures(thread_tree_)) {
       return false;
     }
+    if (reader_->HasFeature(PerfFileFormat::FEAT_INIT_MAP)) {
+      if (!reader_->ReadInitMapFeature([this](auto r) { return ProcessRecord(*r); })) {
+        return false;
+      }
+    }
     if (!reader_->ReadDataSection([this](auto r) { return ProcessRecord(*r); })) {
       return false;
     }
@@ -183,7 +198,7 @@ class PerfDataReader {
     for (auto& p : autofdo_binary_map_) {
       const Dso* dso = p.first;
       AutoFDOBinaryInfo& binary = p.second;
-      binary.first_load_segment_addr = GetFirstLoadSegmentVaddr(dso);
+      binary.executable_segments = GetExecutableSegments(dso);
       autofdo_callback_(BinaryKey(dso, 0), binary);
     }
   }
@@ -600,7 +615,7 @@ class ETMBranchListToAutoFDOConverter {
       return nullptr;
     }
     std::unique_ptr<AutoFDOBinaryInfo> autofdo_binary(new AutoFDOBinaryInfo);
-    autofdo_binary->first_load_segment_addr = GetFirstLoadSegmentVaddr(dso.get());
+    autofdo_binary->executable_segments = GetExecutableSegments(dso.get());
 
     if (dso->type() == DSO_KERNEL) {
       ModifyBranchMapForKernel(dso.get(), key.kernel_start_addr, binary);
@@ -659,7 +674,7 @@ class AutoFDOWriter {
     }
   }
 
-  bool Write(const std::string& output_filename) {
+  bool WriteAutoFDO(const std::string& output_filename) {
     std::unique_ptr<FILE, decltype(&fclose)> output_fp(fopen(output_filename.c_str(), "w"), fclose);
     if (!output_fp) {
       PLOG(ERROR) << "failed to write to " << output_filename;
@@ -681,16 +696,17 @@ class AutoFDOWriter {
     }
     for (const auto& key : keys) {
       const AutoFDOBinaryInfo& binary = binary_map_[key];
-      // AutoFDO text format needs file_offsets instead of virtual addrs in a binary. And it uses
-      // below formula: vaddr = file_offset + GetFirstLoadSegmentVaddr().
-      uint64_t base_addr = binary.first_load_segment_addr;
+      // AutoFDO text format needs file_offsets instead of virtual addrs in a binary. So convert
+      // vaddrs to file offsets.
 
       // Write range_count_map. Sort the output by addrs.
       std::vector<std::pair<AddrPair, uint64_t>> range_counts;
       for (std::pair<AddrPair, uint64_t> p : binary.range_count_map) {
-        if (p.first.first >= base_addr && p.first.second >= base_addr) {
-          p.first.first -= base_addr;
-          p.first.second -= base_addr;
+        std::optional<uint64_t> start_offset = binary.VaddrToOffset(p.first.first);
+        std::optional<uint64_t> end_offset = binary.VaddrToOffset(p.first.second);
+        if (start_offset && end_offset) {
+          p.first.first = start_offset.value();
+          p.first.second = end_offset.value();
           range_counts.emplace_back(p);
         }
       }
@@ -704,8 +720,9 @@ class AutoFDOWriter {
       // Write addr_count_map. Sort the output by addrs.
       std::vector<std::pair<uint64_t, uint64_t>> address_counts;
       for (std::pair<uint64_t, uint64_t> p : binary.address_count_map) {
-        if (p.first >= base_addr) {
-          p.first -= base_addr;
+        std::optional<uint64_t> offset = binary.VaddrToOffset(p.first);
+        if (offset) {
+          p.first = offset.value();
           address_counts.emplace_back(p);
         }
       }
@@ -718,9 +735,11 @@ class AutoFDOWriter {
       // Write branch_count_map. Sort the output by addrs.
       std::vector<std::pair<AddrPair, uint64_t>> branch_counts;
       for (std::pair<AddrPair, uint64_t> p : binary.branch_count_map) {
-        if (p.first.first >= base_addr) {
-          p.first.first -= base_addr;
-          p.first.second = (p.first.second >= base_addr) ? (p.first.second - base_addr) : 0;
+        std::optional<uint64_t> from_offset = binary.VaddrToOffset(p.first.first);
+        std::optional<uint64_t> to_offset = binary.VaddrToOffset(p.first.second);
+        if (from_offset) {
+          p.first.first = from_offset.value();
+          p.first.second = to_offset ? to_offset.value() : 0;
           branch_counts.emplace_back(p);
         }
       }
@@ -734,6 +753,60 @@ class AutoFDOWriter {
       // Write the binary path in comment.
       fprintf(output_fp.get(), "// build_id: %s\n", key.build_id.ToString().c_str());
       fprintf(output_fp.get(), "// %s\n\n", key.path.c_str());
+    }
+    return true;
+  }
+
+  // Write bolt profile in format documented in
+  // https://github.com/llvm/llvm-project/blob/main/bolt/include/bolt/Profile/DataAggregator.h#L372.
+  bool WriteBolt(const std::string& output_filename) {
+    std::unique_ptr<FILE, decltype(&fclose)> output_fp(fopen(output_filename.c_str(), "w"), fclose);
+    if (!output_fp) {
+      PLOG(ERROR) << "failed to write to " << output_filename;
+      return false;
+    }
+    // autofdo_binary_map is used to store instruction ranges, which can have a large amount. And
+    // it has a larger access time (instruction ranges * executed time). So it's better to use
+    // unorder_maps to speed up access time. But we also want a stable output here, to compare
+    // output changes result from code changes. So generate a sorted output here.
+    std::vector<BinaryKey> keys;
+    for (auto& p : binary_map_) {
+      keys.emplace_back(p.first);
+    }
+    std::sort(keys.begin(), keys.end(),
+              [](const BinaryKey& key1, const BinaryKey& key2) { return key1.path < key2.path; });
+    if (keys.size() > 1) {
+      fprintf(output_fp.get(),
+              "// Please split this file. BOLT only accepts profile for one binary.\n");
+    }
+
+    for (const auto& key : keys) {
+      const AutoFDOBinaryInfo& binary = binary_map_[key];
+      // Write range_count_map. Sort the output by addrs.
+      std::vector<std::pair<AddrPair, uint64_t>> range_counts;
+      for (const auto& p : binary.range_count_map) {
+        range_counts.emplace_back(p);
+      }
+      std::sort(range_counts.begin(), range_counts.end());
+      for (const auto& p : range_counts) {
+        fprintf(output_fp.get(), "F %" PRIx64 " %" PRIx64 " %" PRIu64 "\n", p.first.first,
+                p.first.second, p.second);
+      }
+
+      // Write branch_count_map. Sort the output by addrs.
+      std::vector<std::pair<AddrPair, uint64_t>> branch_counts;
+      for (const auto& p : binary.branch_count_map) {
+        branch_counts.emplace_back(p);
+      }
+      std::sort(branch_counts.begin(), branch_counts.end());
+      for (const auto& p : branch_counts) {
+        fprintf(output_fp.get(), "B %" PRIx64 " %" PRIx64 " %" PRIu64 " 0\n", p.first.first,
+                p.first.second, p.second);
+      }
+
+      // Write the binary path in comment.
+      fprintf(output_fp.get(), "// build_id: %s\n", key.build_id.ToString().c_str());
+      fprintf(output_fp.get(), "// %s\n", key.path.c_str());
     }
     return true;
   }
@@ -834,11 +907,13 @@ class InjectCommand : public Command {
 "--output <format>            Select output file format:\n"
 "                               autofdo      -- text format accepted by TextSampleReader\n"
 "                                               of AutoFDO\n"
+"                               bolt         -- text format accepted by `perf2bolt --pa`\n"
 "                               branch-list  -- protobuf file in etm_branch_list.proto\n"
 "                             Default is autofdo.\n"
 "--dump-etm type1,type2,...   Dump etm data. A type is one of raw, packet and element.\n"
 "--exclude-perf               Exclude trace data for the recording process.\n"
 "--symdir <dir>               Look for binaries in a directory recursively.\n"
+"--allow-mismatched-build-id  Allow mismatched build ids when searching for debug binaries.\n"
 "\n"
 "Examples:\n"
 "1. Generate autofdo text output.\n"
@@ -860,6 +935,8 @@ class InjectCommand : public Command {
     if (IsPerfDataFile(input_filenames_[0])) {
       switch (output_format_) {
         case OutputFormat::AutoFDO:
+          [[fallthrough]];
+        case OutputFormat::BOLT:
           return ConvertPerfDataToAutoFDO();
         case OutputFormat::BranchList:
           return ConvertPerfDataToBranchList();
@@ -867,6 +944,8 @@ class InjectCommand : public Command {
     } else {
       switch (output_format_) {
         case OutputFormat::AutoFDO:
+          [[fallthrough]];
+        case OutputFormat::BOLT:
           return ConvertBranchListToAutoFDO();
         case OutputFormat::BranchList:
           return ConvertBranchListToBranchList();
@@ -877,6 +956,7 @@ class InjectCommand : public Command {
  private:
   bool ParseOptions(const std::vector<std::string>& args) {
     const OptionFormatMap option_formats = {
+        {"--allow-mismatched-build-id", {OptionValueType::NONE, OptionType::SINGLE}},
         {"--binary", {OptionValueType::STRING, OptionType::SINGLE}},
         {"--dump-etm", {OptionValueType::STRING, OptionType::SINGLE}},
         {"--exclude-perf", {OptionValueType::NONE, OptionType::SINGLE}},
@@ -891,21 +971,24 @@ class InjectCommand : public Command {
       return false;
     }
 
+    if (options.PullBoolValue("--allow-mismatched-build-id")) {
+      Dso::AllowMismatchedBuildId();
+    }
     if (auto value = options.PullValue("--binary"); value) {
-      binary_name_regex_ = RegEx::Create(*value->str_value);
+      binary_name_regex_ = RegEx::Create(value->str_value);
       if (binary_name_regex_ == nullptr) {
         return false;
       }
     }
     if (auto value = options.PullValue("--dump-etm"); value) {
-      if (!ParseEtmDumpOption(*value->str_value, &etm_dump_option_)) {
+      if (!ParseEtmDumpOption(value->str_value, &etm_dump_option_)) {
         return false;
       }
     }
     exclude_perf_ = options.PullBoolValue("--exclude-perf");
 
     for (const OptionValue& value : options.PullValues("-i")) {
-      std::vector<std::string> files = android::base::Split(*value.str_value, ",");
+      std::vector<std::string> files = android::base::Split(value.str_value, ",");
       for (std::string& file : files) {
         if (android::base::StartsWith(file, "@")) {
           if (!ReadFileList(file.substr(1), &input_filenames_)) {
@@ -921,9 +1004,11 @@ class InjectCommand : public Command {
     }
     options.PullStringValue("-o", &output_filename_);
     if (auto value = options.PullValue("--output"); value) {
-      const std::string& output = *value->str_value;
+      const std::string& output = value->str_value;
       if (output == "autofdo") {
         output_format_ = OutputFormat::AutoFDO;
+      } else if (output == "bolt") {
+        output_format_ = OutputFormat::BOLT;
       } else if (output == "branch-list") {
         output_format_ = OutputFormat::BranchList;
       } else {
@@ -931,9 +1016,11 @@ class InjectCommand : public Command {
         return false;
       }
     }
-    if (auto value = options.PullValue("--symdir"); value) {
-      if (!Dso::AddSymbolDir(*value->str_value)) {
-        return false;
+    if (std::vector<OptionValue> values = options.PullValues("--symdir"); !values.empty()) {
+      for (const OptionValue& value : values) {
+        if (!Dso::AddSymbolDir(value.str_value)) {
+          return false;
+        }
       }
       // Symbol dirs are cleaned when Dso count is decreased to zero, which can happen between
       // processing input files. To make symbol dirs always available, create a placeholder dso to
@@ -1001,7 +1088,11 @@ class InjectCommand : public Command {
     if (!ReadPerfDataFiles(reader_callback)) {
       return false;
     }
-    return autofdo_writer.Write(output_filename_);
+    if (output_format_ == OutputFormat::AutoFDO) {
+      return autofdo_writer.WriteAutoFDO(output_filename_);
+    }
+    CHECK(output_format_ == OutputFormat::BOLT);
+    return autofdo_writer.WriteBolt(output_filename_);
   }
 
   bool ConvertPerfDataToBranchList() {
@@ -1057,12 +1148,23 @@ class InjectCommand : public Command {
         return false;
       }
       for (size_t i = 0; i < binaries.value().size(); ++i) {
-        autofdo_writer.AddAutoFDOBinary(lbr_data.binaries[i], binaries.value()[i]);
+        BinaryKey& key = lbr_data.binaries[i];
+        AutoFDOBinaryInfo& binary = binaries.value()[i];
+        std::unique_ptr<Dso> dso = Dso::CreateDsoWithBuildId(DSO_ELF_FILE, key.path, key.build_id);
+        if (!dso) {
+          continue;
+        }
+        binary.executable_segments = GetExecutableSegments(dso.get());
+        autofdo_writer.AddAutoFDOBinary(key, binary);
       }
     }
 
     // Step3: Write AutoFDOBinaryInfo.
-    return autofdo_writer.Write(output_filename_);
+    if (output_format_ == OutputFormat::AutoFDO) {
+      return autofdo_writer.WriteAutoFDO(output_filename_);
+    }
+    CHECK(output_format_ == OutputFormat::BOLT);
+    return autofdo_writer.WriteBolt(output_filename_);
   }
 
   bool ConvertBranchListToBranchList() {

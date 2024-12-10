@@ -291,6 +291,7 @@ OverflowResult SafeAdd(uint64_t a, uint64_t b);
 void OverflowSafeAdd(uint64_t& dest, uint64_t add);
 
 std::string ReadableCount(uint64_t count);
+std::string ReadableBytes(uint64_t bytes);
 
 }  // namespace simpleperf
 

@@ -111,7 +111,7 @@ bool PrepareCommand::ParseOptions(const std::vector<std::string>& args) {
   }
 
   if (auto value = options.PullValue("--app"); value) {
-    app_name_ = *value->str_value;
+    app_name_ = value->str_value;
   }
   if (!options.PullUintValue("--days", &days_)) {
     return false;
@@ -193,12 +193,12 @@ bool CollectCommand::ParseOptions(const std::vector<std::string>& args) {
   }
 
   if (auto value = options.PullValue("--app"); value) {
-    app_name_ = *value->str_value;
+    app_name_ = value->str_value;
   }
   in_app_context_ = options.PullBoolValue("--in-app");
 
   if (auto value = options.PullValue("-o"); value) {
-    output_filepath_ = *value->str_value;
+    output_filepath_ = value->str_value;
   }
   if (auto value = options.PullValue("--out-fd"); value) {
     out_fd_.reset(static_cast<int>(value->uint_value));

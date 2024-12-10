@@ -52,7 +52,7 @@ impl IProviderStatusCallback for ProviderStatusCallback {
         const TIMEOUT_TO_COLLECT_BOOT_PROFILE: Duration = Duration::from_secs(3);
         let elapsed = Instant::now().duration_since(self.service_start_time);
         if elapsed < TIMEOUT_TO_COLLECT_BOOT_PROFILE {
-            trace_once("boot").map_err(err_to_binder_status)?;
+            trace_system("boot").map_err(err_to_binder_status)?;
         }
         schedule().map_err(err_to_binder_status)?;
         Ok(())
@@ -102,8 +102,8 @@ pub fn terminate() -> Result<()> {
 }
 
 /// Immediately schedule a one-off trace.
-pub fn trace_once(tag: &str) -> Result<()> {
-    get_profcollectd_service()?.trace_once(tag)?;
+pub fn trace_system(tag: &str) -> Result<()> {
+    get_profcollectd_service()?.trace_system(tag)?;
     Ok(())
 }
 

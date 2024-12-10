@@ -602,14 +602,14 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
   use_branch_address_ = options.PullBoolValue("-b");
   accumulate_callchain_ = options.PullBoolValue("--children");
   for (const OptionValue& value : options.PullValues("--comms")) {
-    std::vector<std::string> strs = Split(*value.str_value, ",");
+    std::vector<std::string> strs = Split(value.str_value, ",");
     sample_tree_builder_options_.comm_filter.insert(strs.begin(), strs.end());
   }
   if (!record_filter_.ParseOptions(options)) {
     return false;
   }
   for (const OptionValue& value : options.PullValues("--cpu")) {
-    if (auto cpus = GetCpusFromString(*value.str_value); cpus) {
+    if (auto cpus = GetCpusFromString(value.str_value); cpus) {
       sample_tree_builder_options_.cpu_filter.insert(cpus->begin(), cpus->end());
     } else {
       return false;
@@ -618,7 +618,7 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
   report_csv_ = options.PullBoolValue("--csv");
   options.PullStringValue("--csv-separator", &csv_separator_);
   for (const OptionValue& value : options.PullValues("--dsos")) {
-    std::vector<std::string> strs = Split(*value.str_value, ",");
+    std::vector<std::string> strs = Split(value.str_value, ",");
     sample_tree_builder_options_.dso_filter.insert(strs.begin(), strs.end());
   }
   brief_callgraph_ = !options.PullBoolValue("--full-callgraph");
@@ -626,13 +626,13 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
   if (auto value = options.PullValue("-g"); value) {
     print_callgraph_ = true;
     accumulate_callchain_ = true;
-    if (value->str_value != nullptr) {
-      if (*value->str_value == "callee") {
+    if (!value->str_value.empty()) {
+      if (value->str_value == "callee") {
         callgraph_show_callee_ = true;
-      } else if (*value->str_value == "caller") {
+      } else if (value->str_value == "caller") {
         callgraph_show_callee_ = false;
       } else {
-        LOG(ERROR) << "Unknown argument with -g option: " << *value->str_value;
+        LOG(ERROR) << "Unknown argument with -g option: " << value->str_value;
         return false;
       }
     }
@@ -640,8 +640,8 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
   options.PullStringValue("-i", &record_filename_);
   if (auto value = options.PullValue("--kallsyms"); value) {
     std::string kallsyms;
-    if (!android::base::ReadFileToString(*value->str_value, &kallsyms)) {
-      LOG(ERROR) << "Can't read kernel symbols from " << *value->str_value;
+    if (!android::base::ReadFileToString(value->str_value, &kallsyms)) {
+      LOG(ERROR) << "Can't read kernel symbols from " << value->str_value;
       return false;
     }
     Dso::SetKallsyms(kallsyms);
@@ -671,7 +671,7 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
   }
   print_event_count_ = options.PullBoolValue("--print-event-count");
   for (const OptionValue& value : options.PullValues("--tids")) {
-    if (auto tids = GetTidsFromString(*value.str_value, false); tids) {
+    if (auto tids = GetTidsFromString(value.str_value, false); tids) {
       record_filter_.AddTids(tids.value(), false);
     } else {
       return false;
@@ -681,26 +681,26 @@ bool ReportCommand::ParseOptions(const std::vector<std::string>& args) {
 
   sort_keys_ = {"comm", "pid", "tid", "dso", "symbol"};
   if (auto value = options.PullValue("--sort"); value) {
-    sort_keys_ = Split(*value->str_value, ",");
+    sort_keys_ = Split(value->str_value, ",");
   }
 
   for (const OptionValue& value : options.PullValues("--symbols")) {
-    std::vector<std::string> symbols = Split(*value.str_value, ";");
+    std::vector<std::string> symbols = Split(value.str_value, ";");
     sample_tree_builder_options_.symbol_filter.insert(symbols.begin(), symbols.end());
   }
 
   if (auto value = options.PullValue("--symfs"); value) {
-    if (!Dso::SetSymFsDir(*value->str_value)) {
+    if (!Dso::SetSymFsDir(value->str_value)) {
       return false;
     }
   }
   if (auto value = options.PullValue("--symdir"); value) {
-    if (!Dso::AddSymbolDir(*value->str_value)) {
+    if (!Dso::AddSymbolDir(value->str_value)) {
       return false;
     }
   }
   if (auto value = options.PullValue("--vmlinux"); value) {
-    Dso::SetVmlinux(*value->str_value);
+    Dso::SetVmlinux(value->str_value);
   }
   CHECK(options.values.empty());
   return true;

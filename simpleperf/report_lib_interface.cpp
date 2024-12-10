@@ -92,6 +92,17 @@ struct CallChain {
   CallChainEntry* entries;
 };
 
+struct EventCounter {
+  const char* name;
+  uint64_t id;
+  uint64_t count;
+};
+
+struct EventCountersView {
+  size_t nr;
+  EventCounter* event_counter;
+};
+
 struct FeatureSection {
   const char* data;
   uint32_t data_size;
@@ -209,7 +220,16 @@ class ReportLib {
   Event* GetEventOfCurrentSample() { return &current_event_; }
   SymbolEntry* GetSymbolOfCurrentSample() { return current_symbol_; }
   CallChain* GetCallChainOfCurrentSample() { return &current_callchain_; }
+  EventCountersView* GetEventCountersOfCurrentSample() {
+    event_counters_view_.nr = event_counters_.size();
+    event_counters_view_.event_counter = event_counters_.data();
+    return &event_counters_view_;
+  }
   const char* GetTracingDataOfCurrentSample() { return current_tracing_data_; }
+  const char* GetProcessNameOfCurrentSample() {
+    const ThreadEntry* thread = thread_tree_.FindThread(current_sample_.pid);
+    return (thread != nullptr) ? thread->comm : "unknown";
+  }
 
   const char* GetBuildIdForPath(const char* path);
   FeatureSection* GetFeatureSection(const char* feature_name);
@@ -220,6 +240,7 @@ class ReportLib {
   void ProcessSwitchRecord(std::unique_ptr<Record> r);
   void AddSampleRecordToQueue(SampleRecord* r);
   bool SetCurrentSample(std::unique_ptr<SampleRecord> sample_record);
+  void SetEventCounters(const SampleRecord& r);
   const EventInfo& FindEvent(const SampleRecord& r);
   void CreateEvents();
 
@@ -236,6 +257,8 @@ class ReportLib {
   Event current_event_;
   SymbolEntry* current_symbol_;
   CallChain current_callchain_;
+  std::vector<EventCounter> event_counters_;
+  EventCountersView event_counters_view_;
   const char* current_tracing_data_;
   std::vector<std::unique_ptr<Mapping>> current_mappings_;
   std::vector<CallChainEntry> callchain_entries_;
@@ -521,7 +544,27 @@ bool ReportLib::SetCurrentSample(std::unique_ptr<SampleRecord> sample_record) {
   } else {
     current_tracing_data_ = nullptr;
   }
+  SetEventCounters(r);
   return true;
+}
+
+void ReportLib::SetEventCounters(const SampleRecord& r) {
+  const std::vector<uint64_t>& ids = r.read_data.ids;
+  const std::vector<uint64_t>& counts = r.read_data.counts;
+  CHECK_EQ(ids.size(), counts.size());
+
+  event_counters_.clear();
+  for (size_t i = 0; i < ids.size(); i++) {
+    uint64_t event_id = ids[i];
+    uint64_t count = counts[i];
+    std::optional<size_t> attr_index = record_file_reader_->GetAttrIndexByEventId(event_id);
+    if (!attr_index) {
+      LOG(ERROR) << "Failed to find event name for event id " << event_id;
+      continue;
+    }
+
+    event_counters_.emplace_back(events_[*attr_index].name.c_str(), event_id, count);
+  }
 }
 
 const EventInfo& ReportLib::FindEvent(const SampleRecord& r) {
@@ -645,7 +688,9 @@ Sample* GetNextSample(ReportLib* report_lib) EXPORT;
 Event* GetEventOfCurrentSample(ReportLib* report_lib) EXPORT;
 SymbolEntry* GetSymbolOfCurrentSample(ReportLib* report_lib) EXPORT;
 CallChain* GetCallChainOfCurrentSample(ReportLib* report_lib) EXPORT;
+EventCountersView* GetEventCountersOfCurrentSample(ReportLib* report_lib) EXPORT;
 const char* GetTracingDataOfCurrentSample(ReportLib* report_lib) EXPORT;
+const char* GetProcessNameOfCurrentSample(ReportLib* report_lib) EXPORT;
 
 const char* GetBuildIdForPath(ReportLib* report_lib, const char* path) EXPORT;
 FeatureSection* GetFeatureSection(ReportLib* report_lib, const char* feature_name) EXPORT;
@@ -729,8 +774,16 @@ CallChain* GetCallChainOfCurrentSample(ReportLib* report_lib) {
   return report_lib->GetCallChainOfCurrentSample();
 }
 
+EventCountersView* GetEventCountersOfCurrentSample(ReportLib* report_lib) {
+  return report_lib->GetEventCountersOfCurrentSample();
+}
+
 const char* GetTracingDataOfCurrentSample(ReportLib* report_lib) {
   return report_lib->GetTracingDataOfCurrentSample();
+}
+
+const char* GetProcessNameOfCurrentSample(ReportLib* report_lib) {
+  return report_lib->GetProcessNameOfCurrentSample();
 }
 
 const char* GetBuildIdForPath(ReportLib* report_lib, const char* path) {

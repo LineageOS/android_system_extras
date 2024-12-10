@@ -85,6 +85,8 @@ TEST(command, PreprocessOptions) {
       {"--str-option", {OptionValueType::STRING, OptionType::MULTIPLE}},
       {"--str2-option", {OptionValueType::STRING, OptionType::SINGLE}},
       {"--opt-str-option", {OptionValueType::OPT_STRING, OptionType::MULTIPLE}},
+      {"--opt-str-after-equal-option",
+       {OptionValueType::OPT_STRING_AFTER_EQUAL, OptionType::MULTIPLE}},
       {"--uint-option", {OptionValueType::UINT, OptionType::SINGLE}},
       {"--double-option", {OptionValueType::DOUBLE, OptionType::SINGLE}},
 
@@ -94,24 +96,39 @@ TEST(command, PreprocessOptions) {
   };
 
   // Check options.
-  std::vector<std::string> args = {
-      "--bool-option",    "--str-option",  "str1",          "--str-option",
-      "str1_2",           "--str2-option", "str2_value",    "--opt-str-option",
-      "--opt-str-option", "opt_str",       "--uint-option", "34",
-      "--double-option",  "-32.75"};
+  std::vector<std::string> args = {"--bool-option",
+                                   "--str-option",
+                                   "str1",
+                                   "--str-option",
+                                   "str1_2",
+                                   "--str2-option",
+                                   "str2_value",
+                                   "--opt-str-option",
+                                   "--opt-str-option",
+                                   "opt_str",
+                                   "--opt-str-after-equal-option",
+                                   "--opt-str-after-equal-option=str3",
+                                   "--uint-option",
+                                   "34",
+                                   "--double-option",
+                                   "-32.75"};
   ASSERT_TRUE(cmd.PreprocessOptions(args, option_formats, &options, &ordered_options, nullptr));
   ASSERT_TRUE(options.PullBoolValue("--bool-option"));
   auto values = options.PullValues("--str-option");
   ASSERT_EQ(values.size(), 2);
-  ASSERT_EQ(*values[0].str_value, "str1");
-  ASSERT_EQ(*values[1].str_value, "str1_2");
+  ASSERT_EQ(values[0].str_value, "str1");
+  ASSERT_EQ(values[1].str_value, "str1_2");
   std::string str2_value;
   options.PullStringValue("--str2-option", &str2_value);
   ASSERT_EQ(str2_value, "str2_value");
   values = options.PullValues("--opt-str-option");
   ASSERT_EQ(values.size(), 2);
-  ASSERT_TRUE(values[0].str_value == nullptr);
-  ASSERT_EQ(*values[1].str_value, "opt_str");
+  ASSERT_TRUE(values[0].str_value.empty());
+  ASSERT_EQ(values[1].str_value, "opt_str");
+  values = options.PullValues("--opt-str-after-equal-option");
+  ASSERT_EQ(values.size(), 2);
+  ASSERT_TRUE(values[0].str_value.empty());
+  ASSERT_EQ(values[1].str_value, "str3");
   size_t uint_value;
   ASSERT_TRUE(options.PullUintValue("--uint-option", &uint_value));
   ASSERT_EQ(uint_value, 34);
@@ -125,11 +142,11 @@ TEST(command, PreprocessOptions) {
   ASSERT_TRUE(cmd.PreprocessOptions(args, option_formats, &options, &ordered_options, nullptr));
   ASSERT_EQ(ordered_options.size(), 3);
   ASSERT_EQ(ordered_options[0].first, "--ord-str-option");
-  ASSERT_EQ(*(ordered_options[0].second.str_value), "str1");
+  ASSERT_EQ(ordered_options[0].second.str_value, "str1");
   ASSERT_EQ(ordered_options[1].first, "--ord-uint-option");
   ASSERT_EQ(ordered_options[1].second.uint_value, 32);
   ASSERT_EQ(ordered_options[2].first, "--ord-str-option");
-  ASSERT_EQ(*(ordered_options[2].second.str_value), "str2");
+  ASSERT_EQ(ordered_options[2].second.str_value, "str2");
 
   // Check non_option_args.
   ASSERT_TRUE(cmd.PreprocessOptions({"arg1", "--arg2"}, option_formats, &options, &ordered_options,
@@ -158,6 +175,18 @@ TEST(command, PreprocessOptions) {
   // unexpected non_option_args
   ASSERT_FALSE(cmd.PreprocessOptions({"non_option_args"}, option_formats, &options,
                                      &ordered_options, nullptr));
+
+  auto parse_args = [&](const std::vector<std::string>& args) {
+    return cmd.PreprocessOptions(args, option_formats, &options, &ordered_options, nullptr);
+  };
+
+  ASSERT_TRUE(parse_args({"--opt-str-after-equal-option"}));
+  std::string s;
+  options.PullStringValue("--opt-str-after-equal-option", &s);
+  ASSERT_EQ(s, "");
+  ASSERT_TRUE(parse_args({"--opt-str-after-equal-option=str_value"}));
+  options.PullStringValue("--opt-str-after-equal-option", &s);
+  ASSERT_EQ(s, "str_value");
 }
 
 // @CddTest = 6.1/C-0-2

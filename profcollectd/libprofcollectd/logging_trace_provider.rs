@@ -36,12 +36,36 @@ impl TraceProvider for LoggingTraceProvider {
         true
     }
 
-    fn trace(&self, trace_dir: &Path, tag: &str, sampling_period: &Duration, _binary_filter: &str) {
+    fn trace_system(
+        &self,
+        trace_dir: &Path,
+        tag: &str,
+        sampling_period: &Duration,
+        _binary_filter: &str,
+    ) {
         let trace_file = trace_provider::get_path(trace_dir, tag, LOGGING_TRACEFILE_EXTENSION);
 
         log::info!(
             "Trace event triggered, tag {}, sampling for {}ms, saving to {}",
             tag,
+            sampling_period.as_millis(),
+            trace_file.display()
+        );
+    }
+
+    fn trace_process(
+        &self,
+        trace_dir: &Path,
+        tag: &str,
+        sampling_period: &Duration,
+        processes: &str,
+    ) {
+        let trace_file = trace_provider::get_path(trace_dir, tag, LOGGING_TRACEFILE_EXTENSION);
+
+        log::info!(
+            "Trace event triggered, tag {}, processes {}, sampling for {}ms, saving to {}",
+            tag,
+            processes,
             sampling_period.as_millis(),
             trace_file.display()
         );

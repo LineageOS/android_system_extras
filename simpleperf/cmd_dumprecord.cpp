@@ -199,6 +199,7 @@ class DumpRecordCommand : public Command {
 "Usage: simpleperf dumprecord [options] [perf_record_file]\n"
 "    Dump different parts of a perf record file. Default file is perf.data.\n"
 "--dump-etm type1,type2,...   Dump etm data. A type is one of raw, packet and element.\n"
+"--dump-feature feature1,feature2,...  Only dump selected feature sections.\n"
 "-i <record_file>             Record file to dump. Default is perf.data.\n"
 "--symdir <dir>               Look for binaries in a directory recursively.\n"
                 // clang-format on
@@ -223,6 +224,7 @@ class DumpRecordCommand : public Command {
   // options
   std::string record_filename_ = "perf.data";
   ETMDumpOption etm_dump_option_;
+  std::vector<std::string> dump_features_;
 
   std::unique_ptr<RecordFileReader> record_file_reader_;
   std::unique_ptr<ETMDecoder> etm_decoder_;
@@ -240,6 +242,11 @@ bool DumpRecordCommand::Run(const std::vector<std::string>& args) {
   if (record_file_reader_ == nullptr) {
     return false;
   }
+
+  if (!dump_features_.empty()) {
+    return DumpFeatureSection();
+  }
+
   DumpFileHeader();
   DumpAttrSection();
   if (!DumpDataSection()) {
@@ -251,6 +258,7 @@ bool DumpRecordCommand::Run(const std::vector<std::string>& args) {
 bool DumpRecordCommand::ParseOptions(const std::vector<std::string>& args) {
   const OptionFormatMap option_formats = {
       {"--dump-etm", {OptionValueType::STRING, OptionType::SINGLE}},
+      {"--dump-feature", {OptionValueType::STRING, OptionType::MULTIPLE}},
       {"-i", {OptionValueType::STRING, OptionType::SINGLE}},
       {"--symdir", {OptionValueType::STRING, OptionType::MULTIPLE}},
   };
@@ -261,13 +269,14 @@ bool DumpRecordCommand::ParseOptions(const std::vector<std::string>& args) {
     return false;
   }
   if (auto value = options.PullValue("--dump-etm"); value) {
-    if (!ParseEtmDumpOption(*value->str_value, &etm_dump_option_)) {
+    if (!ParseEtmDumpOption(value->str_value, &etm_dump_option_)) {
       return false;
     }
   }
+  dump_features_ = options.PullStringValues("--dump-feature");
   options.PullStringValue("-i", &record_filename_);
   for (const OptionValue& value : options.PullValues("--symdir")) {
-    if (!Dso::AddSymbolDir(*value.str_value)) {
+    if (!Dso::AddSymbolDir(value.str_value)) {
       return false;
     }
   }
@@ -505,8 +514,13 @@ bool DumpRecordCommand::DumpFeatureSection() {
   for (const auto& pair : section_map) {
     int feature = pair.first;
     const auto& section = pair.second;
-    printf("feature section for %s: offset %" PRId64 ", size %" PRId64 "\n",
-           GetFeatureNameOrUnknown(feature).c_str(), section.offset, section.size);
+    std::string feature_name = GetFeatureNameOrUnknown(feature);
+    if (!dump_features_.empty() &&
+        std::count(dump_features_.begin(), dump_features_.end(), feature_name) == 0) {
+      continue;
+    }
+    printf("feature section for %s: offset %" PRId64 ", size %" PRId64 "\n", feature_name.c_str(),
+           section.offset, section.size);
     if (feature == FEAT_BUILD_ID) {
       std::vector<BuildIdRecord> records = record_file_reader_->ReadBuildIdFeature();
       for (auto& r : records) {
@@ -592,6 +606,12 @@ bool DumpRecordCommand::DumpFeatureSection() {
             PrintIndented(3, "count: %" PRIu64 "\n", count);
           }
         }
+      }
+    } else if (feature == FEAT_INIT_MAP) {
+      PrintIndented(1, "init_map:\n");
+      auto callback = [&](std::unique_ptr<Record> r) { return ProcessRecord(r.get()); };
+      if (!record_file_reader_->ReadInitMapFeature(callback)) {
+        return false;
       }
     }
   }

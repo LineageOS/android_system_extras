@@ -70,7 +70,7 @@ impl Scheduler {
                     Err(_) => {
                         // Did not receive a termination signal, initiate trace event.
                         if check_space_limit(&TRACE_OUTPUT_DIR, &config).unwrap() {
-                            trace_provider.lock().unwrap().trace(
+                            trace_provider.lock().unwrap().trace_system(
                                 &TRACE_OUTPUT_DIR,
                                 "periodic",
                                 &get_sampling_period(),
@@ -94,14 +94,37 @@ impl Scheduler {
         Ok(())
     }
 
-    pub fn one_shot(&self, config: &Config, tag: &str) -> Result<()> {
+    pub fn trace_system(&self, config: &Config, tag: &str) -> Result<()> {
         let trace_provider = self.trace_provider.clone();
         if check_space_limit(&TRACE_OUTPUT_DIR, config)? {
-            trace_provider.lock().unwrap().trace(
+            trace_provider.lock().unwrap().trace_system(
                 &TRACE_OUTPUT_DIR,
                 tag,
                 &get_sampling_period(),
                 &config.binary_filter,
+            );
+        }
+        Ok(())
+    }
+
+    pub fn trace_process(
+        &self,
+        config: &Config,
+        tag: &str,
+        processes: &str,
+        samplng_period: f32,
+    ) -> Result<()> {
+        let trace_provider = self.trace_provider.clone();
+        let duration = match samplng_period {
+            0.0 => get_sampling_period(),
+            _ => Duration::from_millis(samplng_period as u64),
+        };
+        if check_space_limit(&TRACE_OUTPUT_DIR, config)? {
+            trace_provider.lock().unwrap().trace_process(
+                &TRACE_OUTPUT_DIR,
+                tag,
+                &duration,
+                processes,
             );
         }
         Ok(())

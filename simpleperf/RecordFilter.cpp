@@ -402,24 +402,24 @@ bool RecordFilter::ParseOptions(OptionValueMap& options) {
       }
     }
     for (const OptionValue& value : options.PullValues(prefix + "tid")) {
-      if (auto tids = GetTidsFromString(*value.str_value, false); tids) {
+      if (auto tids = GetTidsFromString(value.str_value, false); tids) {
         AddTids(tids.value(), exclude);
       } else {
         return false;
       }
     }
     for (const OptionValue& value : options.PullValues(prefix + "process-name")) {
-      if (!AddProcessNameRegex(*value.str_value, exclude)) {
+      if (!AddProcessNameRegex(value.str_value, exclude)) {
         return false;
       }
     }
     for (const OptionValue& value : options.PullValues(prefix + "thread-name")) {
-      if (!AddThreadNameRegex(*value.str_value, exclude)) {
+      if (!AddThreadNameRegex(value.str_value, exclude)) {
         return false;
       }
     }
     for (const OptionValue& value : options.PullValues(prefix + "uid")) {
-      if (auto uids = ParseUintVector<uint32_t>(*value.str_value); uids) {
+      if (auto uids = ParseUintVector<uint32_t>(value.str_value); uids) {
         AddUids(uids.value(), exclude);
       } else {
         return false;
@@ -427,14 +427,14 @@ bool RecordFilter::ParseOptions(OptionValueMap& options) {
     }
   }
   for (const OptionValue& value : options.PullValues("--cpu")) {
-    if (auto cpus = GetCpusFromString(*value.str_value); cpus) {
+    if (auto cpus = GetCpusFromString(value.str_value); cpus) {
       AddCpus(cpus.value());
     } else {
       return false;
     }
   }
   if (auto value = options.PullValue("--filter-file"); value) {
-    if (!SetFilterFile(*value->str_value)) {
+    if (!SetFilterFile(value->str_value)) {
       return false;
     }
   }

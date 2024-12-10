@@ -37,7 +37,13 @@ impl TraceProvider for SimpleperfLbrTraceProvider {
         true
     }
 
-    fn trace(&self, trace_dir: &Path, tag: &str, sampling_period: &Duration, binary_filter: &str) {
+    fn trace_system(
+        &self,
+        trace_dir: &Path,
+        tag: &str,
+        sampling_period: &Duration,
+        binary_filter: &str,
+    ) {
         let trace_file = trace_provider::get_path(trace_dir, tag, LBR_TRACEFILE_EXTENSION);
         // Record ETM data for kernel space only when it's not filtered out by binary_filter. So we
         // can get more ETM data for user space when ETM data for kernel space isn't needed.
@@ -59,7 +65,31 @@ impl TraceProvider for SimpleperfLbrTraceProvider {
             "-o",
             trace_file.to_str().unwrap(),
         ];
+        simpleperf_profcollect::run_record_cmd(&args);
+    }
 
+    fn trace_process(
+        &self,
+        trace_dir: &Path,
+        tag: &str,
+        sampling_period: &Duration,
+        processes: &str,
+    ) {
+        let trace_file = trace_provider::get_path(trace_dir, tag, LBR_TRACEFILE_EXTENSION);
+        let event_name = "cpu-cycles:u";
+        let duration: String = sampling_period.as_secs_f64().to_string();
+        let args: Vec<&str> = vec![
+            "-p",
+            processes,
+            "-e",
+            event_name,
+            "--duration",
+            &duration,
+            "-b",
+            "--no-dump-symbols",
+            "-o",
+            trace_file.to_str().unwrap(),
+        ];
         simpleperf_profcollect::run_record_cmd(&args);
     }
 

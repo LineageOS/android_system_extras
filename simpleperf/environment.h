@@ -85,7 +85,7 @@ bool SetCpuTimeMaxPercent(size_t percent);
 bool GetPerfEventMlockKb(uint64_t* mlock_kb);
 bool SetPerfEventMlockKb(uint64_t mlock_kb);
 bool CanRecordRawData();
-std::optional<uint64_t> GetMemorySize();
+uint64_t GetMemorySize();
 
 ArchType GetMachineArch();
 void PrepareVdsoFile();

@@ -27,6 +27,7 @@
 
 from collections import Counter
 from dataclasses import dataclass, field
+from enum import Enum, unique
 import json
 import logging
 import sys
@@ -45,7 +46,7 @@ GeckoProfile = Dict
 
 
 # https://github.com/firefox-devtools/profiler/blob/53970305b51b9b472e26d7457fee1d66cd4e2737/src/types/gecko-profile.js#L156
-class Frame(NamedTuple):
+class GeckoFrame(NamedTuple):
     string_id: StringID
     relevantForJS: bool
     innerWindowID: int
@@ -58,14 +59,14 @@ class Frame(NamedTuple):
 
 
 # https://github.com/firefox-devtools/profiler/blob/53970305b51b9b472e26d7457fee1d66cd4e2737/src/types/gecko-profile.js#L216
-class Stack(NamedTuple):
+class GeckoStack(NamedTuple):
     prefix_id: Optional[StackID]
     frame_id: FrameID
     category_id: CategoryID
 
 
 # https://github.com/firefox-devtools/profiler/blob/53970305b51b9b472e26d7457fee1d66cd4e2737/src/types/gecko-profile.js#L90
-class Sample(NamedTuple):
+class GeckoSample(NamedTuple):
     stack_id: Optional[StackID]
     time_ms: Milliseconds
     responsiveness: int
@@ -78,71 +79,92 @@ class Sample(NamedTuple):
 # Schema: https://github.com/firefox-devtools/profiler/blob/53970305b51b9b472e26d7457fee1d66cd4e2737/src/types/profile.js#L425
 # Colors must be defined in:
 # https://github.com/firefox-devtools/profiler/blob/50124adbfa488adba6e2674a8f2618cf34b59cd2/res/css/categories.css
-CATEGORIES = [
-    {
-        "name": 'User',
-        # Follow Brendan Gregg's Flamegraph convention: yellow for userland
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L419
-        "color": 'yellow',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'Kernel',
-        # Follow Brendan Gregg's Flamegraph convention: orange for kernel
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L417
-        "color": 'orange',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'Native',
-        # Follow Brendan Gregg's Flamegraph convention: yellow for userland
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L419
-        "color": 'yellow',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'DEX',
-        # Follow Brendan Gregg's Flamegraph convention: green for Java/JIT
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L411
-        "color": 'green',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'OAT',
-        # Follow Brendan Gregg's Flamegraph convention: green for Java/JIT
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L411
-        "color": 'green',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'Off-CPU',
-        # Follow Brendan Gregg's Flamegraph convention: blue for off-CPU
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L470
-        "color": 'blue',
-        "subcategories": ['Other']
-    },
-    # Not used by this exporter yet, but some Firefox Profiler code assumes
-    # there is an 'Other' category by searching for a category with
-    # color=grey, so include this.
-    {
-        "name": 'Other',
-        "color": 'grey',
-        "subcategories": ['Other']
-    },
-    {
-        "name": 'JIT',
-        # Follow Brendan Gregg's Flamegraph convention: green for Java/JIT
-        # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L411
-        "color": 'green',
-        "subcategories": ['Other']
-    },
-]
+@unique
+class Category(Enum):
+  # Follow Brendan Gregg's Flamegraph convention: yellow for userland
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L419
+  USER = 0, 'User', 'yellow'
+  # Follow Brendan Gregg's Flamegraph convention: orange for kernel
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L417
+  KERNEL = 1, 'Kernel', 'orange'
+  # Follow Brendan Gregg's Flamegraph convention: yellow for userland
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L419
+  NATIVE = 2, 'Native', 'yellow'
+  # Follow Brendan Gregg's Flamegraph convention: green for Java/JIT
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L411
+  DEX = 3, 'DEX', 'green'
+  OAT = 4, 'OAT', 'green'
+  # Follow Brendan Gregg's Flamegraph convention: blue for off-CPU
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L470
+  OFF_CPU = 5, 'Off-CPU', 'blue'
+  # Not used by this exporter yet, but some Firefox Profiler code assumes
+  # there is an 'Other' category by searching for a category with
+  # color=grey, so include this.
+  OTHER = 6, 'Other', 'grey'
+  # Follow Brendan Gregg's Flamegraph convention: green for Java/JIT
+  # https://github.com/brendangregg/FlameGraph/blob/810687f180f3c4929b5d965f54817a5218c9d89b/flamegraph.pl#L411
+  JIT = 7, 'JIT', 'green'
+
+  def __init__(self, value, label, color):
+    self._value_ = value
+    self.label = label
+    self.color = color
+
+  @classmethod
+  def to_json(cls):
+    return [{
+        "name": enum.label,
+        "color": enum.color,
+        # We don't use subcategories, but Firefox Profiler seems to require it.
+        "subcategories":['Other']
+    } for enum in cls]
 
 
-def is_complete_stack(stack: List[str]) -> bool:
+@dataclass
+class StackFrame:
+  symbol_name: str
+  dso_name: str
+
+  def to_gecko_frame_string(self):
+    return '%s (in %s)' % (self.symbol_name, self.dso_name)
+
+  def category(self) -> Category:
+    # Heuristic: kernel code contains "kallsyms" as the library name.
+    if self.dso_name == "[kernel.kallsyms]" or self.dso_name.endswith(".ko"):
+        # Heuristic: empirically, off-CPU profiles mostly measure off-CPU
+        # time accounted to the linux kernel __schedule function, which
+        # handles blocking. This only works if we have kernel symbol
+        # (kallsyms) access though.  __schedule defined here:
+        # https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/kernel/sched/core.c;l=6593;drc=0c99414a07ddaa18d8eb4be90b551d2687cbde2f
+        if self.symbol_name == "__schedule":
+            return Category.OFF_CPU
+        return Category.KERNEL
+    elif self.dso_name.endswith(".so"):
+        return Category.NATIVE
+    elif self.dso_name.endswith(".vdex"):
+        return Category.DEX
+    # APKs are full of dex code.
+    elif self.dso_name.endswith(".apk"):
+        return Category.DEX
+    # /system/framework/ has .jar files which seem to be full of .dex code.
+    elif self.dso_name.endswith(".jar"):
+        return Category.DEX
+    elif self.dso_name.endswith(".oat"):
+        return Category.OAT
+    # In ART, odex is just OAT code
+    elif self.dso_name.endswith(".odex"):
+        return Category.OAT
+    # "[JIT app cache]" is returned for JIT code here:
+    # https://cs.android.com/android/platform/superproject/+/master:system/extras/simpleperf/dso.cpp;l=551;drc=4d8137f55782cc1e8cc93e4694ba3a7159d9a2bc
+    elif self.dso_name == "[JIT app cache]":
+        return Category.JIT
+    return Category.USER
+
+
+def is_complete_stack(stack: List[StackFrame]) -> bool:
     """ Check if the callstack is complete. The stack starts from root. """
-    for entry in stack:
-        if ('__libc_init' in entry) or ('__start_thread' in entry):
+    for frame in stack:
+        if frame.symbol_name == '__libc_init' or frame.symbol_name == '__start_thread':
             return True
     return False
 
@@ -166,12 +188,12 @@ class Thread:
     comm: str
     pid: int
     tid: int
-    samples: List[Sample] = field(default_factory=list)
-    frameTable: List[Frame] = field(default_factory=list)
+    samples: List[GeckoSample] = field(default_factory=list)
+    frameTable: List[GeckoFrame] = field(default_factory=list)
     stringTable: List[str] = field(default_factory=list)
     # TODO: this is redundant with frameTable, could we remove this?
     stringMap: Dict[str, int] = field(default_factory=dict)
-    stackTable: List[Stack] = field(default_factory=list)
+    stackTable: List[GeckoStack] = field(default_factory=list)
     stackMap: Dict[Tuple[Optional[int], int], int] = field(default_factory=dict)
     frameMap: Dict[str, int] = field(default_factory=dict)
 
@@ -182,9 +204,11 @@ class Thread:
         if stack_id is not None:
             return stack_id
         stack_id = len(self.stackTable)
-        self.stackTable.append(Stack(prefix_id=prefix_id,
-                                     frame_id=frame_id,
-                                     category_id=0))
+        self.stackTable.append(GeckoStack(
+            prefix_id=prefix_id,
+            frame_id=frame_id,
+            category_id=0,
+        ))
         self.stackMap[key] = stack_id
         return stack_id
 
@@ -198,8 +222,9 @@ class Thread:
         self.stringMap[string] = string_id
         return string_id
 
-    def _intern_frame(self, frame_str: str) -> int:
+    def _intern_frame(self, frame: StackFrame) -> int:
         """Gets a matching stack frame, or saves the new frame. Returns a Frame ID."""
+        frame_str = frame.to_gecko_frame_string()
         frame_id = self.frameMap.get(frame_str)
         if frame_id is not None:
             return frame_id
@@ -207,29 +232,8 @@ class Thread:
         self.frameMap[frame_str] = frame_id
         string_id = self._intern_string(frame_str)
 
-        category = 0
-        # Heuristic: kernel code contains "kallsyms" as the library name.
-        if "kallsyms" in frame_str or ".ko" in frame_str:
-            category = 1
-            # Heuristic: empirically, off-CPU profiles mostly measure off-CPU
-            # time accounted to the linux kernel __schedule function, which
-            # handles blocking. This only works if we have kernel symbol
-            # (kallsyms) access though.  __schedule defined here:
-            # https://cs.android.com/android/kernel/superproject/+/common-android-mainline:common/kernel/sched/core.c;l=6593;drc=0c99414a07ddaa18d8eb4be90b551d2687cbde2f
-            if frame_str.startswith("__schedule "):
-                category = 5
-        elif ".so" in frame_str:
-            category = 2
-        elif ".vdex" in frame_str:
-            category = 3
-        elif ".oat" in frame_str:
-            category = 4
-        # "[JIT app cache]" is returned for JIT code here:
-        # https://cs.android.com/android/platform/superproject/+/master:system/extras/simpleperf/dso.cpp;l=551;drc=4d8137f55782cc1e8cc93e4694ba3a7159d9a2bc
-        elif "[JIT app cache]" in frame_str:
-            category = 7
 
-        self.frameTable.append(Frame(
+        self.frameTable.append(GeckoFrame(
             string_id=string_id,
             relevantForJS=False,
             innerWindowID=0,
@@ -237,12 +241,12 @@ class Thread:
             optimizations=None,
             line=None,
             column=None,
-            category=category,
+            category=frame.category().value,
             subcategory=0,
         ))
         return frame_id
 
-    def add_sample(self, comm: str, stack: List[str], time_ms: Milliseconds) -> None:
+    def add_sample(self, comm: str, stack: List[StackFrame], time_ms: Milliseconds) -> None:
         """Add a timestamped stack trace sample to the thread builder.
 
         Args:
@@ -260,10 +264,12 @@ class Thread:
             frame_id = self._intern_frame(frame)
             prefix_stack_id = self._intern_stack(frame_id, prefix_stack_id)
 
-        self.samples.append(Sample(stack_id=prefix_stack_id,
-                                   time_ms=time_ms,
-                                   responsiveness=0,
-                                   complete_stack=is_complete_stack(stack)))
+        self.samples.append(GeckoSample(
+            stack_id=prefix_stack_id,
+            time_ms=time_ms,
+            responsiveness=0,
+            complete_stack=is_complete_stack(stack),
+        ))
 
     def sort_samples(self) -> None:
         """ The samples aren't guaranteed to be in order. Sort them by time. """
@@ -423,11 +429,16 @@ def _gecko_profile(
         symbol = lib.GetSymbolOfCurrentSample()
         callchain = lib.GetCallChainOfCurrentSample()
         sample_time_ms = sample.time / 1000000
+        stack : List[StackFrame] = [
+            StackFrame(symbol.symbol_name, symbol.dso_name),
+        ]
 
-        stack = ['%s (in %s)' % (symbol.symbol_name, symbol.dso_name)]
         for i in range(callchain.nr):
             entry = callchain.entries[i]
-            stack.append('%s (in %s)' % (entry.symbol.symbol_name, entry.symbol.dso_name))
+            stack.append(StackFrame(
+                symbol_name = entry.symbol.symbol_name,
+                dso_name = entry.symbol.dso_name
+            ))
         # We want root first, leaf last.
         stack.reverse()
 
@@ -436,8 +447,13 @@ def _gecko_profile(
                 process_names[sample.pid] = sample.thread_comm
             process_name = process_names.get(sample.pid)
             stack = [
-                '%s tid %d (in %s pid %d)' %
-                (sample.thread_comm, sample.tid, process_name, sample.pid)] + stack
+                # This is a synthetic stack frame, these aren't real symbols or
+                # DSOs, but they show up nicely in the UI.
+                StackFrame(
+                    symbol_name = '%s tid %d' % (sample.thread_comm, sample.tid),
+                    dso_name = '%s pid %d' % (process_name, sample.pid),
+                )
+            ] + stack
             thread = thread_map.get(sample.cpu)
             if thread is None:
                 thread = Thread(comm=f'Cpu {sample.cpu}', pid=sample.cpu, tid=sample.cpu)
@@ -493,7 +509,7 @@ def _gecko_profile(
         "shutdownTime": None,
         "version": 24,
         "presymbolicated": True,
-        "categories": CATEGORIES,
+        "categories": Category.to_json(),
         "markerSchema": [],
         "abi": arch,
         "oscpu": meta_info.get("android_build_fingerprint"),

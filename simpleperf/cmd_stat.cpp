@@ -662,7 +662,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   system_wide_collection_ = options.PullBoolValue("-a");
 
   if (auto value = options.PullValue("--app"); value) {
-    app_package_name_ = *value->str_value;
+    app_package_name_ = value->str_value;
   }
   csv_ = options.PullBoolValue("--csv");
 
@@ -676,7 +676,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
 
   in_app_context_ = options.PullBoolValue("--in-app");
   for (const OptionValue& value : options.PullValues("--kprobe")) {
-    for (const auto& cmd : Split(*value.str_value, ",")) {
+    for (const auto& cmd : Split(value.str_value, ",")) {
       if (!probe_events.AddKprobe(cmd)) {
         return false;
       }
@@ -685,7 +685,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   child_inherit_ = !options.PullBoolValue("--no-inherit");
 
   if (auto value = options.PullValue("-o"); value) {
-    output_filename_ = *value->str_value;
+    output_filename_ = value->str_value;
   }
   if (auto value = options.PullValue("--out-fd"); value) {
     out_fd_.reset(static_cast<int>(value->uint_value));
@@ -704,7 +704,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   print_hw_counter_ = options.PullBoolValue("--print-hw-counter");
 
   if (auto value = options.PullValue("--sort"); value) {
-    sort_keys_ = Split(*value->str_value, ",");
+    sort_keys_ = Split(value->str_value, ",");
   }
 
   if (auto value = options.PullValue("--stop-signal-fd"); value) {
@@ -712,7 +712,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   }
 
   for (const OptionValue& value : options.PullValues("-t")) {
-    if (auto tids = GetTidsFromString(*value.str_value, true); tids) {
+    if (auto tids = GetTidsFromString(value.str_value, true); tids) {
       event_selection_set_.AddMonitoredThreads(tids.value());
     } else {
       return false;
@@ -720,7 +720,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
   }
 
   if (auto value = options.PullValue("--tracepoint-events"); value) {
-    if (!EventTypeManager::Instance().ReadTracepointsFromFile(*value->str_value)) {
+    if (!EventTypeManager::Instance().ReadTracepointsFromFile(value->str_value)) {
       return false;
     }
   }
@@ -736,14 +736,14 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
     const OptionValue& value = pair.second;
 
     if (name == "--cpu") {
-      if (auto v = GetCpusFromString(*value.str_value); v) {
+      if (auto v = GetCpusFromString(value.str_value); v) {
         std::set<int>& cpus = v.value();
         event_selection_set_.SetCpusForNewEvents(std::vector<int>(cpus.begin(), cpus.end()));
       } else {
         return false;
       }
     } else if (name == "-e") {
-      for (const auto& event_type : Split(*value.str_value, ",")) {
+      for (const auto& event_type : Split(value.str_value, ",")) {
         if (!probe_events.CreateProbeEventIfNotExist(event_type)) {
           return false;
         }
@@ -752,7 +752,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
         }
       }
     } else if (name == "--group") {
-      std::vector<std::string> event_types = Split(*value.str_value, ",");
+      std::vector<std::string> event_types = Split(value.str_value, ",");
       for (const auto& event_type : event_types) {
         if (!probe_events.CreateProbeEventIfNotExist(event_type)) {
           return false;
@@ -762,7 +762,7 @@ bool StatCommand::ParseOptions(const std::vector<std::string>& args,
         return false;
       }
     } else if (name == "--tp-filter") {
-      if (!event_selection_set_.SetTracepointFilter(*value.str_value)) {
+      if (!event_selection_set_.SetTracepointFilter(value.str_value)) {
         return false;
       }
     } else {

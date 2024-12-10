@@ -143,6 +143,13 @@ void DumpPerfEventAttr(const perf_event_attr& attr, size_t indent) {
                 attr.use_clockid, attr.context_switch);
   PrintIndented(indent + 1, "sample_regs_user 0x%" PRIx64 "\n", attr.sample_regs_user);
   PrintIndented(indent + 1, "sample_stack_user 0x%" PRIx64 "\n", attr.sample_stack_user);
+  PrintIndented(indent + 1, "clockid %d\n", attr.clockid);
+  PrintIndented(indent + 1, "sample_regs_intr %" PRIu64 "\n", attr.sample_regs_intr);
+  PrintIndented(indent + 1, "aux_watermark %u\n", attr.aux_watermark);
+  PrintIndented(indent + 1, "sample_max_stack %u\n", attr.sample_max_stack);
+  PrintIndented(indent + 1, "aux_sample_size %u\n", attr.aux_sample_size);
+  PrintIndented(indent + 1, "sig_data 0x%" PRIx64 "\n", attr.sig_data);
+  PrintIndented(indent + 1, "config3 0x%" PRIx64 "\n", attr.config3);
 }
 
 bool GetCommonEventIdPositionsForAttrs(const EventAttrIds& attrs,

@@ -106,12 +106,12 @@ bool BootRecordCommand::ParseOptions(const std::vector<std::string>& args) {
   }
   if (auto value = options.PullValue("--enable"); value) {
     action_ = Action::ENABLE;
-    record_options_ = *value->str_value;
+    record_options_ = value->str_value;
   } else if (options.PullBoolValue("--disable")) {
     action_ = Action::DISABLE;
   } else if (auto value = options.PullValue("--record"); value) {
     action_ = Action::RECORD;
-    record_options_ = *value->str_value;
+    record_options_ = value->str_value;
   }
   return true;
 }

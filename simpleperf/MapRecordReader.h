@@ -59,7 +59,8 @@ class MapRecordThread {
   ~MapRecordThread();
 
   bool Join();
-  bool ReadMapRecords(const std::function<bool(Record*)>& callback);
+  bool ReadMapRecordData(const std::function<bool(const char*, size_t)>& callback);
+  bool ReadMapRecords(const std::function<void(const Record*)>& callback, bool only_kernel_maps);
 
  private:
   // functions running in the map record thread
@@ -70,6 +71,7 @@ class MapRecordThread {
   std::unique_ptr<TemporaryFile> tmpfile_;
   std::unique_ptr<FILE, decltype(&fclose)> fp_;
   std::thread thread_;
+  bool thread_joined_ = false;
   std::atomic<bool> early_stop_ = false;
   std::atomic<bool> thread_result_ = false;
 };

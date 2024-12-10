@@ -959,7 +959,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.526725: 250000 cp
 	ffffff82a2e84116 __sys_trace ([kernel.kallsyms])
 	      752e1313c8 mmap64 (/apex/com.android.runtime/lib64/bionic/libc.so)
 	      75304ce1b8 android::FileMap::create(char const*, int, long, unsigned long, bool) (/system/lib64/libutils.so)
-	      752dd80240 android::ApkAssets::Open(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&, android::Asset::AccessMode) const (/system/lib64/libandroidfw.so)
+	      752dd80240 android::ApkAssets::Open(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&, android::Asset::AccessMode) const (/system/lib64/libandroidfw.so)
 	      752f9c2b34 android::NativeOpenNonAsset(_JNIEnv*, _jclass*, long, int, _jstring*, int) (/system/lib64/libandroid_runtime.so)
 	      74abfc1766 android.content.res.AssetManager.openNonAsset (/system/framework/framework.jar)
 	      74abfc9dd6 android.content.res.ResourcesImpl.loadDrawableForCookie (/system/framework/framework.jar)
@@ -4404,7 +4404,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.565977: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.566227: 250000 cpu-clock:
 	      74ad241688 void art::gc::collector::ConcurrentCopying::MarkRoot<false>(art::Thread*, art::mirror::CompressedReference<art::mirror::Object>*) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad242178 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad242178 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2209e4 art::gc::accounting::ModUnionTableReferenceCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22d290 art::gc::collector::ConcurrentCopying::CopyingPhase() (/apex/com.android.runtime/lib64/libart.so)
@@ -4433,7 +4433,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.566227: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.566477: 250000 cpu-clock:
-	      74ad242338 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad242338 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2209a4 art::gc::accounting::ModUnionTableReferenceCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22d290 art::gc::collector::ConcurrentCopying::CopyingPhase() (/apex/com.android.runtime/lib64/libart.so)
@@ -4462,7 +4462,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.566477: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.566727: 250000 cpu-clock:
-	      74ad241f34 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241f34 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2259dc art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -4492,7 +4492,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.566727: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.566977: 250000 cpu-clock:
-	      74ad241cbc void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241cbc void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2259dc art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -4523,7 +4523,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.566977: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.567227: 250000 cpu-clock:
 	      74ad24288c void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241cb0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241cb0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad225a20 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -4682,7 +4682,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.568477: 250000 cp
 	      74ad233a40 art::gc::collector::ConcurrentCopying::PushOntoMarkStack(art::Thread*, art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad23c808 art::gc::collector::ConcurrentCopying::Copy(art::Thread*, art::mirror::Object*, art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad242844 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad24210c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad24210c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4713,7 +4713,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.568477: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.568727: 250000 cpu-clock:
 	      74ad242824 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241c64 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241c64 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4743,7 +4743,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.568727: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.568977: 250000 cpu-clock:
-	      74ad24220c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad24220c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4774,7 +4774,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.568977: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.569227: 250000 cpu-clock:
 	      74ad242888 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4804,7 +4804,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.569227: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.569477: 250000 cpu-clock:
-	      74ad241c40 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241c40 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4834,7 +4834,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.569477: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.569727: 250000 cpu-clock:
-	      74ad241b24 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b24 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -4894,7 +4894,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.569978: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.570228: 250000 cpu-clock:
-	      74ad2a7e38 std::__1::deque<std::__1::pair<unsigned char*, unsigned char*>, std::__1::allocator<std::__1::pair<unsigned char*, unsigned char*> > >::__add_back_capacity() (/apex/com.android.runtime/lib64/libart.so)
+	      74ad2a7e38 std::__1::deque<std::__1::pair<unsigned char*, unsigned char*>, std::__1::allocator<std::__1::pair<unsigned char*, unsigned char*>>>::__add_back_capacity() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2a49f8 art::gc::space::RegionSpace::ClearFromSpace(unsigned long*, unsigned long*, bool) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22dc50 art::gc::collector::ConcurrentCopying::ReclaimPhase() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22b334 art::gc::collector::ConcurrentCopying::RunPhases() (/apex/com.android.runtime/lib64/libart.so)
@@ -5072,7 +5072,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.574229: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.574478: 250000 cpu-clock:
 	      74ad24288c void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad24210c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad24210c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2209a4 art::gc::accounting::ModUnionTableReferenceCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22d290 art::gc::collector::ConcurrentCopying::CopyingPhase() (/apex/com.android.runtime/lib64/libart.so)
@@ -5129,7 +5129,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.574728: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.574978: 250000 cpu-clock:
-	      74ad24232c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad24232c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2209a4 art::gc::accounting::ModUnionTableReferenceCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad22d290 art::gc::collector::ConcurrentCopying::CopyingPhase() (/apex/com.android.runtime/lib64/libart.so)
@@ -5158,7 +5158,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.574978: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.575228: 250000 cpu-clock:
-	      74ad241b1c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b1c void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad225a20 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -5188,7 +5188,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.575228: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.575478: 250000 cpu-clock:
-	      74ad241ca0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241ca0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2259dc art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -5219,7 +5219,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.575478: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.575728: 250000 cpu-clock:
 	      74ad242894 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2325c4 art::gc::collector::ConcurrentCopying::ImmuneSpaceScanObjVisitor::Callback(art::mirror::Object*, void*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2259dc art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*)::$_4::operator()(unsigned long) const (/apex/com.android.runtime/lib64/libart.so)
 	      74ad221ff8 art::gc::accounting::ModUnionTableCardCache::VisitObjects(void (*)(art::mirror::Object*, void*), void*) (/apex/com.android.runtime/lib64/libart.so)
@@ -5395,7 +5395,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.576978: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.577229: 250000 cpu-clock:
 	      74ad24291c void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241c28 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241c28 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5425,7 +5425,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.577229: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.577478: 250000 cpu-clock:
-	      74ad242194 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad242194 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5458,7 +5458,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.577728: 250000 cp
 	      74ad233a20 art::gc::collector::ConcurrentCopying::PushOntoMarkStack(art::Thread*, art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad23c808 art::gc::collector::ConcurrentCopying::Copy(art::Thread*, art::mirror::Object*, art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad242844 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241cb0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241cb0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5489,7 +5489,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.577728: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.577978: 250000 cpu-clock:
 	      74ad2427c8 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241c64 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241c64 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5522,7 +5522,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.578228: 250000 cp
 	      752e0e21d0 __memcpy (/apex/com.android.runtime/lib64/bionic/libc.so)
 	      74ad23c0b0 art::gc::collector::ConcurrentCopying::Copy(art::Thread*, art::mirror::Object*, art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad242844 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241ba0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241ba0 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5552,7 +5552,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.578228: 250000 cp
 	      752e0e1798 __libc_init (/apex/com.android.runtime/lib64/bionic/libc.so)
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.578478: 250000 cpu-clock:
-	      74ad241b18 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b18 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)
@@ -5583,7 +5583,7 @@ com.example.android.displayingbitmaps	31850/31850 [006] 684943.578478: 250000 cp
 
 com.example.android.displayingbitmaps	31850/31850 [006] 684943.578728: 250000 cpu-clock:
 	      74ad242808 void art::gc::collector::ConcurrentCopying::Process<false>(art::mirror::Object*, art::MemberOffset) (/apex/com.android.runtime/lib64/libart.so)
-	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> >(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
+	      74ad241b48 void art::mirror::Object::VisitReferences<true, (art::VerifyObjectFlags)0, (art::ReadBarrierOption)1, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false>>(art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&, art::gc::collector::ConcurrentCopying::RefFieldsVisitor<false> const&) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad236e14 art::gc::collector::ConcurrentCopying::ProcessMarkStackRef(art::mirror::Object*) (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2368f4 art::gc::collector::ConcurrentCopying::ProcessMarkStackOnce() (/apex/com.android.runtime/lib64/libart.so)
 	      74ad2364cc art::gc::collector::ConcurrentCopying::ProcessMarkStack() (/apex/com.android.runtime/lib64/libart.so)

@@ -76,8 +76,9 @@ pub fn pack_report(
         })?;
 
     if usage_setting != NO_USAGE_SETTING {
-        zip.start_file("usage_setting", options)?;
+        zip.start_file("usage_setting.txt", options)?;
         zip.write_all(usage_setting.to_string().as_bytes())?;
+        zip.write_all(b"\n")?;
     }
     zip.finish()?;
     clear_processed_files()?;

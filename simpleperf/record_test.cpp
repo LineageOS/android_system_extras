@@ -132,13 +132,30 @@ TEST_F(RecordTest, SampleRecord_ReplaceRegAndStackWithCallChain) {
       r.ReplaceRegAndStackWithCallChain(user_ips);
       CheckRecordMatchBinary(r);
       CheckRecordEqual(r, expected);
+
+      // Test a sample with record size > the end of user stack (). See
+      // https://lkml.org/lkml/2024/5/28/1224.
+      event_attr.sample_type |= PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER;
+      SampleRecord r2(event_attr, 0, 1, 2, 3, 4, 5, 6, {}, {1}, std::vector<char>(stack_size), 10);
+
+      std::vector<char> big_binary(r2.size() + 72, '\0');
+      memcpy(big_binary.data(), r2.Binary(), r2.size());
+      perf_event_header header;
+      memcpy(&header, big_binary.data(), sizeof(perf_event_header));
+      header.size = big_binary.size();
+      SampleRecord r3;
+      ASSERT_TRUE(r3.Parse(event_attr, big_binary.data(), big_binary.data() + big_binary.size()));
+      event_attr.sample_type &= ~(PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER);
+      r3.ReplaceRegAndStackWithCallChain(user_ips);
+      CheckRecordMatchBinary(r3);
+      CheckRecordEqual(r3, expected);
     }
   }
 }
 
 // @CddTest = 6.1/C-0-2
 TEST_F(RecordTest, SampleRecord_UpdateUserCallChain) {
-  event_attr.sample_type |= PERF_SAMPLE_CALLCHAIN | PERF_SAMPLE_REGS_USER | PERF_SAMPLE_STACK_USER;
+  event_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
   SampleRecord r(event_attr, 0, 1, 2, 3, 4, 5, 6, {}, {1, PERF_CONTEXT_USER, 2}, {}, 0);
   r.UpdateUserCallChain({3, 4, 5});
   CheckRecordMatchBinary(r);

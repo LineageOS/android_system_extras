@@ -31,6 +31,7 @@ namespace simpleperf {
 struct Record;
 
 constexpr char DEFAULT_KERNEL_MMAP_NAME[] = "[kernel.kallsyms]";
+constexpr char DEFAULT_KERNEL_BPF_MMAP_NAME[] = "[bpf]";
 constexpr char DEFAULT_EXECNAME_FOR_THREAD_MMAP[] = "//anon";
 
 namespace map_flags {

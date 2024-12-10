@@ -43,6 +43,10 @@ fi
 if [[ "${dir}" == *.apk ]]; then
   trap 'cleanup_trap' EXIT
 
+  echo
+  echo "Recursively analyzing $dir"
+  echo
+
   if { zipalign --help 2>&1 | grep -q "\-P <pagesize_kb>"; }; then
     echo "=== APK zip-alignment ==="
     zipalign -v -c -P 16 4 "${dir}" | egrep 'lib/arm64-v8a|lib/x86_64|Verification'
@@ -64,9 +68,13 @@ fi
 if [[ "${dir}" == *.apex ]]; then
   trap 'cleanup_trap' EXIT
 
+  echo
+  echo "Recursively analyzing $dir"
+  echo
+
   dir_filename=$(basename "${dir}")
   tmp=$(mktemp -d -t "${dir_filename%.apex}_out_XXXXX")
-  deapexer extract "${dir}" "${tmp}" >/dev/null 2>&1
+  deapexer extract "${dir}" "${tmp}" || { echo "Failed to deapex." && exit 1; }
   dir="${tmp}"
 fi
 
@@ -79,12 +87,17 @@ unaligned_libs=()
 echo
 echo "=== ELF alignment ==="
 
-matches="$(find "${dir}" -type f \( -name "*.so" -or -executable \))"
+matches="$(find "${dir}" -type f)"
 IFS=$'\n'
 for match in $matches; do
+  # We could recursively call this script or rewrite it to though.
+  [[ "${match}" == *".apk" ]] && echo "WARNING: doesn't recursively inspect .apk file: ${match}"
+  [[ "${match}" == *".apex" ]] && echo "WARNING: doesn't recursively inspect .apex file: ${match}"
+
   [[ $(file "${match}") == *"ELF"* ]] || continue
+
   res="$(objdump -p "${match}" | grep LOAD | awk '{ print $NF }' | head -1)"
-  if [[ $res =~ 2**(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,}) ]]; then
+  if [[ $res =~ 2\*\*(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,}) ]]; then
     echo -e "${match}: ${GREEN}ALIGNED${ENDCOLOR} ($res)"
   else
     echo -e "${match}: ${RED}UNALIGNED${ENDCOLOR} ($res)"

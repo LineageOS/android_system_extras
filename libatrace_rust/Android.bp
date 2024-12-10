@@ -31,7 +31,6 @@ rust_test_host {
     defaults: ["libatrace_tracing_subscriber_defaults"],
     test_suites: ["general_tests"],
     rustlibs: [
-        "libonce_cell",
         "libthread_local",
     ],
 }
@@ -65,7 +64,6 @@ rust_test_host {
     defaults: ["libatrace_rust_defaults"],
     test_suites: ["general_tests"],
     rustlibs: [
-        "libonce_cell",
         "libthread_local",
     ],
 }

@@ -38,6 +38,7 @@ namespace simpleperf_dso_impl {
 class DebugElfFileFinder {
  public:
   void Reset();
+  void AllowMismatchedBuildId() { allow_mismatched_build_id_ = true; }
   bool SetSymFsDir(const std::string& symfs_dir);
   bool AddSymbolDir(const std::string& symbol_dir);
   void SetVdsoFile(const std::string& vdso_file, bool is_64bit);
@@ -47,11 +48,16 @@ class DebugElfFileFinder {
 
  private:
   void CollectBuildIdInDir(const std::string& dir);
+  std::optional<std::string> SearchFileMapByPath(const std::string& path);
+  bool CheckDebugFilePath(const std::string& path, BuildId& build_id,
+                          bool report_build_id_mismatch);
 
+  bool allow_mismatched_build_id_ = false;
   std::string vdso_64bit_;
   std::string vdso_32bit_;
   std::string symfs_dir_;
   std::unordered_map<std::string, std::string> build_id_to_file_map_;
+  std::vector<std::string> no_build_id_files_;
 };
 
 }  // namespace simpleperf_dso_impl
@@ -127,6 +133,7 @@ class Dso {
       kallsyms_ = std::move(kallsyms);
     }
   }
+  static void AllowMismatchedBuildId();
   static void SetBuildIds(const std::vector<std::pair<std::string, BuildId>>& build_ids);
   static BuildId FindExpectedBuildIdForPath(const std::string& path);
   static void SetVdsoFile(const std::string& vdso_file, bool is_64bit);

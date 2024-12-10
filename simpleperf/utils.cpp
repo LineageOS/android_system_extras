@@ -511,4 +511,15 @@ std::string ReadableCount(uint64_t count) {
   return s;
 }
 
+// Convert bytes to human friendly mode.
+std::string ReadableBytes(uint64_t bytes) {
+  if (bytes >= kMegabyte) {
+    return StringPrintf("%.2f MB", static_cast<double>(bytes) / kMegabyte);
+  }
+  if (bytes >= kKilobyte) {
+    return StringPrintf("%.2f KB", static_cast<double>(bytes) / kKilobyte);
+  }
+  return StringPrintf("%" PRIu64 " B", bytes);
+}
+
 }  // namespace simpleperf

@@ -27,7 +27,6 @@
 #include <binder/IPCThreadState.h>
 #include <binder/IServiceManager.h>
 #include <binder/ProcessState.h>
-#include <libsnapshot/snapshot.h>
 
 int LpdumpMain(int argc, char* argv[], std::ostream&, std::ostream&);
 
@@ -52,24 +51,15 @@ class Lpdump : public BnLpdump {
         std::stringstream error;
         int ret = LpdumpMain((int)local_argv.size(), local_argv.data(), output, error);
         std::string error_str = error.str();
-        if (ret != 0) {
+        if (ret == 0) {
+            if (!error_str.empty()) {
+                LOG(WARNING) << error_str;
+            }
+            *aidl_return = output.str();
+            return Status::ok();
+        } else {
             return Status::fromServiceSpecificError(ret, error_str.c_str());
         }
-
-        if (android::base::GetBoolProperty("ro.virtual_ab.enabled", false)) {
-            if (auto sm = android::snapshot::SnapshotManager::New()) {
-                output << "---------------\n";
-                output << "Snapshot state:\n";
-                output << "---------------\n";
-                sm->Dump(output);
-            }
-        }
-
-        if (!error_str.empty()) {
-            LOG(WARNING) << error_str;
-        }
-        *aidl_return = output.str();
-        return Status::ok();
     }
 };
 

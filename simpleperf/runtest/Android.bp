@@ -101,11 +101,25 @@ cc_binary {
 cc_binary {
     name: "etm_test_loop",
     srcs: ["etm_test_loop.cpp"],
+    // Keep relocation sections of executables for bolt.
+    ldflags: ["-Wl,-q"],
     // afdo: true,
 }
 
 cc_binary {
     name: "etm_test_loop_small",
     srcs: ["etm_test_loop.cpp"],
-    ldflags: ["-Wl,-z,noseparate-code"],
+    ldflags: [
+        "-Wl,-z,noseparate-code",
+        "-Wl,-q",
+    ],
+}
+
+cc_binary {
+    name: "autofdo_addr_test",
+    srcs: ["autofdo_addr_test.cpp"],
+    ldflags: [
+        "-Wl,-z,noseparate-code",
+        "-Wl,-q",
+    ],
 }

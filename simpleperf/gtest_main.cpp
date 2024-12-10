@@ -69,6 +69,17 @@ class ScopedEnablingPerf {
 
 #endif  // defined(__ANDROID__)
 
+// Detect test environment before running tests to utilize cached results for delay-sensitive
+// tests.
+void DetectTestEnvironment() {
+#if defined(__linux__)
+  IsInNativeAbi();
+  HasHardwareCounter();
+#endif  // defined(__linux__)
+  HasPmuCounter();
+  HasTracepointEvents();
+}
+
 int main(int argc, char** argv) {
   RegisterAllCommands();
   // To test profiling apps, simpleperf_unit_test needs to copy itself to the app's directory,
@@ -116,6 +127,7 @@ int main(int argc, char** argv) {
     testdata_dir += OS_PATH_SEPARATOR;
   }
   LOG(INFO) << "testdata is in " << testdata_dir;
+  DetectTestEnvironment();
   return RUN_ALL_TESTS();
 }
 

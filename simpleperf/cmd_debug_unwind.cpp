@@ -693,20 +693,20 @@ bool DebugUnwindCommand::ParseOptions(const std::vector<std::string>& args) {
   generate_test_file_ = options.PullBoolValue("--generate-test-file");
   options.PullStringValue("-i", &input_filename_);
   for (auto& value : options.PullValues("--keep-binaries-in-test-file")) {
-    std::vector<std::string> binaries = android::base::Split(*value.str_value, ",");
+    std::vector<std::string> binaries = android::base::Split(value.str_value, ",");
     kept_binaries_in_test_file_.insert(binaries.begin(), binaries.end());
   }
   skip_sample_print_ = options.PullBoolValue("--skip-sample-print");
   options.PullStringValue("-o", &output_filename_);
   for (auto& value : options.PullValues("--sample-time")) {
-    auto times = ParseUintVector<uint64_t>(*value.str_value);
+    auto times = ParseUintVector<uint64_t>(value.str_value);
     if (!times) {
       return false;
     }
     sample_times_.insert(times.value().begin(), times.value().end());
   }
   if (auto value = options.PullValue("--symfs"); value) {
-    if (!Dso::SetSymFsDir(*value->str_value)) {
+    if (!Dso::SetSymFsDir(value->str_value)) {
       return false;
     }
   }

@@ -57,6 +57,7 @@ cc_library_shared {
             shared_libs: [
                 "libcutils",
                 "libfs_mgr",
+                "libsnapshot",
             ],
         },
     },
@@ -162,7 +163,6 @@ cc_binary {
         "liblpdump",
         "liblpdump_interface-cpp",
         "libprotobuf-cpp-lite",
-        "libsnapshot",
         "libutils",
     ],
     static_libs: [

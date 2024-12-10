@@ -19,6 +19,7 @@ import os
 import re
 import tempfile
 from typing import Dict, List, Optional, Set
+from gecko_profile_generator import Category, StackFrame
 
 from . test_utils import TestBase, TestHelper
 
@@ -130,3 +131,26 @@ class TestGeckoProfileGenerator(TestBase):
         self.assertEqual(4031, get_sample_count())
         # Use `--remove-gaps 0` to disable removing gaps.
         self.assertEqual(4032, get_sample_count(['--remove-gaps', '0']))
+
+    def test_categories(self):
+        want = [
+            (StackFrame("do_translation_fault", "[kernel.kallsyms]"), Category.KERNEL),
+            (StackFrame("ufshcd_queuecommand", "/vendor/lib/modules/ufshcd-core.ko"), Category.KERNEL),
+            (StackFrame("pread64", "/apex/com.android.runtime/lib64/bionic/libc.so"), Category.NATIVE),
+            (StackFrame("sqlite3_step", "/data/app/~~wuHphp3RYz860st7j_csbg==/com.google.android.apps.maps-Ly1kpqXI4YEFCsPE36jq5A==/split_config.arm64_v8a.apk!/lib/arm64-v8a/libgmm-jni.so"), Category.NATIVE),
+            (StackFrame("__schedule", "[kernel.kallsyms]"), Category.OFF_CPU),
+            # b/362131906 regression: Collection.sort was classified as NATIVE
+            # due to having .so substring.
+            (StackFrame("java.util.Collections.sort", "/data/misc/apexdata/com.android.art/dalvik-cache/arm64/boot.oat"), Category.OAT),
+            (StackFrame("java.util.ArrayList.sort", "/data/misc/apexdata/com.android.art/dalvik-cache/arm64/boot.oat"), Category.OAT),
+            (StackFrame("java.lang.Thread.run", "/data/misc/apexdata/com.android.art/dalvik-cache/arm64/boot.oat"), Category.OAT),
+            (StackFrame("art_quick_alloc_object_initialized_region_tlab", "/apex/com.android.art/lib64/libart.so"), Category.NATIVE),
+            (StackFrame("java.lang.System.arraycopy", "/apex/com.android.art/javalib/core-oj.jar"), Category.DEX),
+            (StackFrame("com.google.protobuf.MessageSchema.parseMessage", "/data/app/~~wuHphp3RYz860st7j_csbg==/com.google.android.apps.maps-Ly1kpqXI4YEFCsPE36jq5A==/oat/arm64/base.odex"), Category.OAT),
+            (StackFrame("art_quick_invoke_stub", "/apex/com.android.art/lib64/libart.so"), Category.NATIVE),
+            (StackFrame("android.net.NetworkInfo.<init>", "[JIT app cache]"), Category.JIT),
+            (StackFrame("unknown", "noextension"), Category.USER),
+        ]
+        got = [(testcase[0], testcase[0].category()) for testcase in want]
+
+        self.assertEqual(want, got)

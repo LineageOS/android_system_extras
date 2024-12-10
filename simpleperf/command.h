@@ -43,7 +43,8 @@ enum class OptionType {
 enum class OptionValueType {
   NONE,  // No value is needed
   STRING,
-  OPT_STRING,  // optional string
+  OPT_STRING,              // optional string
+  OPT_STRING_AFTER_EQUAL,  // optional string after '=' in the option, like "3" in "-z=3"
   UINT,
   DOUBLE,
 };
@@ -64,10 +65,10 @@ struct OptionFormat {
 
 using OptionFormatMap = std::unordered_map<OptionName, OptionFormat>;
 
-union OptionValue {
-  const std::string* str_value;
-  uint64_t uint_value;
-  double double_value;
+struct OptionValue {
+  std::string str_value;
+  uint64_t uint_value = 0;
+  double double_value = 0;
 };
 
 struct OptionValueMap {
@@ -103,8 +104,7 @@ struct OptionValueMap {
 
   void PullStringValue(const OptionName& name, std::string* value) {
     if (auto option_value = PullValue(name); option_value) {
-      CHECK(option_value->str_value != nullptr);
-      *value = *option_value->str_value;
+      *value = option_value->str_value;
     }
   }
 
@@ -120,7 +120,7 @@ struct OptionValueMap {
   std::vector<std::string> PullStringValues(const OptionName& name) {
     std::vector<std::string> res;
     for (const auto& value : PullValues(name)) {
-      res.emplace_back(*value.str_value);
+      res.emplace_back(value.str_value);
     }
     return res;
   }

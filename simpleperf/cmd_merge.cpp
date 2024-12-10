@@ -156,7 +156,7 @@ class MergeCommand : public Command {
       return false;
     }
     for (const OptionValue& value : options.PullValues("-i")) {
-      auto files = android::base::Split(*value.str_value, ",");
+      auto files = android::base::Split(value.str_value, ",");
       input_files_.insert(input_files_.end(), files.begin(), files.end());
     }
     options.PullStringValue("-o", &output_file_);

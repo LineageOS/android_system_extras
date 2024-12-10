@@ -138,7 +138,8 @@ void ThreadTree::AddKernelMap(uint64_t start_addr, uint64_t len, uint64_t pgoff,
     return;
   }
   Dso* dso;
-  if (android::base::StartsWith(filename, DEFAULT_KERNEL_MMAP_NAME)) {
+  if (android::base::StartsWith(filename, DEFAULT_KERNEL_MMAP_NAME) ||
+      android::base::StartsWith(filename, DEFAULT_KERNEL_BPF_MMAP_NAME)) {
     dso = FindKernelDsoOrNew();
   } else {
     dso = FindKernelModuleDsoOrNew(filename, start_addr, start_addr + len);

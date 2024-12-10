@@ -222,6 +222,9 @@ bool EventSelectionSet::BuildAndCheckEventSelection(const std::string& event_nam
       return false;
     }
     ETMRecorder::GetInstance().SetEtmPerfEventAttr(&selection->event_attr);
+    // The kernel (rb_allocate_aux) allocates high order of pages based on aux_watermark.
+    // To avoid that, use aux_watermark <= 1 page size.
+    selection->event_attr.aux_watermark = 4096;
   }
   bool set_default_sample_freq = false;
   if (!for_stat_cmd_) {

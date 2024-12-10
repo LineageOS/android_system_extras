@@ -99,6 +99,29 @@ TEST(DebugElfFileFinder, add_symbol_dir) {
 }
 
 // @CddTest = 6.1/C-0-2
+TEST(DebugElfFileFinder, allow_mismatched_build_id) {
+  DebugElfFileFinder finder;
+  std::string symfs_dir = ConvertPathSeparator(GetTestDataDir() + CORRECT_SYMFS_FOR_BUILD_ID_CHECK);
+  ASSERT_TRUE(finder.AddSymbolDir(symfs_dir));
+  // By default, can't find binary with empty or different build ids.
+  BuildId empty_build_id;
+  ASSERT_EQ(finder.FindDebugFile("/data/elf_for_build_id_check", false, empty_build_id),
+            "/data/elf_for_build_id_check");
+  BuildId different_build_id("01234");
+  ASSERT_EQ(finder.FindDebugFile("/data/elf_for_build_id_check", false, different_build_id),
+            "/data/elf_for_build_id_check");
+
+  // With AllowMismatchedBuildId(), can find binary with empty and different build ids.
+  finder.AllowMismatchedBuildId();
+  empty_build_id = BuildId();
+  ASSERT_EQ(finder.FindDebugFile("/data/elf_for_build_id_check", false, empty_build_id),
+            symfs_dir + OS_PATH_SEPARATOR + "elf_for_build_id_check");
+  different_build_id = BuildId("01234");
+  ASSERT_EQ(finder.FindDebugFile("/data/elf_for_build_id_check", false, different_build_id),
+            symfs_dir + OS_PATH_SEPARATOR + "elf_for_build_id_check");
+}
+
+// @CddTest = 6.1/C-0-2
 TEST(DebugElfFileFinder, build_id_list) {
   DebugElfFileFinder finder;
   // Find file in symfs dir with correct build_id_list.

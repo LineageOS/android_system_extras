@@ -82,7 +82,16 @@ TEST_F(MapRecordReaderTest, MapRecordThread) {
   ASSERT_TRUE(CreateMapRecordReader());
   MapRecordThread thread(*reader_);
   ASSERT_TRUE(thread.Join());
-  ASSERT_TRUE(thread.ReadMapRecords([this](Record* r) { return CountRecord(r); }));
+  std::vector<char> buffer;
+  ASSERT_TRUE(thread.ReadMapRecordData([&](const char* data, size_t size) {
+    buffer.insert(buffer.end(), data, data + size);
+    return true;
+  }));
+  std::vector<std::unique_ptr<Record>> records =
+      ReadRecordsFromBuffer(attr_, buffer.data(), buffer.size());
+  for (auto& r : records) {
+    ASSERT_TRUE(CountRecord(r.get()));
+  }
   ASSERT_GT(map_record_count_, 0);
   ASSERT_GT(comm_record_count_, 0);
 }

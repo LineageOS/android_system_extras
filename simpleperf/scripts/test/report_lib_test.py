@@ -158,7 +158,6 @@ class TestReportLib(TestBase):
         self.assertFalse(any('android.view' in method for method in methods))
         self.assertTrue(any('android.widget' in method for method in methods))
 
-
     def test_merge_java_methods(self):
         def parse_dso_names(report_lib):
             dso_names = set()
@@ -401,6 +400,13 @@ class TestReportLib(TestBase):
         self.assertEqual(symbol.symbol_addr, 0xffffffc008fb3e0c)
         self.assertEqual(symbol.symbol_len, 0x4c)
 
+    def test_get_process_name(self):
+        self.report_lib.SetRecordFile(TestHelper.testdata_path('perf_display_bitmaps.data'))
+        expected_process_name = 'com.example.android.displayingbitmaps'
+        while self.report_lib.GetNextSample():
+            process_name = self.report_lib.GetProcessNameOfCurrentSample()
+            self.assertEqual(process_name, expected_process_name)
+
 
 class TestProtoFileReportLib(TestBase):
     def test_smoke(self):
@@ -452,7 +458,7 @@ class TestProtoFileReportLib(TestBase):
         }
 
         proto_file_path = self.convert_perf_data_to_proto_file(
-                                TestHelper.testdata_path('perf_with_trace_offcpu_v2.data'))
+            TestHelper.testdata_path('perf_with_trace_offcpu_v2.data'))
         report_lib.SetRecordFile(proto_file_path)
         self.assertEqual(set(report_lib.GetSupportedTraceOffCpuModes()), set(mode_dict.keys()))
         for mode, expected_values in mode_dict.items():
@@ -484,6 +490,6 @@ class TestProtoFileReportLib(TestBase):
         report_lib.Close()
         report_lib = ProtoFileReportLib()
         proto_file_path = self.convert_perf_data_to_proto_file(
-                                TestHelper.testdata_path('perf.data'))
+            TestHelper.testdata_path('perf.data'))
         report_lib.SetRecordFile(proto_file_path)
         self.assertEqual(report_lib.GetSupportedTraceOffCpuModes(), [])

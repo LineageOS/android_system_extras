@@ -40,6 +40,9 @@ struct BinaryKey {
 
   BinaryKey(const Dso* dso, uint64_t kernel_start_addr) : path(dso->Path()) {
     build_id = Dso::FindExpectedBuildIdForPath(dso->Path());
+    if (build_id.IsEmpty()) {
+      GetBuildId(*dso, build_id);
+    }
     if (dso->type() == DSO_KERNEL) {
       this->kernel_start_addr = kernel_start_addr;
     }

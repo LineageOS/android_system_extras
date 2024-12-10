@@ -141,8 +141,12 @@ cc_defaults {
         "libopencsd_decoder",
         "libz",
         "libziparchive",
+        "libzstd",
     ],
     target: {
+        host: {
+            stl: "libc++_static",
+        },
         linux: {
             static_libs: [
                 "libunwindstack",
@@ -152,15 +156,8 @@ cc_defaults {
                 "librustc_demangle_static",
             ],
         },
-        linux_glibc_x86_64: {
-            stl: "libc++_static",
-        },
-        linux_musl_x86_64: {
-            stl: "libc++_static",
-        },
         windows: {
             enabled: true,
-            stl: "libc++_static",
         },
     },
     use_version_lib: true,
@@ -185,6 +182,7 @@ cc_defaults {
         "libsimpleperf_etm_decoder",
         "libsimpleperf_regex",
         "libopencsd_decoder",
+        "libzstd",
     ],
     target: {
         linux: {
@@ -253,6 +251,7 @@ cc_defaults {
         "thread_tree.cpp",
         "tracing.cpp",
         "utils.cpp",
+        "ZstdUtil.cpp",
         ":simpleperf_event_table",
     ],
     target: {
@@ -601,6 +600,7 @@ cc_defaults {
         "test_util.cpp",
         "tracing_test.cpp",
         "utils_test.cpp",
+        "ZstdUtil_test.cpp",
     ],
     target: {
         android: {
@@ -738,6 +738,9 @@ cc_fuzz {
     defaults: [
         "simpleperf_static_libs",
     ],
+    fuzzing_frameworks: {
+        afl: false,
+    },
     host_supported: true,
     srcs: [
         "libsimpleperf_report_fuzzer.cpp",
@@ -763,6 +766,9 @@ cc_fuzz {
     defaults: [
         "simpleperf_static_libs",
     ],
+    fuzzing_frameworks: {
+        afl: false,
+    },
     host_supported: true,
     srcs: [
         "simpleperf_writer_fuzzer.cpp",
@@ -778,5 +784,30 @@ cc_fuzz {
         windows: {
             enabled: false,
         },
+    },
+}
+
+genrule {
+    name: "simpleperf_script.zip",
+    tools: [
+        "soong_zip",
+    ],
+    srcs: [
+        "**/*.proto",
+        "app_api/**/*",
+        "doc/**/*",
+        "demo/**/*",
+        "runtest/**/*",
+        "scripts/**/*",
+        "testdata/**/*",
+    ],
+    cmd: "$(location soong_zip) -o $(out) -C system/extras/simpleperf " +
+        "-D system/extras/simpleperf ",
+    out: [
+        "simpleperf/simpleperf_script.zip",
+    ],
+    dist: {
+        targets: ["simpleperf"],
+        dir: "simpleperf",
     },
 }

@@ -261,3 +261,84 @@ TEST_F(RecordFileTest, write_file2_feature_section) {
   ASSERT_FALSE(error);
   ASSERT_EQ(file_id, files.size());
 }
+
+TEST_F(RecordFileTest, init_map_feature_section) {
+  // Write to a record file.
+  std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
+  ASSERT_TRUE(writer != nullptr);
+  AddEventType("cpu-cycles");
+  ASSERT_TRUE(writer->WriteAttrSection(attr_ids_));
+
+  // Write init_map feature section.
+  ASSERT_TRUE(writer->BeginWriteFeatures(1));
+  MmapRecord mmap_record(attr_ids_[0].attr, true, 1, 1, 0x1000, 0x2000, 0x3000,
+                         "mmap_record_example", attr_ids_[0].ids[0]);
+  CommRecord comm_record(attr_ids_[0].attr, 1, 2, "comm_record_example", attr_ids_[0].ids[0], 1000);
+  ASSERT_TRUE(writer->WriteInitMapFeature(mmap_record.Binary(), mmap_record.size()));
+  ASSERT_TRUE(writer->WriteInitMapFeature(comm_record.Binary(), comm_record.size()));
+  ASSERT_TRUE(writer->EndWriteFeatures());
+  ASSERT_TRUE(writer->Close());
+
+  // Read from the record file.
+  std::unique_ptr<RecordFileReader> reader = RecordFileReader::CreateInstance(tmpfile_.path);
+  ASSERT_TRUE(reader != nullptr);
+  const EventAttrIds& attrs = reader->AttrSection();
+  ASSERT_EQ(1u, attrs.size());
+  ASSERT_EQ(0, memcmp(&attrs[0].attr, &attr_ids_[0].attr, sizeof(perf_event_attr)));
+  ASSERT_EQ(attrs[0].ids, attr_ids_[0].ids);
+
+  // Read and check feature section.
+  int count = 0;
+  auto callback = [&](std::unique_ptr<Record> r) -> bool {
+    if (count == 0) {
+      CheckRecordEqual(mmap_record, *r);
+    } else if (count == 1) {
+      CheckRecordEqual(comm_record, *r);
+    }
+    count++;
+    return true;
+  };
+  ASSERT_TRUE(reader->ReadInitMapFeature(callback));
+  ASSERT_EQ(count, 2);
+}
+
+// @CddTest = 6.1/C-0-2
+TEST_F(RecordFileTest, compression) {
+  // Write to a record file.
+  std::unique_ptr<RecordFileWriter> writer = RecordFileWriter::CreateInstance(tmpfile_.path);
+  ASSERT_TRUE(writer != nullptr);
+  ASSERT_TRUE(writer->SetCompressionLevel(3));
+
+  // Write attr section.
+  AddEventType("cpu-cycles");
+  ASSERT_TRUE(writer->WriteAttrSection(attr_ids_));
+
+  // Write data section.
+  MmapRecord mmap_record(attr_ids_[0].attr, true, 1, 1, 0x1000, 0x2000, 0x3000,
+                         "mmap_record_example", attr_ids_[0].ids[0]);
+  CommRecord comm_record(attr_ids_[0].attr, 1, 2, "comm_record_example", attr_ids_[0].ids[0], 1000);
+  const size_t repeat_count = 100;
+  for (size_t i = 0; i < repeat_count; i++) {
+    ASSERT_TRUE(writer->WriteRecord(mmap_record));
+    ASSERT_TRUE(writer->WriteRecord(comm_record));
+  }
+  ASSERT_TRUE(writer->FinishWritingDataSection());
+  ASSERT_TRUE(writer->Close());
+
+  // Read from a record file.
+  std::unique_ptr<RecordFileReader> reader = RecordFileReader::CreateInstance(tmpfile_.path);
+  ASSERT_TRUE(reader != nullptr);
+  const EventAttrIds& attrs = reader->AttrSection();
+  ASSERT_EQ(1u, attrs.size());
+  ASSERT_EQ(0, memcmp(&attrs[0].attr, &attr_ids_[0].attr, sizeof(perf_event_attr)));
+  ASSERT_EQ(attrs[0].ids, attr_ids_[0].ids);
+
+  // Read and check data section.
+  std::vector<std::unique_ptr<Record>> records = reader->DataSection();
+  ASSERT_EQ(repeat_count * 2, records.size());
+  for (size_t i = 0; i < repeat_count; i++) {
+    CheckRecordEqual(mmap_record, *records[i * 2]);
+    CheckRecordEqual(comm_record, *records[i * 2 + 1]);
+  }
+  ASSERT_TRUE(reader->Close());
+}

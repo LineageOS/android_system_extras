@@ -149,8 +149,7 @@ TEST(environment, GetAppType) {
 // @CddTest = 6.1/C-0-2
 TEST(environment, GetMemorySize) {
   auto value = GetMemorySize();
-  ASSERT_TRUE(value);
-  ASSERT_GT(value.value(), 0);
+  ASSERT_GT(value, 0);
 }
 
 // @CddTest = 6.1/C-0-2

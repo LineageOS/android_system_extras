@@ -359,7 +359,7 @@ bool ReportSampleCommand::ParseOptions(const std::vector<std::string>& args) {
   options.PullStringValue("-i", &record_filename_);
   options.PullStringValue("-o", &report_filename_);
   for (const OptionValue& value : options.PullValues("--proguard-mapping-file")) {
-    if (!callchain_report_builder_.AddProguardMappingFile(*value.str_value)) {
+    if (!callchain_report_builder_.AddProguardMappingFile(value.str_value)) {
       return false;
     }
   }
@@ -374,7 +374,7 @@ bool ReportSampleCommand::ParseOptions(const std::vector<std::string>& args) {
   }
   show_execution_type_ = options.PullBoolValue("--show-execution-type");
   for (const OptionValue& value : options.PullValues("--symdir")) {
-    if (!Dso::AddSymbolDir(*value.str_value)) {
+    if (!Dso::AddSymbolDir(value.str_value)) {
       return false;
     }
   }

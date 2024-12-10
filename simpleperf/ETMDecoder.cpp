@@ -345,7 +345,7 @@ class InstructionDecoder : public TrcIDecode {
 // for an InstructionRange element.
 struct ElementCallback {
  public:
-  virtual ~ElementCallback(){};
+  virtual ~ElementCallback() {};
   virtual ocsd_datapath_resp_t ProcessElement(ocsd_trc_index_t index_sop, uint8_t trace_id,
                                               const OcsdTraceElement& elem,
                                               const ocsd_instr_info* next_instr) = 0;

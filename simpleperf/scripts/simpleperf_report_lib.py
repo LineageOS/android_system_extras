@@ -225,6 +225,30 @@ class CallChainStructure(ct.Structure):
                 ('entries', ct.POINTER(CallChainEntryStructure))]
 
 
+class EventCounterStructure(ct.Structure):
+    """ An event counter.
+        name: the name of the event.
+        id: the id of the counter.
+        count: the count value for corresponding counter id.
+    """
+    _fields_ = [('_name', ct.c_char_p),
+                ('id', ct.c_uint64),
+                ('count', ct.c_uint64)]
+
+    @property
+    def name(self) -> str:
+        return _char_pt_to_str(self._name)
+
+class EventCountersViewStructure(ct.Structure):
+    """ An array of event counter.
+        nr: number of event counters in the array.
+        event_counter: a pointer to an array of EventCounterStructure.
+    """
+    _fields_ = [('nr', ct.c_size_t),
+                ('event_counter', ct.POINTER(EventCounterStructure))]
+
+
+
 class FeatureSectionStructure(ct.Structure):
     """ A feature section in perf.data to store information like record cmd, device arch, etc.
         data: a pointer to a buffer storing the section data.
@@ -295,8 +319,12 @@ class ReportLib(object):
         self._GetSymbolOfCurrentSampleFunc.restype = ct.POINTER(SymbolStruct)
         self._GetCallChainOfCurrentSampleFunc = self._lib.GetCallChainOfCurrentSample
         self._GetCallChainOfCurrentSampleFunc.restype = ct.POINTER(CallChainStructure)
+        self._GetEventCountersOfCurrentSampleFunc = self._lib.GetEventCountersOfCurrentSample
+        self._GetEventCountersOfCurrentSampleFunc.restype = ct.POINTER(EventCountersViewStructure)
         self._GetTracingDataOfCurrentSampleFunc = self._lib.GetTracingDataOfCurrentSample
         self._GetTracingDataOfCurrentSampleFunc.restype = ct.POINTER(ct.c_char)
+        self._GetProcessNameOfCurrentSampleFunc = self._lib.GetProcessNameOfCurrentSample
+        self._GetProcessNameOfCurrentSampleFunc.restype = ct.c_char_p
         self._GetBuildIdForPathFunc = self._lib.GetBuildIdForPath
         self._GetBuildIdForPathFunc.restype = ct.c_char_p
         self._GetFeatureSection = self._lib.GetFeatureSection
@@ -458,6 +486,11 @@ class ReportLib(object):
         assert not _is_null(callchain)
         return callchain[0]
 
+    def GetEventCountersOfCurrentSample(self) -> EventCountersViewStructure:
+        event_counters = self._GetEventCountersOfCurrentSampleFunc(self.getInstance())
+        assert not _is_null(event_counters)
+        return event_counters[0]
+
     def GetTracingDataOfCurrentSample(self) -> Optional[Dict[str, Any]]:
         data = self._GetTracingDataOfCurrentSampleFunc(self.getInstance())
         if _is_null(data):
@@ -468,6 +501,9 @@ class ReportLib(object):
             field = event.tracing_data_format.fields[i]
             result[field.name] = field.parse_value(data)
         return result
+
+    def GetProcessNameOfCurrentSample(self) -> str:
+        return _char_pt_to_str(self._GetProcessNameOfCurrentSampleFunc(self.getInstance()))
 
     def GetBuildIdForPath(self, path: str) -> str:
         build_id = self._GetBuildIdForPathFunc(self.getInstance(), _char_pt(path))

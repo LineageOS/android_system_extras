@@ -73,6 +73,7 @@ inline const OptionFormatMap& GetRecordCmdOptionFormats() {
         {"--no-callchain-joiner",
          {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--no-cut-samples", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
+        {"--no-dump-build-id", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--no-dump-kernel-symbols",
          {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
         {"--no-dump-symbols", {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::ALLOWED}},
@@ -99,6 +100,8 @@ inline const OptionFormatMap& GetRecordCmdOptionFormats() {
          {OptionValueType::STRING, OptionType::SINGLE, AppRunnerType::CHECK_PATH}},
         {"--use-cmd-exit-code",
          {OptionValueType::NONE, OptionType::SINGLE, AppRunnerType::NOT_ALLOWED}},
+        {"-z",
+         {OptionValueType::OPT_STRING_AFTER_EQUAL, OptionType::SINGLE, AppRunnerType::ALLOWED}},
     };
     OptionFormatMap record_filter_options = GetRecordFilterOptionFormats(true);
     option_formats.insert(record_filter_options.begin(), record_filter_options.end());

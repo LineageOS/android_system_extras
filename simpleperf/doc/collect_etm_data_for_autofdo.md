@@ -187,6 +187,26 @@ We can check if `etm_test_loop.afdo` is used when building etm_test_loop.
 If comparing the disassembly of `out/target/product/generic_arm64/symbols/system/bin/etm_test_loop`
 before and after optimizing with AutoFDO data, we can see different preferences when branching.
 
+## Convert ETM data for llvm-bolt (experiment)
+
+We can also convert ETM data to profiles for [llvm-bolt](https://github.com/llvm/llvm-project/tree/main/bolt).
+The binaries should have an unstripped symbol table, and linked with relocations (--emit-relocs or
+-q linker flag).
+
+```sh
+# symdir is the directory containting etm_test_loop with unstripped symbol table and relocations.
+(host) $ simpleperf inject -i perf.data --output bolt -o perf_inject_bolt.data --symdir symdir
+# Remove the comment line.
+(host) $ sed -i '/^\/\//d' perf_inject_bolt.data
+(host) $ <LLVM_BIN>/perf2bolt --pa -p=perf_inject_bolt.data -o perf.fdata symdir/etm_test_loop
+# --no-huge-pages and --align-text=0x4000 are used to avoid generating big binaries due to
+# alignment. See https://github.com/facebookarchive/BOLT/issues/138.
+# However, if the original binary is built with huge page alignments (-z max-page-size=0x200000),
+# then don't use these flags.
+(host) $ <LLVM_BIN>/llvm-bolt symdir/etm_test_loop -o etm_test_loop.bolt -data=perf.fdata \
+         -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold \
+         -split-eh -dyno-stats --no-huge-pages --align-text=0x4000
+```
 
 ## Collect ETM data with a daemon
 

@@ -54,6 +54,7 @@ std::string RemovePathSeparatorSuffix(const std::string& path) {
 }
 
 void DebugElfFileFinder::Reset() {
+  allow_mismatched_build_id_ = false;
   vdso_64bit_.clear();
   vdso_32bit_.clear();
   symfs_dir_.clear();
@@ -98,8 +99,12 @@ void DebugElfFileFinder::CollectBuildIdInDir(const std::string& dir) {
       BuildId build_id;
       ElfStatus status;
       auto elf = ElfFile::Open(path, &status);
-      if (status == ElfStatus::NO_ERROR && elf->GetBuildId(&build_id) == ElfStatus::NO_ERROR) {
-        build_id_to_file_map_[build_id.ToString()] = path;
+      if (status == ElfStatus::NO_ERROR) {
+        if (elf->GetBuildId(&build_id) == ElfStatus::NO_ERROR) {
+          build_id_to_file_map_[build_id.ToString()] = path;
+        } else {
+          no_build_id_files_.emplace_back(std::move(path));
+        }
       }
     }
   }
@@ -113,8 +118,8 @@ void DebugElfFileFinder::SetVdsoFile(const std::string& vdso_file, bool is_64bit
   }
 }
 
-static bool CheckDebugFilePath(const std::string& path, BuildId& build_id,
-                               bool report_build_id_mismatch) {
+bool DebugElfFileFinder::CheckDebugFilePath(const std::string& path, BuildId& build_id,
+                                            bool report_build_id_mismatch) {
   ElfStatus status;
   auto elf = ElfFile::Open(path, &status);
   if (!elf) {
@@ -124,6 +129,10 @@ static bool CheckDebugFilePath(const std::string& path, BuildId& build_id,
   status = elf->GetBuildId(&debug_build_id);
   if (status != ElfStatus::NO_ERROR && status != ElfStatus::NO_BUILD_ID) {
     return false;
+  }
+
+  if (allow_mismatched_build_id_) {
+    return true;
   }
 
   // Native libraries in apks and kernel modules may not have build ids.
@@ -152,11 +161,17 @@ std::string DebugElfFileFinder::FindDebugFile(const std::string& dso_path, bool 
 
   // 1. Try build_id_to_file_map.
   if (!build_id_to_file_map_.empty()) {
-    if (!build_id.IsEmpty() || GetBuildIdFromDsoPath(dso_path, &build_id)) {
+    if (!build_id.IsEmpty()) {
       auto it = build_id_to_file_map_.find(build_id.ToString());
       if (it != build_id_to_file_map_.end() && CheckDebugFilePath(it->second, build_id, false)) {
         return it->second;
       }
+    }
+  }
+  if (allow_mismatched_build_id_) {
+    std::optional<std::string> s = SearchFileMapByPath(dso_path);
+    if (s.has_value()) {
+      return s.value();
     }
   }
   if (!symfs_dir_.empty()) {
@@ -205,6 +220,45 @@ std::string DebugElfFileFinder::GetPathInSymFsDir(const std::string& path) {
   std::replace(elf_path.begin(), elf_path.end(), '/', OS_PATH_SEPARATOR);
   return add_symfs_prefix(elf_path);
 }
+
+std::optional<std::string> DebugElfFileFinder::SearchFileMapByPath(const std::string& path) {
+  std::string filename;
+  if (size_t pos = path.rfind('/'); pos != std::string::npos) {
+    filename = path.substr(pos + 1);
+  } else {
+    filename = path;
+  }
+  std::string best_elf_file;
+  size_t best_match_length = 0;
+  auto check_file = [&](const std::string& elf_file) {
+    if (EndsWith(elf_file, filename)) {
+      size_t i = elf_file.size();
+      size_t j = path.size();
+      while (i > 0 && j > 0 && elf_file[i - 1] == path[j - 1]) {
+        i--;
+        j--;
+      }
+      size_t match_length = elf_file.size() - i;
+      if (match_length > best_match_length) {
+        best_elf_file = elf_file;
+        best_match_length = match_length;
+      }
+    }
+  };
+
+  for (const auto& p : build_id_to_file_map_) {
+    check_file(p.second);
+  }
+  for (const auto& elf_file : no_build_id_files_) {
+    check_file(elf_file);
+  }
+  if (!best_elf_file.empty()) {
+    LOG(INFO) << "Found " << best_elf_file << " for " << path << " by filename";
+    return best_elf_file;
+  }
+  return std::nullopt;
+}
+
 }  // namespace simpleperf_dso_impl
 
 static OneTimeFreeAllocator symbol_name_allocator;
@@ -318,6 +372,10 @@ bool Dso::SetSymFsDir(const std::string& symfs_dir) {
 
 bool Dso::AddSymbolDir(const std::string& symbol_dir) {
   return debug_elf_file_finder_.AddSymbolDir(symbol_dir);
+}
+
+void Dso::AllowMismatchedBuildId() {
+  return debug_elf_file_finder_.AllowMismatchedBuildId();
 }
 
 void Dso::SetVmlinux(const std::string& vmlinux) {

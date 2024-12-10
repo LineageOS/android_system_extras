@@ -18,7 +18,6 @@
 
 use anyhow::Result;
 use macaddr::MacAddr6;
-use once_cell::sync::Lazy;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -26,6 +25,7 @@ use std::fs::{read_dir, remove_file};
 use std::path::Path;
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 const PROFCOLLECT_CONFIG_NAMESPACE: &str = "aconfig_flags.profcollect_native_boot";
@@ -36,16 +36,16 @@ const DEFAULT_BINARY_FILTER: &str = "(^/(system|apex/.+|vendor)/(bin|lib64)/.+)|
 pub const REPORT_RETENTION_SECS: u64 = 14 * 24 * 60 * 60; // 14 days.
 
 // Static configs that cannot be changed.
-pub static TRACE_OUTPUT_DIR: Lazy<&'static Path> =
-    Lazy::new(|| Path::new("/data/misc/profcollectd/trace/"));
-pub static PROFILE_OUTPUT_DIR: Lazy<&'static Path> =
-    Lazy::new(|| Path::new("/data/misc/profcollectd/output/"));
-pub static REPORT_OUTPUT_DIR: Lazy<&'static Path> =
-    Lazy::new(|| Path::new("/data/misc/profcollectd/report/"));
-pub static CONFIG_FILE: Lazy<&'static Path> =
-    Lazy::new(|| Path::new("/data/misc/profcollectd/output/config.json"));
-pub static LOG_FILE: Lazy<&'static Path> =
-    Lazy::new(|| Path::new("/data/misc/profcollectd/output/trace.log"));
+pub static TRACE_OUTPUT_DIR: LazyLock<&'static Path> =
+    LazyLock::new(|| Path::new("/data/misc/profcollectd/trace/"));
+pub static PROFILE_OUTPUT_DIR: LazyLock<&'static Path> =
+    LazyLock::new(|| Path::new("/data/misc/profcollectd/output/"));
+pub static REPORT_OUTPUT_DIR: LazyLock<&'static Path> =
+    LazyLock::new(|| Path::new("/data/misc/profcollectd/report/"));
+pub static CONFIG_FILE: LazyLock<&'static Path> =
+    LazyLock::new(|| Path::new("/data/misc/profcollectd/output/config.json"));
+pub static LOG_FILE: LazyLock<&'static Path> =
+    LazyLock::new(|| Path::new("/data/misc/profcollectd/output/trace.log"));
 
 /// Dynamic configs, stored in config.json.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]

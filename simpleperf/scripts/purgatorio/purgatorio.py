@@ -29,7 +29,7 @@ import sys
 from bokeh.embed import components
 from bokeh.io import output_file, show
 from bokeh.layouts import layout, Spacer
-from bokeh.models import ColumnDataSource, CustomJS, WheelZoomTool, HoverTool, FuncTickFormatter
+from bokeh.models import ColumnDataSource, CustomJS, WheelZoomTool, HoverTool, CustomJSTickFormatter
 from bokeh.models.widgets import DataTable, DateFormatter, TableColumn
 from bokeh.models.ranges import FactorRange
 from bokeh.palettes import Category20b
@@ -59,7 +59,7 @@ def create_graph(args, source, data_range):
     # a crude way to avoid process name cluttering at some zoom levels.
     # TODO: remove processes from the ticker base on the number of samples currently visualized.
     # The process with most samples visualized should always be visible on the ticker
-    graph.xaxis.formatter = FuncTickFormatter(args={'range': data_range, 'graph': graph}, code="""
+    graph.xaxis.formatter = CustomJSTickFormatter(args={'range': data_range, 'graph': graph}, code="""
     var pixels_per_entry = graph.inner_height / (range.end - range.start) //Do not rond end and start here
     var entries_to_skip = Math.ceil(12 / pixels_per_entry) // kind of 12 px per entry
     var desc = tick.split(/:| /)

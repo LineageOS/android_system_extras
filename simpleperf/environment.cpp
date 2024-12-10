@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
+#include <sys/sysinfo.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 
@@ -249,14 +250,10 @@ bool CanRecordRawData() {
 #endif
 }
 
-std::optional<uint64_t> GetMemorySize() {
-  std::unique_ptr<FILE, decltype(&fclose)> fp(fopen("/proc/meminfo", "r"), fclose);
-  uint64_t size;
-  if (fp && fscanf(fp.get(), "MemTotal:%" PRIu64 " k", &size) == 1) {
-    return size * kKilobyte;
-  }
-  PLOG(ERROR) << "failed to get memory size";
-  return std::nullopt;
+uint64_t GetMemorySize() {
+  struct sysinfo info;
+  sysinfo(&info);
+  return info.totalram;
 }
 
 static const char* GetLimitLevelDescription(int limit_level) {

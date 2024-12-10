@@ -46,9 +46,9 @@ the profile before uploading:
 gzip pprof.profile
 ```
 
-After compressing, you can upload the `pprof.profile.gz` file to either http://pprof/ or
-http://pprofng/. Both websites have an 'Upload' tab for this purpose. Alternatively, you can use
-the following `pprof` command to upload the compressed profile:
+After compressing, you can upload the `pprof.profile.gz` file to http://pprof/. The website has an
+'Upload' tab for this purpose. Alternatively, you can use the following `pprof` command to upload
+the compressed profile:
 
 ```
 # Upload all threads in profile, grouped by threadpool.

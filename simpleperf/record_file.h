@@ -29,6 +29,7 @@
 
 #include <android-base/macros.h>
 
+#include "ZstdUtil.h"
 #include "dso.h"
 #include "event_attr.h"
 #include "event_type.h"
@@ -81,12 +82,14 @@ class RecordFileWriter {
   RecordFileWriter(const std::string& filename, FILE* fp, bool own_fp);
   ~RecordFileWriter();
 
+  bool SetCompressionLevel(size_t compression_level);
   bool WriteAttrSection(const EventAttrIds& attr_ids);
   bool WriteRecord(const Record& record);
-  bool WriteData(const void* buf, size_t len);
+  bool FinishWritingDataSection();
 
   uint64_t GetDataSectionSize() const { return data_section_size_; }
   bool ReadDataSection(const std::function<void(const Record*)>& callback);
+  const std::vector<uint64_t>& AuxTraceRecordOffsets() const { return auxtrace_record_offsets_; }
 
   bool BeginWriteFeatures(size_t feature_count);
   bool WriteBuildIdFeature(const std::vector<BuildIdRecord>& build_id_records);
@@ -98,17 +101,27 @@ class RecordFileWriter {
   bool WriteFileFeature(const FileFeature& file);
   bool WriteMetaInfoFeature(const std::unordered_map<std::string, std::string>& info_map);
   bool WriteDebugUnwindFeature(const DebugUnwindFeature& debug_unwind);
+  bool WriteInitMapFeature(const char* data, size_t size);
+  bool FinishWritingInitMapFeature();
   bool WriteFeature(int feature, const char* data, size_t size);
   bool EndWriteFeatures();
 
   bool Close();
+  Compressor* GetCompressor() { return compressor_.get(); }
 
  private:
   void GetHitModulesInBuffer(const char* p, const char* end,
                              std::vector<std::string>* hit_kernel_modules,
                              std::vector<std::string>* hit_user_files);
   bool WriteFileHeader();
+  bool WriteAuxTraceRecord(const AuxTraceRecord& r);
+  // If flush=true, the previous data can be decompressed without any following data.
+  bool WriteCompressorOutput(bool flush, bool data_section);
+  bool WriteCompressRecord(const char* data, size_t size, bool data_section);
+  bool WriteData(const void* buf, size_t len);
   bool Write(const void* buf, size_t len);
+  bool ReadFromDecompressor(Decompressor& decompressor,
+                            const std::function<void(const Record*)>& callback);
   bool Read(void* buf, size_t len);
   bool GetFilePos(uint64_t* file_pos);
   bool WriteStringWithLength(const std::string& s);
@@ -128,6 +141,9 @@ class RecordFileWriter {
 
   std::map<int, PerfFileFormat::SectionDesc> features_;
   size_t feature_count_;
+
+  std::unique_ptr<Compressor> compressor_;
+  std::vector<uint64_t> auxtrace_record_offsets_;
 
   DISALLOW_COPY_AND_ASSIGN(RecordFileWriter);
 };
@@ -169,6 +185,7 @@ class RecordFileReader {
   bool ReadRecord(std::unique_ptr<Record>& record);
 
   size_t GetAttrIndexOfRecord(const Record* record);
+  std::optional<size_t> GetAttrIndexByEventId(uint64_t event_id);
 
   std::vector<std::string> ReadCmdlineFeature();
   std::vector<BuildIdRecord> ReadBuildIdFeature();
@@ -186,6 +203,7 @@ class RecordFileReader {
   const std::unordered_map<std::string, std::string>& GetMetaInfoFeature() { return meta_info_; }
   std::string GetClockId();
   std::optional<DebugUnwindFeature> ReadDebugUnwindFeature();
+  bool ReadInitMapFeature(const std::function<bool(std::unique_ptr<Record>)>& callback);
 
   bool LoadBuildIdAndFileFeatures(ThreadTree& thread_tree);
 
@@ -202,6 +220,25 @@ class RecordFileReader {
   std::vector<std::unique_ptr<Record>> DataSection();
 
  private:
+  struct ReadPos {
+    uint64_t pos = 0;
+    uint64_t end = 0;
+  };
+
+  struct AuxDataLocation {
+    uint64_t aux_offset;
+    uint64_t aux_size;
+    uint64_t file_offset;
+
+    AuxDataLocation(uint64_t aux_offset = 0, uint64_t aux_size = 0, uint64_t file_offset = 0)
+        : aux_offset(aux_offset), aux_size(aux_size), file_offset(file_offset) {}
+
+    bool operator!=(const AuxDataLocation& other) const {
+      return aux_offset != other.aux_offset || aux_size != other.aux_size ||
+             file_offset != other.file_offset;
+    }
+  };
+
   RecordFileReader(const std::string& filename, FILE* fp);
   bool ReadHeader();
   bool CheckSectionDesc(const PerfFileFormat::SectionDesc& desc, uint64_t min_offset,
@@ -213,10 +250,14 @@ class RecordFileReader {
   bool ReadFileV2Feature(uint64_t& read_pos, uint64_t max_size, FileFeature& file);
   bool ReadMetaInfoFeature();
   void UseRecordingEnvironment();
-  std::unique_ptr<Record> ReadRecord();
+  std::unique_ptr<Record> ReadRecord(ReadPos& pos);
+  std::unique_ptr<char[]> ReadRecordWithDecompression(ReadPos& pos);
   bool Read(void* buf, size_t len);
   void ProcessEventIdRecord(const EventIdRecord& r);
   bool BuildAuxDataLocation();
+  bool ReadAuxDataFromDecompressor(uint32_t cpu, uint64_t aux_offset, size_t size,
+                                   std::vector<uint8_t>& buf, const AuxDataLocation& location,
+                                   bool& error);
 
   const std::string filename_;
   FILE* record_fp_;
@@ -230,23 +271,23 @@ class RecordFileReader {
   size_t event_id_pos_in_sample_records_;
   size_t event_id_reverse_pos_in_non_sample_records_;
 
-  uint64_t read_record_size_;
+  ReadPos read_record_pos_;
 
   std::unordered_map<std::string, std::string> meta_info_;
   std::unique_ptr<ScopedCurrentArch> scoped_arch_;
   std::unique_ptr<ScopedEventTypes> scoped_event_types_;
 
-  struct AuxDataLocation {
-    uint64_t aux_offset;
-    uint64_t aux_size;
-    uint64_t file_offset;
-
-    AuxDataLocation(uint64_t aux_offset, uint64_t aux_size, uint64_t file_offset)
-        : aux_offset(aux_offset), aux_size(aux_size), file_offset(file_offset) {}
-  };
   // It maps from a cpu id to the locations (file offsets in perf.data) of aux data received from
   // that cpu's aux buffer. It is used to locate aux data in perf.data.
   std::unordered_map<uint32_t, std::vector<AuxDataLocation>> aux_data_location_;
+  std::unique_ptr<Decompressor> decompressor_;
+
+  struct AuxDataDecompressor {
+    uint32_t cpu = 0;
+    AuxDataLocation location;
+    std::unique_ptr<Decompressor> decompressor;
+  };
+  std::unique_ptr<AuxDataDecompressor> auxdata_decompressor_;
 
   DISALLOW_COPY_AND_ASSIGN(RecordFileReader);
 };

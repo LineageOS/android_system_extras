@@ -50,54 +50,67 @@ bool ConvertArgsToOptions(const std::vector<std::string>& args,
   ordered_options->clear();
   size_t i;
   for (i = 0; i < args.size() && !args[i].empty() && args[i][0] == '-'; i++) {
+    std::string value_after_equal;
     auto it = option_formats.find(args[i]);
     if (it == option_formats.end()) {
-      if (args[i] == "--") {
-        i++;
-        break;
+      if (auto pos = args[i].find("="); pos != std::string::npos) {
+        value_after_equal = args[i].substr(pos + 1);
+        it = option_formats.find(args[i].substr(0, pos));
       }
-      LOG(ERROR) << "Unknown option " << args[i] << "." << help_msg;
-      return false;
+      if (it == option_formats.end()) {
+        if (args[i] == "--") {
+          i++;
+          break;
+        }
+        LOG(ERROR) << "Unknown option " << args[i] << "." << help_msg;
+        return false;
+      }
     }
     const OptionName& name = it->first;
     const OptionFormat& format = it->second;
     OptionValue value;
-    memset(&value, 0, sizeof(value));
 
-    if (i + 1 == args.size()) {
-      if (format.value_type != OptionValueType::NONE &&
-          format.value_type != OptionValueType::OPT_STRING) {
-        LOG(ERROR) << "No argument following " << name << " option." << help_msg;
-        return false;
-      }
-    } else {
-      switch (format.value_type) {
-        case OptionValueType::NONE:
-          break;
-        case OptionValueType::STRING:
-          value.str_value = &args[++i];
-          break;
-        case OptionValueType::OPT_STRING:
-          if (!args[i + 1].empty() && args[i + 1][0] != '-') {
-            value.str_value = &args[++i];
-          }
-          break;
-        case OptionValueType::UINT:
-          if (!android::base::ParseUint(args[++i], &value.uint_value,
-                                        std::numeric_limits<uint64_t>::max(), true)) {
-            LOG(ERROR) << "Invalid argument for option " << name << ": " << args[i] << "."
-                       << help_msg;
-            return false;
-          }
-          break;
-        case OptionValueType::DOUBLE:
-          if (!android::base::ParseDouble(args[++i], &value.double_value)) {
-            LOG(ERROR) << "Invalid argument for option " << name << ": " << args[i] << "."
-                       << help_msg;
-            return false;
-          }
-          break;
-      }
+    switch (format.value_type) {
+      case OptionValueType::NONE:
+        break;
+      case OptionValueType::STRING:
+        if (i + 1 == args.size()) {
+          LOG(ERROR) << "No argument following " << name << " option." << help_msg;
+          return false;
+        }
+        value.str_value = args[++i];
+        break;
+      case OptionValueType::OPT_STRING:
+        if (i + 1 < args.size() && !args[i + 1].empty() && args[i + 1][0] != '-') {
+          value.str_value = args[++i];
+        }
+        break;
+      case OptionValueType::OPT_STRING_AFTER_EQUAL:
+        value.str_value = value_after_equal;
+        break;
+      case OptionValueType::UINT:
+        if (i + 1 == args.size()) {
+          LOG(ERROR) << "No argument following " << name << " option." << help_msg;
+          return false;
+        }
+        if (!android::base::ParseUint(args[++i], &value.uint_value,
+                                      std::numeric_limits<uint64_t>::max(), true)) {
+          LOG(ERROR) << "Invalid argument for option " << name << ": " << args[i] << "."
+                     << help_msg;
+          return false;
+        }
+        break;
+      case OptionValueType::DOUBLE:
+        if (i + 1 == args.size()) {
+          LOG(ERROR) << "No argument following " << name << " option." << help_msg;
+          return false;
+        }
+        if (!android::base::ParseDouble(args[++i], &value.double_value)) {
+          LOG(ERROR) << "Invalid argument for option " << name << ": " << args[i] << "."
+                     << help_msg;
+          return false;
+        }
+        break;
     }
 
     switch (format.type) {
@@ -192,15 +205,15 @@ void RegisterAllCommands() {
   RegisterReportCommand();
   RegisterReportSampleCommand();
 #if defined(__linux__)
-    RegisterListCommand();
-    RegisterRecordCommand();
-    RegisterStatCommand();
-    RegisterDebugUnwindCommand();
-    RegisterTraceSchedCommand();
-    RegisterMonitorCommand();
+  RegisterListCommand();
+  RegisterRecordCommand();
+  RegisterStatCommand();
+  RegisterDebugUnwindCommand();
+  RegisterTraceSchedCommand();
+  RegisterMonitorCommand();
 #if defined(__ANDROID__)
-    RegisterAPICommands();
-    RegisterBootRecordCommand();
+  RegisterAPICommands();
+  RegisterBootRecordCommand();
 #endif
 #endif
 }

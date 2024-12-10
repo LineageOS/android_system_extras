@@ -222,7 +222,8 @@ class TestPprofProtoGenerator(TestBase):
 
         # Read recording file.
         config = {'ndk_path': TestHelper.ndk_path, 'max_chain_length': 1000000,
-                  'report_lib_options': ReportLibOptions(False, None, '', None, None, None)}
+                  'report_lib_options': ReportLibOptions(False, None, '', None, None, None),
+                  'show_event_counters': False}
         generator = PprofProfileGenerator(config)
         generator.load_record_file(testdata_file)
 
@@ -298,3 +299,18 @@ class TestPprofProtoGenerator(TestBase):
 
     def test_report_sample_proto_file(self):
         self.run_generator('', testdata_file='display_bitmaps.proto_data')
+
+    def test_tagroot(self):
+        data = self.run_generator(['--tagroot', 'comm', 'thread_comm'])
+        self.assertIn('process:e.sample.tunnel', data)
+        self.assertIn('thread:e.sample.tunnel', data)
+        self.assertIn('thread:Binder:10419_3', data)
+
+    def test_show_event_counters(self):
+        output = self.run_generator(
+            ['--show_event_counters'],
+            testdata_file='perf_with_add_counter.data')
+        self.assertIn('type=cpu-cycles_counter, unit=count', output)
+        self.assertIn('type=cpu-cycles_counter_samples, unit=samples', output)
+        self.assertIn('type=instructions_counter, unit=count', output)
+        self.assertIn('type=instructions_counter_samples, unit=samples', output)

@@ -14,16 +14,7 @@
  * limitations under the License.
  */
 
-#include <errno.h>
-#include <pthread.h>
 #include <signal.h>
-#include <stdlib.h>
-#include <string.h>
-#include <libgen.h> // For POSIX basename().
-
-// Use _system_properties.h to use __system_property_wait_any()
-#define _REALLY_INCLUDE_SYS__SYSTEM_PROPERTIES_H_
-#include <sys/_system_properties.h>
 
 #include "profile-extras.h"
 

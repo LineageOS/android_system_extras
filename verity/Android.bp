@@ -102,6 +102,9 @@ cc_defaults {
         "libcrypto",
         "libbase",
     ],
+    export_shared_lib_headers: [
+        "libcrypto",
+    ],
 
     host_supported: true,
 }

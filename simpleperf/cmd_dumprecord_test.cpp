@@ -89,3 +89,9 @@ TEST(cmd_dump, etm_data) {
 TEST(cmd_dump, dump_arm_regs_recorded_in_arm64) {
   ASSERT_TRUE(DumpCmd()->Run({GetTestData("perf_with_arm_regs.data")}));
 }
+
+// @CddTest = 6.1/C-0-2
+TEST(cmd_dump, dump_feature_option) {
+  ASSERT_TRUE(
+      DumpCmd()->Run({"--dump-feature", "meta_info", GetTestData("perf_display_bitmaps.data")}));
+}

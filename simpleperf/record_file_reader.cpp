@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <android-base/logging.h>
+#include <android-base/scopeguard.h>
 
 #include "event_attr.h"
 #include "record.h"
@@ -61,6 +62,7 @@ static const std::map<int, std::string> feature_name_map = {
     {FEAT_DEBUG_UNWIND_FILE, "debug_unwind_file"},
     {FEAT_FILE2, "file2"},
     {FEAT_ETM_BRANCH_LIST, "etm_branch_list"},
+    {FEAT_INIT_MAP, "init_map"},
 };
 
 std::string GetFeatureName(int feature_id) {
@@ -99,8 +101,7 @@ RecordFileReader::RecordFileReader(const std::string& filename, FILE* fp)
     : filename_(filename),
       record_fp_(fp),
       event_id_pos_in_sample_records_(0),
-      event_id_reverse_pos_in_non_sample_records_(0),
-      read_record_size_(0) {
+      event_id_reverse_pos_in_non_sample_records_(0) {
   file_size_ = GetFileSize(filename_);
 }
 
@@ -279,15 +280,17 @@ bool RecordFileReader::ReadDataSection(
 }
 
 bool RecordFileReader::ReadRecord(std::unique_ptr<Record>& record) {
-  if (read_record_size_ == 0) {
+  if (read_record_pos_.end == 0) {
     if (fseek(record_fp_, header_.data.offset, SEEK_SET) != 0) {
       PLOG(ERROR) << "fseek() failed";
       return false;
     }
+    read_record_pos_.end = header_.data.size;
   }
   record = nullptr;
-  if (read_record_size_ < header_.data.size) {
-    record = ReadRecord();
+  if (read_record_pos_.pos < read_record_pos_.end ||
+      (decompressor_ && decompressor_->HasOutputData())) {
+    record = ReadRecord(read_record_pos_);
     if (record == nullptr) {
       return false;
     }
@@ -298,25 +301,23 @@ bool RecordFileReader::ReadRecord(std::unique_ptr<Record>& record) {
   return true;
 }
 
-std::unique_ptr<Record> RecordFileReader::ReadRecord() {
-  char header_buf[Record::header_size()];
-  RecordHeader header;
-  if (!Read(header_buf, Record::header_size()) || !header.Parse(header_buf)) {
+std::unique_ptr<Record> RecordFileReader::ReadRecord(ReadPos& pos) {
+  std::unique_ptr<char[]> p = ReadRecordWithDecompression(pos);
+  if (!p) {
     return nullptr;
   }
-  std::unique_ptr<char[]> p;
+  RecordHeader header;
+  if (!header.Parse(p.get())) {
+    return nullptr;
+  }
+
   if (header.type == SIMPLE_PERF_RECORD_SPLIT) {
     // Read until meeting a RECORD_SPLIT_END record.
     std::vector<char> buf;
     while (header.type == SIMPLE_PERF_RECORD_SPLIT) {
-      size_t add_size = header.size - Record::header_size();
-      size_t old_size = buf.size();
-      buf.resize(old_size + add_size);
-      if (!Read(&buf[old_size], add_size)) {
-        return nullptr;
-      }
-      read_record_size_ += header.size;
-      if (!Read(header_buf, Record::header_size()) || !header.Parse(header_buf)) {
+      buf.insert(buf.end(), p.get() + Record::header_size(), p.get() + header.size);
+      p = ReadRecordWithDecompression(pos);
+      if (!p || !header.Parse(p.get())) {
         return nullptr;
       }
     }
@@ -324,7 +325,6 @@ std::unique_ptr<Record> RecordFileReader::ReadRecord() {
       LOG(ERROR) << "SPLIT records are not followed by a SPLIT_END record.";
       return nullptr;
     }
-    read_record_size_ += header.size;
     if (buf.size() < Record::header_size() || !header.Parse(buf.data()) ||
         header.size != buf.size()) {
       LOG(ERROR) << "invalid record merged from SPLIT records";
@@ -332,15 +332,6 @@ std::unique_ptr<Record> RecordFileReader::ReadRecord() {
     }
     p.reset(new char[buf.size()]);
     memcpy(p.get(), buf.data(), buf.size());
-  } else {
-    p.reset(new char[header.size]);
-    memcpy(p.get(), header_buf, Record::header_size());
-    if (header.size > Record::header_size()) {
-      if (!Read(p.get() + Record::header_size(), header.size - Record::header_size())) {
-        return nullptr;
-      }
-    }
-    read_record_size_ += header.size;
   }
 
   const perf_event_attr* attr = &event_attrs_[0].attr;
@@ -374,14 +365,62 @@ std::unique_ptr<Record> RecordFileReader::ReadRecord() {
   r->OwnBinary();
   if (r->type() == PERF_RECORD_AUXTRACE) {
     auto auxtrace = static_cast<AuxTraceRecord*>(r.get());
-    auxtrace->location.file_offset = header_.data.offset + read_record_size_;
-    read_record_size_ += auxtrace->data->aux_size;
+    auxtrace->location.file_offset = header_.data.offset + read_record_pos_.pos;
+    read_record_pos_.pos += auxtrace->data->aux_size;
     if (fseek(record_fp_, auxtrace->data->aux_size, SEEK_CUR) != 0) {
       PLOG(ERROR) << "fseek() failed";
       return nullptr;
     }
   }
   return r;
+}
+
+std::unique_ptr<char[]> RecordFileReader::ReadRecordWithDecompression(ReadPos& pos) {
+  while (true) {
+    if (decompressor_) {
+      std::string_view output = decompressor_->GetOutputData();
+      if (output.size() >= sizeof(perf_event_header)) {
+        auto header = reinterpret_cast<const perf_event_header*>(output.data());
+        if (header->size <= output.size()) {
+          std::unique_ptr<char[]> p(new char[header->size]);
+          memcpy(p.get(), output.data(), header->size);
+          decompressor_->ConsumeOutputData(header->size);
+          return p;
+        }
+      }
+    }
+    if (pos.pos == pos.end) {
+      break;
+    }
+    perf_event_header header;
+    if (!Read(&header, sizeof(header))) {
+      return nullptr;
+    }
+    pos.pos += header.size;
+    if (header.type == PERF_RECORD_COMPRESSED) {
+      if (!decompressor_) {
+        decompressor_ = CreateZstdDecompressor();
+        if (!decompressor_) {
+          return nullptr;
+        }
+      }
+      std::vector<char> buf(header.size - sizeof(header));
+      if (!Read(buf.data(), buf.size())) {
+        return nullptr;
+      }
+      if (!decompressor_->AddInputData(buf.data(), buf.size())) {
+        return nullptr;
+      }
+    } else {
+      std::unique_ptr<char[]> p(new char[header.size]);
+      memcpy(p.get(), &header, sizeof(header));
+      if (!Read(p.get() + sizeof(header), header.size - sizeof(header))) {
+        return nullptr;
+      }
+      return p;
+    }
+  }
+  return nullptr;
 }
 
 bool RecordFileReader::Read(void* buf, size_t len) {
@@ -414,6 +453,14 @@ size_t RecordFileReader::GetAttrIndexOfRecord(const Record* record) {
     return it->second;
   }
   return 0;
+}
+
+std::optional<size_t> RecordFileReader::GetAttrIndexByEventId(uint64_t event_id) {
+  auto it = event_id_to_attr_map_.find(event_id);
+  if (it != event_id_to_attr_map_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
 }
 
 bool RecordFileReader::ReadFeatureSection(int feature, std::vector<char>* data) {
@@ -735,6 +782,29 @@ std::optional<DebugUnwindFeature> RecordFileReader::ReadDebugUnwindFeature() {
   return std::nullopt;
 }
 
+bool RecordFileReader::ReadInitMapFeature(
+    const std::function<bool(std::unique_ptr<Record>)>& callback) {
+  auto it = feature_section_descriptors_.find(FEAT_INIT_MAP);
+  if (it == feature_section_descriptors_.end()) {
+    return false;
+  }
+  if (fseek(record_fp_, it->second.offset, SEEK_SET) != 0) {
+    PLOG(ERROR) << "fseek() failed";
+    return false;
+  }
+  ReadPos pos = {0, it->second.size};
+  while (pos.pos < pos.end || (decompressor_ && decompressor_->HasOutputData())) {
+    auto r = ReadRecord(pos);
+    if (!r) {
+      return false;
+    }
+    if (!callback(std::move(r))) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool RecordFileReader::LoadBuildIdAndFileFeatures(ThreadTree& thread_tree) {
   std::vector<BuildIdRecord> records = ReadBuildIdFeature();
   std::vector<std::pair<std::string, BuildId>> build_ids;
@@ -763,6 +833,8 @@ bool RecordFileReader::ReadAuxData(uint32_t cpu, uint64_t aux_offset, size_t siz
     error = true;
     return false;
   }
+  android::base::ScopeGuard guard([&]() { fseek(record_fp_, saved_pos, SEEK_SET); });
+
   OverflowResult aux_end = SafeAdd(aux_offset, size);
   if (aux_end.overflow) {
     LOG(ERROR) << "aux_end overflow";
@@ -782,9 +854,7 @@ bool RecordFileReader::ReadAuxData(uint32_t cpu, uint64_t aux_offset, size_t siz
     auto location_it = std::upper_bound(it->second.begin(), it->second.end(), aux_offset, comp);
     if (location_it != it->second.begin()) {
       --location_it;
-      if (location_it->aux_offset + location_it->aux_size >= aux_end.value) {
-        location = &*location_it;
-      }
+      location = &*location_it;
     }
   }
   if (location == nullptr) {
@@ -793,15 +863,13 @@ bool RecordFileReader::ReadAuxData(uint32_t cpu, uint64_t aux_offset, size_t siz
               << size << ". Probably the data is lost when recording.";
     return false;
   }
+  if (decompressor_) {
+    return ReadAuxDataFromDecompressor(cpu, aux_offset, size, buf, *location, error);
+  }
   if (buf.size() < size) {
     buf.resize(size);
   }
   if (!ReadAtOffset(aux_offset - location->aux_offset + location->file_offset, buf.data(), size)) {
-    error = true;
-    return false;
-  }
-  if (fseek(record_fp_, saved_pos, SEEK_SET) != 0) {
-    PLOG(ERROR) << "fseek() failed";
     error = true;
     return false;
   }
@@ -840,6 +908,48 @@ bool RecordFileReader::BuildAuxDataLocation() {
       aux_data_location_[auxtrace.data->cpu].emplace_back(location);
     }
   }
+  return true;
+}
+
+bool RecordFileReader::ReadAuxDataFromDecompressor(uint32_t cpu, uint64_t aux_offset, size_t size,
+                                                   std::vector<uint8_t>& buf,
+                                                   const AuxDataLocation& location, bool& error) {
+  if (!auxdata_decompressor_) {
+    auxdata_decompressor_.reset(new AuxDataDecompressor);
+    auxdata_decompressor_->decompressor = CreateZstdDecompressor();
+    if (!auxdata_decompressor_->decompressor) {
+      error = true;
+      return false;
+    }
+  }
+  if (auxdata_decompressor_->cpu != cpu || auxdata_decompressor_->location != location) {
+    auxdata_decompressor_->cpu = cpu;
+    auxdata_decompressor_->location = location;
+    Decompressor& decompressor = *auxdata_decompressor_->decompressor;
+    // Read and decompress new aux data.
+    std::string_view output = decompressor.GetOutputData();
+    if (!output.empty()) {
+      decompressor.ConsumeOutputData(output.size());
+    }
+    std::vector<char> input(location.aux_size);
+    if (!ReadAtOffset(location.file_offset, input.data(), input.size()) ||
+        !decompressor.AddInputData(input.data(), input.size())) {
+      error = true;
+      return false;
+    }
+  }
+  std::string_view data = auxdata_decompressor_->decompressor->GetOutputData();
+  if (location.aux_offset + data.size() < aux_offset + size) {
+    // ETM data can be dropped when recording if the userspace buffer is full. This isn't an
+    // error.
+    LOG(INFO) << "aux data is missing: cpu " << cpu << ", aux_offset " << aux_offset << ", size "
+              << size << ". Probably the data is lost when recording.";
+    return false;
+  }
+  if (buf.size() < size) {
+    buf.resize(size);
+  }
+  memcpy(buf.data(), &data[aux_offset - location.aux_offset], size);
   return true;
 }
 

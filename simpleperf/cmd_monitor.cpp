@@ -373,7 +373,7 @@ bool MonitorCommand::ParseOptions(const std::vector<std::string>& args) {
       event_selection_set_.SetSampleRateForNewEvents(rate);
 
     } else if (name == "--call-graph") {
-      std::vector<std::string> strs = android::base::Split(*value.str_value, ",");
+      std::vector<std::string> strs = android::base::Split(value.str_value, ",");
       if (strs[0] == "fp") {
         fp_callchain_sampling_ = true;
         dwarf_callchain_sampling_ = false;
@@ -400,7 +400,7 @@ bool MonitorCommand::ParseOptions(const std::vector<std::string>& args) {
       }
 
     } else if (name == "-e") {
-      std::vector<std::string> event_types = android::base::Split(*value.str_value, ",");
+      std::vector<std::string> event_types = android::base::Split(value.str_value, ",");
       for (auto& event_type : event_types) {
         if (!event_selection_set_.AddEventType(event_type)) {
           return false;

@@ -36,6 +36,7 @@
 #ifdef __ANDROID__
 #include <cutils/android_get_control_file.h>
 #include <fs_mgr.h>
+#include <libsnapshot/snapshot.h>
 #endif
 #include <jsonpb/jsonpb.h>
 #include <liblp/builder.h>
@@ -247,6 +248,16 @@ static bool MergeFsUsage(DynamicPartitionsDeviceInfoProto* proto,
         }
     }
     return true;
+}
+static void DumpSnapshotState(std::ostream& output) {
+    if (android::base::GetBoolProperty("ro.virtual_ab.enabled", false)) {
+        if (auto sm = android::snapshot::SnapshotManager::New()) {
+            output << "---------------\n";
+            output << "Snapshot state:\n";
+            output << "---------------\n";
+            sm->Dump(output);
+        }
+    }
 }
 #endif
 
@@ -549,6 +560,10 @@ int LpdumpMain(int argc, char* argv[], std::ostream& cout, std::ostream& cerr) {
             PrintMetadata(*pt.get(), cout);
         }
     }
+#ifdef __ANDROID__
+    DumpSnapshotState(cout);
+#endif
+
     return EX_OK;
 }
 

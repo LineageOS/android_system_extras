@@ -123,7 +123,9 @@ void SimplePerfWriterFuzzer::process() {
             std::unique_ptr<Dso> dso =
                 Dso::CreateDso(dso_type, mFdp.ConsumeRandomLengthString(kMaxLen) /* path */,
                                mFdp.ConsumeBool() /*  force_64bit */);
-            dsos.push_back(dso.get());
+            if (dso) {
+              dsos.push_back(dso.release());
+            }
           }
           writer->WriteFileFeatures(dsos);
         },

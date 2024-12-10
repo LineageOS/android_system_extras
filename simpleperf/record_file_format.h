@@ -85,6 +85,9 @@ file2 feature section (used to replace file feature section):
 
 etm_branch_list feature section:
   ETMBranchList etm_branch_list;  // from etm_branch_list.proto
+
+init_map feature section:
+  Record record[];  // MmapRecord, Mmap2Record or CommRecord
 */
 
 namespace simpleperf {
@@ -120,6 +123,7 @@ enum {
   FEAT_DEBUG_UNWIND_FILE,
   FEAT_FILE2,
   FEAT_ETM_BRANCH_LIST,
+  FEAT_INIT_MAP,
   FEAT_MAX_NUM = 256,
 };
 
