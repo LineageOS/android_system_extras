@@ -147,6 +147,20 @@ cc_binary {
 }
 
 cc_binary {
+    name: "lpsetro",
+    defaults: ["lp_defaults"],
+    host_supported: true,
+    shared_libs: [
+        "libbase",
+        "liblog",
+        "liblp",
+    ],
+    srcs: [
+        "lpsetro.cc",
+    ],
+}
+
+cc_binary {
     name: "lpdumpd",
     defaults: [
         "lp_defaults",
