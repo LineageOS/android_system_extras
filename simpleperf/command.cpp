@@ -270,6 +270,10 @@ bool RunSimpleperfCmd(int argc, char** argv) {
   }
 
   android::base::ScopedLogSeverity severity(log_severity);
+  if (log_severity == android::base::VERBOSE) {
+    // If verbose, use android::base::StderrLogger to add time info.
+    android::base::SetLogger(android::base::StderrLogger);
+  }
 
   if (args.empty()) {
     args.push_back("help");

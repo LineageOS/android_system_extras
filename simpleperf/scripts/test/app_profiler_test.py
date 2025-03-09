@@ -62,6 +62,9 @@ class TestNativeProfiling(TestBase):
             stderr=subprocess.PIPE, text=True)
         self.assertIn('No Android device is connected via ADB.', proc.stderr)
 
+    def test_android_version(self):
+        self.assertGreaterEqual(TestHelper.adb.get_android_version(), 9)
+
 
 class TestNativeLibDownloader(TestBase):
     def setUp(self):

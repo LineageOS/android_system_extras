@@ -24,8 +24,10 @@ from torq import DEFAULT_DUR_MS
 TEST_FAILURE_MSG = "Test failure."
 TEST_DUR_MS = 9000
 INVALID_DUR_MS = "invalid-dur-ms"
+ANDROID_SDK_VERSION_T = 33
+ANDROID_SDK_VERSION_S_V2 = 32
 
-COMMON_DEFAULT_CONFIG_BEGINNING_STRING = f'''\
+COMMON_DEFAULT_CONFIG_BEGINNING_STRING_1 = f'''\
 <<EOF
 
 buffers: {{
@@ -97,9 +99,11 @@ data_sources: {{
       vmstat_counters: VMSTAT_PGSTEAL_DIRECT
       vmstat_counters: VMSTAT_PGSCAN_KSWAPD
       vmstat_counters: VMSTAT_PGSTEAL_KSWAPD
-      vmstat_counters: VMSTAT_WORKINGSET_REFAULT
-      # Below field not available on < Android SC-V2 releases.
-      cpufreq_period_ms: 500
+      vmstat_counters: VMSTAT_WORKINGSET_REFAULT'''
+
+CPUFREQ_STRING_NEW_ANDROID = f'      cpufreq_period_ms: 500'
+
+COMMON_DEFAULT_CONFIG_BEGINNING_STRING_2 = f'''\
     }}
   }}
 }}
@@ -168,8 +172,7 @@ incremental_state_config {{
 
 '''
 
-DEFAULT_CONFIG_9000_DUR_MS = f'''\
-{COMMON_DEFAULT_CONFIG_BEGINNING_STRING}
+COMMON_DEFAULT_FTRACE_EVENTS = f'''\
       ftrace_events: "dmabuf_heap/dma_heap_stat"
       ftrace_events: "ftrace/print"
       ftrace_events: "gpu_mem/gpu_mem_total"
@@ -197,13 +200,21 @@ DEFAULT_CONFIG_9000_DUR_MS = f'''\
       ftrace_events: "task/task_newtask"
       ftrace_events: "task/task_rename"
       ftrace_events: "vmscan/*"
-      ftrace_events: "workqueue/*"
+      ftrace_events: "workqueue/*"'''
+
+DEFAULT_CONFIG_9000_DUR_MS = f'''\
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_1}
+{CPUFREQ_STRING_NEW_ANDROID}
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_2}
+{COMMON_DEFAULT_FTRACE_EVENTS}
 {COMMON_DEFAULT_CONFIG_MIDDLE_STRING}
 duration_ms: {TEST_DUR_MS}
 {COMMON_CONFIG_ENDING_STRING}EOF'''
 
 DEFAULT_CONFIG_EXCLUDED_FTRACE_EVENTS = f'''\
-{COMMON_DEFAULT_CONFIG_BEGINNING_STRING}
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_1}
+{CPUFREQ_STRING_NEW_ANDROID}
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_2}
       ftrace_events: "dmabuf_heap/dma_heap_stat"
       ftrace_events: "ftrace/print"
       ftrace_events: "gpu_mem/gpu_mem_total"
@@ -235,7 +246,9 @@ duration_ms: {DEFAULT_DUR_MS}
 {COMMON_CONFIG_ENDING_STRING}EOF'''
 
 DEFAULT_CONFIG_INCLUDED_FTRACE_EVENTS = f'''\
-{COMMON_DEFAULT_CONFIG_BEGINNING_STRING}
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_1}
+{CPUFREQ_STRING_NEW_ANDROID}
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_2}
       ftrace_events: "dmabuf_heap/dma_heap_stat"
       ftrace_events: "ftrace/print"
       ftrace_events: "gpu_mem/gpu_mem_total"
@@ -266,6 +279,15 @@ DEFAULT_CONFIG_INCLUDED_FTRACE_EVENTS = f'''\
       ftrace_events: "workqueue/*"
       ftrace_events: "mock_ftrace_event1"
       ftrace_events: "mock_ftrace_event2"
+{COMMON_DEFAULT_CONFIG_MIDDLE_STRING}
+duration_ms: {DEFAULT_DUR_MS}
+{COMMON_CONFIG_ENDING_STRING}EOF'''
+
+DEFAULT_CONFIG_OLD_ANDROID = f'''\
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_1}
+
+{COMMON_DEFAULT_CONFIG_BEGINNING_STRING_2}
+{COMMON_DEFAULT_FTRACE_EVENTS}
 {COMMON_DEFAULT_CONFIG_MIDDLE_STRING}
 duration_ms: {DEFAULT_DUR_MS}
 {COMMON_CONFIG_ENDING_STRING}EOF'''
@@ -322,16 +344,22 @@ class ConfigBuilderUnitTest(unittest.TestCase):
   def test_build_default_config_setting_valid_dur_ms(self):
     self.command.dur_ms = TEST_DUR_MS
 
-    config, error = build_default_config(self.command)
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(error, None)
     self.assertEqual(config, DEFAULT_CONFIG_9000_DUR_MS)
+
+  def test_build_default_config_on_old_android_version(self):
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_S_V2)
+
+    self.assertEqual(error, None)
+    self.assertEqual(config, DEFAULT_CONFIG_OLD_ANDROID)
 
   def test_build_default_config_setting_invalid_dur_ms(self):
     self.command.dur_ms = None
 
     with self.assertRaises(ValueError) as e:
-      build_default_config(self.command)
+      build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(str(e.exception), ("Cannot create config because a valid"
                                         " dur_ms was not set."))
@@ -340,7 +368,7 @@ class ConfigBuilderUnitTest(unittest.TestCase):
     self.command.excluded_ftrace_events = ["power/suspend_resume",
                                            "mm_event/mm_event_record"]
 
-    config, error = build_default_config(self.command)
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(error, None)
     self.assertEqual(config, DEFAULT_CONFIG_EXCLUDED_FTRACE_EVENTS)
@@ -348,7 +376,7 @@ class ConfigBuilderUnitTest(unittest.TestCase):
   def test_build_default_config_removing_invalid_excluded_ftrace_events(self):
     self.command.excluded_ftrace_events = ["invalid_ftrace_event"]
 
-    config, error = build_default_config(self.command)
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(config, None)
     self.assertNotEqual(error, None)
@@ -392,7 +420,7 @@ class ConfigBuilderUnitTest(unittest.TestCase):
     self.command.included_ftrace_events = ["mock_ftrace_event1",
                                            "mock_ftrace_event2"]
 
-    config, error = build_default_config(self.command)
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(error, None)
     self.assertEqual(config, DEFAULT_CONFIG_INCLUDED_FTRACE_EVENTS)
@@ -400,7 +428,7 @@ class ConfigBuilderUnitTest(unittest.TestCase):
   def test_build_default_config_adding_invalid_included_ftrace_events(self):
     self.command.included_ftrace_events = ["power/suspend_resume"]
 
-    config, error = build_default_config(self.command)
+    config, error = build_default_config(self.command, ANDROID_SDK_VERSION_T)
 
     self.assertEqual(config, None)
     self.assertNotEqual(error, None)

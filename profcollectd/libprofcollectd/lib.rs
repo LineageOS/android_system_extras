@@ -20,12 +20,7 @@ mod config;
 mod report;
 mod scheduler;
 mod service;
-mod simpleperf_etm_trace_provider;
-mod simpleperf_lbr_trace_provider;
 mod trace_provider;
-
-#[cfg(feature = "test")]
-mod logging_trace_provider;
 
 use anyhow::{Context, Result};
 use profcollectd_aidl_interface::aidl::com::android::server::profcollect::IProfCollectd::{

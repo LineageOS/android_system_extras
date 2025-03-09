@@ -16,17 +16,23 @@
 
 //! ProfCollect trace provider trait and helper functions.
 
+mod simpleperf_etm;
+mod simpleperf_lbr;
+
+#[cfg(feature = "test")]
+mod logging;
+
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::simpleperf_etm_trace_provider::SimpleperfEtmTraceProvider;
-use crate::simpleperf_lbr_trace_provider::SimpleperfLbrTraceProvider;
+use simpleperf_etm::SimpleperfEtmTraceProvider;
+use simpleperf_lbr::SimpleperfLbrTraceProvider;
 
 #[cfg(feature = "test")]
-use crate::logging_trace_provider::LoggingTraceProvider;
+use logging::LoggingTraceProvider;
 
 pub trait TraceProvider {
     fn get_name(&self) -> &'static str;

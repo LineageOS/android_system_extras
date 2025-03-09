@@ -1038,5 +1038,19 @@
         ]
       }
     ]
+  },
+  "riscv64": {
+    "events": [],
+    "cpus": []
+  },
+  "x86-intel": {
+    "events": [
+      ["0x20c4", "BR_INST_RETIRED.NEAR_TAKEN", "Taken branch instructions retired"]
+    ]
+  },
+  "x86-amd": {
+    "events": [
+      ["0xc4", "ex_ret_brn_tkn", "Retired taken branch instructions"]
+    ]
   }
 }

@@ -87,7 +87,12 @@ python_binary_host {
 
 prebuilt_etc {
     name: "mke2fs.conf",
-    recovery_available: true,
+    src: "mke2fs.conf",
+}
+
+prebuilt_etc {
+    name: "mke2fs.conf.recovery",
+    recovery: true,
     src: "mke2fs.conf",
 }
 

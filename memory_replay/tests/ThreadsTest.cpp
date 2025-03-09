@@ -16,7 +16,8 @@
 
 #include <gtest/gtest.h>
 
-#include "Alloc.h"
+#include <memory_trace/MemoryTrace.h>
+
 #include "Pointers.h"
 #include "Thread.h"
 #include "Threads.h"
@@ -32,8 +33,8 @@ TEST(ThreadsTest, single_thread) {
   Thread* found_thread = threads.FindThread(900);
   ASSERT_EQ(thread, found_thread);
 
-  AllocEntry thread_done = {.type = THREAD_DONE};
-  thread->SetAllocEntry(&thread_done);
+  memory_trace::Entry thread_done = {.type = memory_trace::THREAD_DONE};
+  thread->SetEntry(&thread_done);
 
   thread->SetPending();
 
@@ -67,10 +68,10 @@ TEST(ThreadsTest, multiple_threads) {
   Thread* found_thread3 = threads.FindThread(902);
   ASSERT_EQ(thread3, found_thread3);
 
-  AllocEntry thread_done = {.type = THREAD_DONE};
-  thread1->SetAllocEntry(&thread_done);
-  thread2->SetAllocEntry(&thread_done);
-  thread3->SetAllocEntry(&thread_done);
+  memory_trace::Entry thread_done = {.type = memory_trace::THREAD_DONE};
+  thread1->SetEntry(&thread_done);
+  thread2->SetEntry(&thread_done);
+  thread3->SetEntry(&thread_done);
 
   thread1->SetPending();
   threads.Finish(thread1);
@@ -96,25 +97,25 @@ TEST(ThreadsTest, verify_quiesce) {
   // If WaitForAllToQuiesce is not correct, then this should provoke an error
   // since we are overwriting the action data while it's being used.
   constexpr size_t kAllocEntries = 512;
-  std::vector<AllocEntry> mallocs(kAllocEntries);
-  std::vector<AllocEntry> frees(kAllocEntries);
+  std::vector<memory_trace::Entry> mallocs(kAllocEntries);
+  std::vector<memory_trace::Entry> frees(kAllocEntries);
   for (size_t i = 0; i < kAllocEntries; i++) {
-    mallocs[i].type = MALLOC;
+    mallocs[i].type = memory_trace::MALLOC;
     mallocs[i].ptr = 0x1234 + i;
     mallocs[i].size = 100;
-    thread->SetAllocEntry(&mallocs[i]);
+    thread->SetEntry(&mallocs[i]);
     thread->SetPending();
     threads.WaitForAllToQuiesce();
 
-    frees[i].type = FREE;
+    frees[i].type = memory_trace::FREE;
     frees[i].ptr = 0x1234 + i;
-    thread->SetAllocEntry(&frees[i]);
+    thread->SetEntry(&frees[i]);
     thread->SetPending();
     threads.WaitForAllToQuiesce();
   }
 
-  AllocEntry thread_done = {.type = THREAD_DONE};
-  thread->SetAllocEntry(&thread_done);
+  memory_trace::Entry thread_done = {.type = memory_trace::THREAD_DONE};
+  thread->SetEntry(&thread_done);
   thread->SetPending();
   threads.Finish(thread);
   ASSERT_EQ(0U, threads.num_threads());

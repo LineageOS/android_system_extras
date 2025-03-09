@@ -918,18 +918,33 @@ int GetAndroidVersion() {
   static int android_version = -1;
   if (android_version == -1) {
     android_version = 0;
+
+    auto parse_version = [&](const std::string& s) {
+      // The release string can be a list of numbers (like 8.1.0), a character (like Q)
+      // or many characters (like OMR1).
+      if (!s.empty()) {
+        // Each Android version has a version number: L is 5, M is 6, N is 7, O is 8, etc.
+        if (s[0] >= 'L' && s[0] <= 'V') {
+          android_version = s[0] - 'P' + kAndroidVersionP;
+        } else if (isdigit(s[0])) {
+          sscanf(s.c_str(), "%d", &android_version);
+        }
+      }
+    };
     std::string s = android::base::GetProperty("ro.build.version.codename", "REL");
-    if (s == "REL") {
-      s = android::base::GetProperty("ro.build.version.release", "");
+    if (s != "REL") {
+      parse_version(s);
     }
-    // The release string can be a list of numbers (like 8.1.0), a character (like Q)
-    // or many characters (like OMR1).
-    if (!s.empty()) {
-      // Each Android version has a version number: L is 5, M is 6, N is 7, O is 8, etc.
-      if (s[0] >= 'A' && s[0] <= 'Z') {
-        android_version = s[0] - 'P' + kAndroidVersionP;
-      } else if (isdigit(s[0])) {
-        sscanf(s.c_str(), "%d", &android_version);
+    if (android_version == 0) {
+      s = android::base::GetProperty("ro.build.version.release", "");
+      parse_version(s);
+    }
+    if (android_version == 0) {
+      s = android::base::GetProperty("ro.build.version.sdk", "");
+      int sdk_version = 0;
+      const int SDK_VERSION_V = 35;
+      if (sscanf(s.c_str(), "%d", &sdk_version) == 1 && sdk_version >= SDK_VERSION_V) {
+        android_version = kAndroidVersionV;
       }
     }
   }
@@ -1033,54 +1048,137 @@ std::optional<uid_t> GetProcessUid(pid_t pid) {
   return std::nullopt;
 }
 
-std::vector<ARMCpuModel> GetARMCpuModels() {
-  std::vector<ARMCpuModel> cpu_models;
-  LineReader reader("/proc/cpuinfo");
-  if (!reader.Ok()) {
+namespace {
+
+class CPUModelParser {
+ public:
+  std::vector<CpuModel> ParseARMCpuModel(const std::vector<std::string>& lines) {
+    std::vector<CpuModel> cpu_models;
+    uint32_t processor = 0;
+    CpuModel model;
+    model.arch = "arm";
+    int parsed = 0;
+
+    auto line_callback = [&](const std::string& name, const std::string& value) {
+      if (name == "processor" && android::base::ParseUint(value, &processor)) {
+        parsed |= 1;
+      } else if (name == "CPU implementer" &&
+                 android::base::ParseUint(value, &model.arm_data.implementer)) {
+        parsed |= 2;
+      } else if (name == "CPU part" && android::base::ParseUint(value, &model.arm_data.partnum) &&
+                 parsed == 0x3) {
+        AddCpuModel(processor, model, cpu_models);
+        parsed = 0;
+      }
+    };
+    ProcessLines(lines, line_callback);
     return cpu_models;
   }
-  auto add_cpu = [&](uint32_t processor, uint32_t implementer, uint32_t partnum) {
-    for (auto& model : cpu_models) {
-      if (model.implementer == implementer && model.partnum == partnum) {
-        model.cpus.push_back(processor);
-        return;
-      }
-    }
-    cpu_models.resize(cpu_models.size() + 1);
-    ARMCpuModel& model = cpu_models.back();
-    model.implementer = implementer;
-    model.partnum = partnum;
-    model.cpus.push_back(processor);
-  };
 
-  uint32_t processor = 0;
-  uint32_t implementer = 0;
-  uint32_t partnum = 0;
-  int parsed = 0;
-  std::string* line;
-  while ((line = reader.ReadLine()) != nullptr) {
-    std::vector<std::string> strs = android::base::Split(*line, ":");
-    if (strs.size() != 2) {
-      continue;
-    }
-    std::string name = android::base::Trim(strs[0]);
-    std::string value = android::base::Trim(strs[1]);
-    if (name == "processor") {
-      if (android::base::ParseUint(value, &processor)) {
+  std::vector<CpuModel> ParseRISCVCpuModel(const std::vector<std::string>& lines) {
+    std::vector<CpuModel> cpu_models;
+    uint32_t processor = 0;
+    CpuModel model;
+    model.arch = "riscv";
+    int parsed = 0;
+
+    auto line_callback = [&](const std::string& name, const std::string& value) {
+      if (name == "processor" && android::base::ParseUint(value, &processor)) {
         parsed |= 1;
-      }
-    } else if (name == "CPU implementer") {
-      if (android::base::ParseUint(value, &implementer)) {
+      } else if (name == "mvendorid" &&
+                 android::base::ParseUint(value, &model.riscv_data.mvendorid)) {
         parsed |= 2;
+      } else if (name == "marchid" && android::base::ParseUint(value, &model.riscv_data.marchid)) {
+        parsed |= 4;
+      } else if (name == "mimpid" && android::base::ParseUint(value, &model.riscv_data.mimpid) &&
+                 parsed == 0x7) {
+        AddCpuModel(processor, model, cpu_models);
+        parsed = 0;
       }
-    } else if (name == "CPU part") {
-      if (android::base::ParseUint(value, &partnum) && parsed == 0x3) {
-        add_cpu(processor, implementer, partnum);
+    };
+    ProcessLines(lines, line_callback);
+    return cpu_models;
+  }
+
+  std::vector<CpuModel> ParseX86CpuModel(const std::vector<std::string>& lines) {
+    std::vector<CpuModel> cpu_models;
+    uint32_t processor = 0;
+    CpuModel model;
+    model.arch = "x86";
+    int parsed = 0;
+
+    auto line_callback = [&](const std::string& name, const std::string& value) {
+      if (name == "processor" && android::base::ParseUint(value, &processor)) {
+        parsed |= 1;
+      } else if (name == "vendor_id") {
+        model.x86_data.vendor_id = value;
+        AddCpuModel(processor, model, cpu_models);
+        parsed = 0;
       }
-      parsed = 0;
+    };
+    ProcessLines(lines, line_callback);
+    return cpu_models;
+  }
+
+ private:
+  void ProcessLines(const std::vector<std::string>& lines,
+                    const std::function<void(const std::string&, const std::string&)>& callback) {
+    for (const auto& line : lines) {
+      std::vector<std::string> strs = android::base::Split(line, ":");
+      if (strs.size() != 2) {
+        continue;
+      }
+      std::string name = android::base::Trim(strs[0]);
+      std::string value = android::base::Trim(strs[1]);
+      callback(name, value);
     }
   }
-  return cpu_models;
+
+  void AddCpuModel(uint32_t processor, const CpuModel& model, std::vector<CpuModel>& cpu_models) {
+    for (auto& m : cpu_models) {
+      if (model.arch == "arm") {
+        if (model.arm_data.implementer == m.arm_data.implementer &&
+            model.arm_data.partnum == m.arm_data.partnum) {
+          m.cpus.push_back(processor);
+          return;
+        }
+      } else if (model.arch == "riscv") {
+        if (model.riscv_data.mvendorid == m.riscv_data.mvendorid &&
+            model.riscv_data.marchid == m.riscv_data.marchid &&
+            model.riscv_data.mimpid == m.riscv_data.mimpid) {
+          m.cpus.push_back(processor);
+          return;
+        }
+      } else if (model.arch == "x86") {
+        if (model.x86_data.vendor_id == m.x86_data.vendor_id) {
+          m.cpus.push_back(processor);
+          return;
+        }
+      }
+    }
+    cpu_models.push_back(model);
+    cpu_models.back().cpus.push_back(processor);
+  }
+};
+
+}  // namespace
+
+std::vector<CpuModel> GetCpuModels() {
+  std::string data;
+  if (!android::base::ReadFileToString("/proc/cpuinfo", &data)) {
+    return {};
+  }
+  std::vector<std::string> lines = android::base::Split(data, "\n");
+  CPUModelParser parser;
+#if defined(__aarch64__) || defined(__arm__)
+  return parser.ParseARMCpuModel(lines);
+#elif defined(__riscv)
+  return parser.ParseRISCVCpuModel(lines);
+#elif defined(__x86_64__) || defined(__i386__)
+  return parser.ParseX86CpuModel(lines);
+#else
+  return {};
+#endif
 }
 
 }  // namespace simpleperf

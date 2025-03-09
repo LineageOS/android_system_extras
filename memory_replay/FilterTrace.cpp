@@ -28,7 +28,8 @@
 #include <android-base/parseint.h>
 #include <android-base/strings.h>
 
-#include "AllocParser.h"
+#include <memory_trace/MemoryTrace.h>
+
 #include "File.h"
 
 static std::string GetBaseExec() {
@@ -108,42 +109,18 @@ static bool ParseOptions(int argc, char** argv, size_t& min_size, size_t& max_si
   return true;
 }
 
-static void PrintEntry(const AllocEntry& entry, size_t size, bool print_trace_format) {
+static void PrintEntry(const memory_trace::Entry& entry, size_t size, bool print_trace_format) {
   if (print_trace_format) {
-    switch (entry.type) {
-      case REALLOC:
-        if (entry.u.old_ptr == 0) {
-          // Convert to a malloc since it is functionally the same.
-          printf("%d: malloc %p %zu\n", entry.tid, reinterpret_cast<void*>(entry.ptr), entry.size);
-        } else {
-          printf("%d: realloc %p %p %zu\n", entry.tid, reinterpret_cast<void*>(entry.ptr),
-                 reinterpret_cast<void*>(entry.u.old_ptr), entry.size);
-        }
-        break;
-      case MALLOC:
-        printf("%d: malloc %p %zu\n", entry.tid, reinterpret_cast<void*>(entry.ptr), entry.size);
-        break;
-      case MEMALIGN:
-        printf("%d: memalign %p %zu %zu\n", entry.tid, reinterpret_cast<void*>(entry.ptr),
-               entry.u.align, entry.size);
-        break;
-      case CALLOC:
-        printf("%d: calloc %p %zu %zu\n", entry.tid, reinterpret_cast<void*>(entry.ptr),
-               entry.u.n_elements, entry.size);
-        break;
-      default:
-        errx(1, "Invalid entry type found %d\n", entry.type);
-        break;
-    }
+    printf("%s\n", memory_trace::CreateStringFromEntry(entry).c_str());
   } else {
-    printf("%s size %zu\n", entry.type == REALLOC && entry.u.old_ptr != 0 ? "realloc" : "alloc",
-           size);
+    printf("%s size %zu\n",
+           entry.type == memory_trace::REALLOC && entry.u.old_ptr != 0 ? "realloc" : "alloc", size);
   }
 }
 
 static void ProcessTrace(const std::string_view& trace, size_t min_size, size_t max_size,
                          bool print_trace_format) {
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   GetUnwindInfo(trace.data(), &entries, &num_entries);
 
@@ -159,14 +136,14 @@ static void ProcessTrace(const std::string_view& trace, size_t min_size, size_t 
   size_t total_allocs = 0;
   size_t total_reallocs = 0;
   for (size_t i = 0; i < num_entries; i++) {
-    const AllocEntry& entry = entries[i];
+    const memory_trace::Entry& entry = entries[i];
     switch (entry.type) {
-      case MALLOC:
-      case MEMALIGN:
-      case REALLOC:
+      case memory_trace::MALLOC:
+      case memory_trace::MEMALIGN:
+      case memory_trace::REALLOC:
         if (entry.size >= min_size && entry.size <= max_size) {
           PrintEntry(entry, entry.size, print_trace_format);
-          if (entry.type == REALLOC) {
+          if (entry.type == memory_trace::REALLOC) {
             total_reallocs++;
           } else {
             total_allocs++;
@@ -174,15 +151,15 @@ static void ProcessTrace(const std::string_view& trace, size_t min_size, size_t 
         }
         break;
 
-      case CALLOC:
+      case memory_trace::CALLOC:
         if (size_t size = entry.u.n_elements * entry.size;
             size >= min_size && entry.size <= max_size) {
           PrintEntry(entry, size, print_trace_format);
         }
         break;
 
-      case FREE:
-      case THREAD_DONE:
+      case memory_trace::FREE:
+      case memory_trace::THREAD_DONE:
       default:
         break;
     }

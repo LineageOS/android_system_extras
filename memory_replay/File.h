@@ -21,11 +21,13 @@
 #include <string>
 
 // Forward Declarations.
-struct AllocEntry;
+namespace memory_trace {
+struct Entry;
+}
 
 std::string ZipGetContents(const char* filename);
 
 // If filename ends with .zip, treat as a zip file to decompress.
-void GetUnwindInfo(const char* filename, AllocEntry** entries, size_t* num_entries);
+void GetUnwindInfo(const char* filename, memory_trace::Entry** entries, size_t* num_entries);
 
-void FreeEntries(AllocEntry* entries, size_t num_entries);
+void FreeEntries(memory_trace::Entry* entries, size_t num_entries);

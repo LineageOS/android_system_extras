@@ -14,15 +14,17 @@
 # limitations under the License.
 #
 
-import subprocess
+import math
 import os
+import subprocess
 import time
+
 from validation_error import ValidationError
 
 ADB_ROOT_TIMED_OUT_LIMIT_SECS = 5
 ADB_BOOT_COMPLETED_TIMED_OUT_LIMIT_SECS = 30
 POLLING_INTERVAL_SECS = 0.5
-
+SIMPLEPERF_TRACE_FILE = "/data/misc/perfetto-traces/perf.data"
 
 class AdbDevice:
   """
@@ -97,13 +99,23 @@ class AdbDevice:
                        " being rooted." % self.serial))
 
   def remove_file(self, file_path):
-    subprocess.run(["adb", "-s", self.serial, "shell", "rm", file_path])
+    subprocess.run(["adb", "-s", self.serial, "shell", "rm", "-f", file_path])
 
   def start_perfetto_trace(self, config):
     return subprocess.Popen(("adb -s %s shell perfetto -c - --txt -o"
                              " /data/misc/perfetto-traces/"
                              "trace.perfetto-trace %s"
                              % (self.serial, config)), shell=True)
+
+  def start_simpleperf_trace(self, command):
+    events_param = "-e " + ",".join(command.simpleperf_event)
+    return subprocess.Popen(("adb -s %s shell simpleperf record -a -f 1000 "
+                             "--post-unwind=yes -m 8192 -g --duration %d"
+                             " %s -o %s"
+                             % (self.serial,
+                                int(math.ceil(command.dur_ms/1000)),
+                                events_param, SIMPLEPERF_TRACE_FILE)),
+                            shell=True)
 
   def pull_file(self, file_path, host_file):
     subprocess.run(["adb", "-s", self.serial, "pull", file_path, host_file])
@@ -143,6 +155,12 @@ class AdbDevice:
 
   def reboot(self):
     subprocess.run(["adb", "-s", self.serial, "reboot"])
+    if not self.poll_is_task_completed(ADB_ROOT_TIMED_OUT_LIMIT_SECS,
+                                       POLLING_INTERVAL_SECS,
+                                       lambda: self.serial not in
+                                               self.get_adb_devices()):
+      raise Exception(("Device with serial %s took too long to start"
+                       " rebooting." % self.serial))
 
   def wait_for_device(self):
     subprocess.run(["adb", "-s", self.serial, "wait-for-device"])
@@ -192,26 +210,45 @@ class AdbDevice:
     subprocess.run(["adb", "-s", self.serial, "shell", "am", "force-stop",
                     package])
 
-  def get_num_cpus(self):
-    raise NotImplementedError
+  def get_prop(self, prop):
+    return subprocess.run(
+        ["adb", "-s", self.serial, "shell", "getprop", prop],
+        capture_output=True).stdout.decode("utf-8").split("\n")[0]
 
-  def get_memory(self):
-    raise NotImplementedError
+  def get_android_sdk_version(self):
+    return int(self.get_prop("ro.build.version.sdk"))
 
-  def get_max_num_cpus(self):
-    raise NotImplementedError
+  def simpleperf_event_exists(self, simpleperf_events):
+    events_copy = simpleperf_events.copy()
+    grep_command = "grep"
+    for event in simpleperf_events:
+      grep_command += " -e " + event.lower()
 
-  def get_max_memory(self):
-    raise NotImplementedError
+    output = subprocess.run(["adb", "-s", self.serial, "shell",
+                             "simpleperf", "list", "|", grep_command],
+                            capture_output=True)
 
-  def set_hw_config(self, hw_config):
-    raise NotImplementedError
+    if output is None or len(output.stdout) == 0:
+      raise Exception("Error while validating simpleperf events.")
+    lines = output.stdout.decode("utf-8").split("\n")
 
-  def set_num_cpus(self, num_cpus):
-    raise NotImplementedError
+    # Anything that does not start with two spaces is not a command.
+    # Any command with a space will have the command before the first space.
+    for line in lines:
+      if len(line) <= 3 or line[:2] != "  " or line[2] == "#":
+        # Line doesn't contain a simpleperf event
+        continue
+      event = line[2:].split(" ")[0]
+      if event in events_copy:
+        events_copy.remove(event)
+        if len(events_copy) == 0:
+          # All of the events exist, exit early
+          break
 
-  def set_memory(self, memory):
-    raise NotImplementedError
-
-  def simpleperf_event_exists(self, simpleperf_event):
-    raise NotImplementedError
+    if len(events_copy) > 0:
+      return ValidationError("The following simpleperf event(s) are invalid:"
+                             " %s."
+                             % events_copy,
+                             "Run adb shell simpleperf list to"
+                             " see valid simpleperf events.")
+    return None

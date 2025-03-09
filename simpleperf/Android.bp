@@ -801,6 +801,9 @@ genrule {
         "scripts/**/*",
         "testdata/**/*",
     ],
+    exclude_srcs: [
+        "scripts/binary_cache/**/*",
+    ],
     cmd: "$(location soong_zip) -o $(out) -C system/extras/simpleperf " +
         "-D system/extras/simpleperf ",
     out: [

@@ -19,28 +19,29 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <memory_trace/MemoryTrace.h>
+
 #include "Alloc.h"
-#include "AllocParser.h"
 #include "Pointers.h"
 #include "Utils.h"
 
-bool AllocDoesFree(const AllocEntry& entry) {
+bool AllocDoesFree(const memory_trace::Entry& entry) {
   switch (entry.type) {
-    case MALLOC:
-    case CALLOC:
-    case MEMALIGN:
-    case THREAD_DONE:
+    case memory_trace::MALLOC:
+    case memory_trace::CALLOC:
+    case memory_trace::MEMALIGN:
+    case memory_trace::THREAD_DONE:
       return false;
 
-    case FREE:
+    case memory_trace::FREE:
       return entry.ptr != 0;
 
-    case REALLOC:
+    case memory_trace::REALLOC:
       return entry.u.old_ptr != 0;
   }
 }
 
-static uint64_t MallocExecute(const AllocEntry& entry, Pointers* pointers) {
+static uint64_t MallocExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   int pagesize = getpagesize();
   uint64_t time_nsecs = Nanotime();
   void* memory = malloc(entry.size);
@@ -52,7 +53,7 @@ static uint64_t MallocExecute(const AllocEntry& entry, Pointers* pointers) {
   return time_nsecs;
 }
 
-static uint64_t CallocExecute(const AllocEntry& entry, Pointers* pointers) {
+static uint64_t CallocExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   int pagesize = getpagesize();
   uint64_t time_nsecs = Nanotime();
   void* memory = calloc(entry.u.n_elements, entry.size);
@@ -64,7 +65,7 @@ static uint64_t CallocExecute(const AllocEntry& entry, Pointers* pointers) {
   return time_nsecs;
 }
 
-static uint64_t ReallocExecute(const AllocEntry& entry, Pointers* pointers) {
+static uint64_t ReallocExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   void* old_memory = nullptr;
   if (entry.u.old_ptr != 0) {
     old_memory = pointers->Remove(entry.u.old_ptr);
@@ -81,7 +82,7 @@ static uint64_t ReallocExecute(const AllocEntry& entry, Pointers* pointers) {
   return time_nsecs;
 }
 
-static uint64_t MemalignExecute(const AllocEntry& entry, Pointers* pointers) {
+static uint64_t MemalignExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   int pagesize = getpagesize();
   uint64_t time_nsecs = Nanotime();
   void* memory = memalign(entry.u.align, entry.size);
@@ -93,7 +94,7 @@ static uint64_t MemalignExecute(const AllocEntry& entry, Pointers* pointers) {
   return time_nsecs;
 }
 
-static uint64_t FreeExecute(const AllocEntry& entry, Pointers* pointers) {
+static uint64_t FreeExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   if (entry.ptr == 0) {
     return 0;
   }
@@ -104,17 +105,17 @@ static uint64_t FreeExecute(const AllocEntry& entry, Pointers* pointers) {
   return Nanotime() - time_nsecs;
 }
 
-uint64_t AllocExecute(const AllocEntry& entry, Pointers* pointers) {
+uint64_t AllocExecute(const memory_trace::Entry& entry, Pointers* pointers) {
   switch (entry.type) {
-    case MALLOC:
+    case memory_trace::MALLOC:
       return MallocExecute(entry, pointers);
-    case CALLOC:
+    case memory_trace::CALLOC:
       return CallocExecute(entry, pointers);
-    case REALLOC:
+    case memory_trace::REALLOC:
       return ReallocExecute(entry, pointers);
-    case MEMALIGN:
+    case memory_trace::MEMALIGN:
       return MemalignExecute(entry, pointers);
-    case FREE:
+    case memory_trace::FREE:
       return FreeExecute(entry, pointers);
     default:
       return 0;

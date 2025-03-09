@@ -35,12 +35,13 @@
 #include <android-base/strings.h>
 #include <benchmark/benchmark.h>
 
-#include "Alloc.h"
+#include <memory_trace/MemoryTrace.h>
+
 #include "File.h"
 #include "Utils.h"
 
 struct TraceDataType {
-  AllocEntry* entries = nullptr;
+  memory_trace::Entry* entries = nullptr;
   size_t num_entries = 0;
   void** ptrs = nullptr;
   size_t num_ptrs = 0;
@@ -99,17 +100,17 @@ static void GetTraceData(const std::string& filename, TraceDataType* trace_data)
   std::stack<size_t> free_indices;
   std::unordered_map<uint64_t, size_t> ptr_to_index;
   for (size_t i = 0; i < trace_data->num_entries; i++) {
-    AllocEntry* entry = &trace_data->entries[i];
+    memory_trace::Entry* entry = &trace_data->entries[i];
     switch (entry->type) {
-      case MALLOC:
-      case CALLOC:
-      case MEMALIGN: {
+      case memory_trace::MALLOC:
+      case memory_trace::CALLOC:
+      case memory_trace::MEMALIGN: {
         size_t idx = GetIndex(free_indices, &trace_data->num_ptrs);
         ptr_to_index[entry->ptr] = idx;
         entry->ptr = idx;
         break;
       }
-      case REALLOC: {
+      case memory_trace::REALLOC: {
         if (entry->u.old_ptr != 0) {
           auto idx_entry = ptr_to_index.find(entry->u.old_ptr);
           if (idx_entry == ptr_to_index.end()) {
@@ -125,7 +126,7 @@ static void GetTraceData(const std::string& filename, TraceDataType* trace_data)
         entry->ptr = idx;
         break;
       }
-      case FREE:
+      case memory_trace::FREE:
         if (entry->ptr != 0) {
           auto idx_entry = ptr_to_index.find(entry->ptr);
           if (idx_entry == ptr_to_index.end()) {
@@ -136,7 +137,7 @@ static void GetTraceData(const std::string& filename, TraceDataType* trace_data)
           ptr_to_index.erase(idx_entry);
         }
         break;
-      case THREAD_DONE:
+      case memory_trace::THREAD_DONE:
         break;
     }
   }
@@ -156,9 +157,9 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
   void** ptrs = trace_data->ptrs;
   for (size_t i = 0; i < trace_data->num_entries; i++) {
     void* ptr;
-    const AllocEntry& entry = trace_data->entries[i];
+    const memory_trace::Entry& entry = trace_data->entries[i];
     switch (entry.type) {
-      case MALLOC:
+      case memory_trace::MALLOC:
         start_ns = Nanotime();
         ptr = malloc(entry.size);
         if (ptr == nullptr) {
@@ -173,7 +174,7 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
         ptrs[entry.ptr] = ptr;
         break;
 
-      case CALLOC:
+      case memory_trace::CALLOC:
         start_ns = Nanotime();
         ptr = calloc(entry.u.n_elements, entry.size);
         if (ptr == nullptr) {
@@ -188,7 +189,7 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
         ptrs[entry.ptr] = ptr;
         break;
 
-      case MEMALIGN:
+      case memory_trace::MEMALIGN:
         start_ns = Nanotime();
         ptr = memalign(entry.u.align, entry.size);
         if (ptr == nullptr) {
@@ -203,7 +204,7 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
         ptrs[entry.ptr] = ptr;
         break;
 
-      case REALLOC:
+      case memory_trace::REALLOC:
         start_ns = Nanotime();
         if (entry.u.old_ptr == 0) {
           ptr = realloc(nullptr, entry.size);
@@ -225,7 +226,7 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
         ptrs[entry.ptr] = ptr;
         break;
 
-      case FREE:
+      case memory_trace::FREE:
         if (entry.ptr != 0) {
           ptr = ptrs[entry.ptr - 1];
           ptrs[entry.ptr - 1] = nullptr;
@@ -237,7 +238,7 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
         total_ns += Nanotime() - start_ns;
         break;
 
-      case THREAD_DONE:
+      case memory_trace::THREAD_DONE:
         break;
     }
   }
@@ -249,7 +250,8 @@ static void RunTrace(benchmark::State& state, TraceDataType* trace_data) {
 // Run a trace as if all of the allocations occurred in a single thread.
 // This is not completely realistic, but it is a possible worst case that
 // could happen in an app.
-static void BenchmarkTrace(benchmark::State& state, const char* filename, bool enable_decay_time) {
+static void BenchmarkTrace(benchmark::State& state, const char* filename,
+                           [[maybe_unused]] bool enable_decay_time) {
 #if defined(__BIONIC__)
   if (enable_decay_time) {
     mallopt(M_DECAY_TIME, 1);

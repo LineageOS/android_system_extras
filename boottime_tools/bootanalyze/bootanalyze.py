@@ -40,6 +40,7 @@ KERNEL_TIME_KEY = "kernel"
 BOOT_ANIM_END_TIME_KEY = "BootAnimEnd"
 KERNEL_BOOT_COMPLETE = "BootComplete_kernel"
 LOGCAT_BOOT_COMPLETE = "BootComplete"
+ANDROID_INIT_SECOND_STAGE = "android_init_2st_stage"
 CARWATCHDOG_BOOT_COMPLETE = "CarWatchdogBootupProfilingComplete"
 LAUNCHER_START = "LauncherStart"
 CARWATCHDOG_DUMP_COMMAND = "adb shell dumpsys android.automotive.watchdog.ICarWatchdog/default"
@@ -318,8 +319,12 @@ def handle_reboot_log(capture_log_on_error, shutdown_events_pattern, components_
 
 def collect_dmesg_events(search_events_pattern, timings_pattern, results):
   dmesg_events, kernel_timing_events = collect_events(search_events_pattern, ADB_CMD +\
-                                                      ' shell su root dmesg -w', timings_pattern,\
-                                                      [KERNEL_BOOT_COMPLETE], True)
+                                                      ' shell su root dmesg -w', timings_pattern,
+                                                      [
+                                                        KERNEL_BOOT_COMPLETE,
+                                                        ANDROID_INIT_SECOND_STAGE
+                                                      ],
+                                                      False, True)
   results.append(dmesg_events)
   results.append(kernel_timing_events)
 
@@ -349,7 +354,7 @@ def iterate(args, search_events_pattern, timings_pattern, shutdown_events_patter
     logcat_stop_events.append(CARWATCHDOG_BOOT_COMPLETE)
   logcat_events, logcat_timing_events = collect_events(
     search_events_pattern, ADB_CMD + ' logcat -b all -v epoch', timings_pattern,\
-    logcat_stop_events, False)
+    logcat_stop_events, True, False)
 
   t.join()
   dmesg_events = results[0]
@@ -389,16 +394,27 @@ def iterate(args, search_events_pattern, timings_pattern, shutdown_events_patter
     diffs.append((logcat_event_time[KERNEL_TIME_KEY], logcat_event_time[KERNEL_TIME_KEY]))
 
   if logcat_event_time.get(BOOT_ANIM_END_TIME_KEY) and dmesg_event_time.get(BOOT_ANIM_END_TIME_KEY):
-      diffs.append((logcat_event_time[BOOT_ANIM_END_TIME_KEY],\
+    diffs.append((logcat_event_time[BOOT_ANIM_END_TIME_KEY],\
                     logcat_event_time[BOOT_ANIM_END_TIME_KEY] -\
                       dmesg_event_time[BOOT_ANIM_END_TIME_KEY]))
-  if not dmesg_event_time.get(KERNEL_BOOT_COMPLETE):
-      print("BootAnimEnd time or BootComplete-kernel not captured in both log" +\
-        ", cannot get time diff")
-      print("dmesg {} logcat {}".format(dmesg_event_time, logcat_event_time))
-      return None, None, None, None, None, None
-  diffs.append((logcat_event_time[LOGCAT_BOOT_COMPLETE],\
-                logcat_event_time[LOGCAT_BOOT_COMPLETE] - dmesg_event_time[KERNEL_BOOT_COMPLETE]))
+  if logcat_event_time.get(LOGCAT_BOOT_COMPLETE) and dmesg_event_time.get(KERNEL_BOOT_COMPLETE):
+    diffs.append((
+        logcat_event_time[LOGCAT_BOOT_COMPLETE],
+        logcat_event_time[LOGCAT_BOOT_COMPLETE] - dmesg_event_time[KERNEL_BOOT_COMPLETE],
+    ))
+  elif logcat_event_time.get(ANDROID_INIT_SECOND_STAGE) and \
+      dmesg_event_time.get(ANDROID_INIT_SECOND_STAGE):
+    print("BootAnimEnd time or BootComplete-kernel not captured in both log" +\
+      ", use Android init 2nd stage get time diff")
+    diffs.append((
+      logcat_event_time[ANDROID_INIT_SECOND_STAGE],
+      logcat_event_time[ANDROID_INIT_SECOND_STAGE] - dmesg_event_time[ANDROID_INIT_SECOND_STAGE],
+    ))
+  else:
+    print("BootComplete and Android init 2nd stage not captured in both log" +\
+          ", cannot get time diff")
+    print('dmesg {} logcat {}'.format(dmesg_event_time, logcat_event_time))
+    return None, None, None, None, None, None
 
   for k, v in logcat_event_time.items():
     debug("event[{0}, {1}]".format(k, v))
@@ -419,10 +435,10 @@ def iterate(args, search_events_pattern, timings_pattern, shutdown_events_patter
       diff = diffs[0]
     events[k] = events[k] - diff[1]
     if events[k] < 0.0:
-        if events[k] < -0.1: # maybe previous one is better fit
-          events[k] = events[k] + diff[1] - diff_prev[1]
-        else:
-          events[k] = 0.0
+      if events[k] < -0.1: # maybe previous one is better fit
+        events[k] = events[k] + diff[1] - diff_prev[1]
+      else:
+        events[k] = 0.0
 
   data_points = collections.OrderedDict()
 
@@ -672,7 +688,8 @@ def log_timeout(time_left, stop_events, events, timing_events):
   print(" remaininig events {}, event {} timing events {}".\
     format(stop_events, events, timing_events))
 
-def collect_events(search_events, command, timings, stop_events, disable_timing_after_zygote):
+def collect_events(search_events, command, timings, stop_events,
+                   collects_all_events, disable_timing_after_zygote):
   events = collections.OrderedDict()
   timing_events = {}
 
@@ -681,7 +698,10 @@ def collect_events(search_events, command, timings, stop_events, disable_timing_
   start_time = time.time()
   zygote_found = False
   line = None
-  print("remaining stop_events:", stop_events)
+  if collects_all_events:
+    print("remaining stop_events:", stop_events)
+  else:
+    print("waiting for any of stop_events:", stop_events)
   init = True
   while True:
     if init:
@@ -740,8 +760,12 @@ def collect_events(search_events, command, timings, stop_events, disable_timing_
           new_event = update_name_if_already_exist(events, event)
           events[new_event] = line
         if event in stop_events:
-          stop_events.remove(event)
-          print("remaining stop_events:", stop_events)
+          if collects_all_events:
+            stop_events.remove(event)
+            print("remaining stop_events:", stop_events)
+          else:
+            # no need to wait for others
+            stop_events = []
 
       timing_event = get_boot_event(line, timings)
       if timing_event and (not disable_timing_after_zygote or not zygote_found):
@@ -826,7 +850,7 @@ def do_reboot(serial, use_adb_reboot):
   while retry < 20:
     current_devices = subprocess.check_output("adb devices", shell=True).decode('utf-8', 'ignore')
     if original_devices != current_devices:
-      if not serial or (serial and current_devices.find(serial) < 0):
+      if not serial or (serial and re.findall(serial + ".*offline", current_devices, re.MULTILINE)):
         return True
     time.sleep(1)
     retry += 1

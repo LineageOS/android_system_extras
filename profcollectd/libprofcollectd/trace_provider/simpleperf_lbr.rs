@@ -25,6 +25,8 @@ use crate::trace_provider;
 
 static LBR_TRACEFILE_EXTENSION: &str = "lbrtrace";
 static LBR_PROFILE_EXTENSION: &str = "data";
+// Use a prime value to make sure that there are no weird interactions with e.g. short loops.
+static LBR_SAMPLE_PERIOD: &str = "500009";
 
 pub struct SimpleperfLbrTraceProvider {}
 
@@ -47,13 +49,18 @@ impl TraceProvider for SimpleperfLbrTraceProvider {
         let trace_file = trace_provider::get_path(trace_dir, tag, LBR_TRACEFILE_EXTENSION);
         // Record ETM data for kernel space only when it's not filtered out by binary_filter. So we
         // can get more ETM data for user space when ETM data for kernel space isn't needed.
-        let event_name =
-            if binary_filter.contains("kernel") { "cpu-cycles" } else { "cpu-cycles:u" };
+        let event_name = if binary_filter.contains("kernel") {
+            "BR_INST_RETIRED.NEAR_TAKEN"
+        } else {
+            "BR_INST_RETIRED.NEAR_TAKEN:u"
+        };
         let duration: String = sampling_period.as_secs_f64().to_string();
         let args: Vec<&str> = vec![
             "-a",
             "-e",
             event_name,
+            "-c",
+            LBR_SAMPLE_PERIOD,
             "--duration",
             &duration,
             "-b",
@@ -76,13 +83,15 @@ impl TraceProvider for SimpleperfLbrTraceProvider {
         processes: &str,
     ) {
         let trace_file = trace_provider::get_path(trace_dir, tag, LBR_TRACEFILE_EXTENSION);
-        let event_name = "cpu-cycles:u";
+        let event_name = "BR_INST_RETIRED.NEAR_TAKEN:u";
         let duration: String = sampling_period.as_secs_f64().to_string();
         let args: Vec<&str> = vec![
             "-p",
             processes,
             "-e",
             event_name,
+            "-c",
+            LBR_SAMPLE_PERIOD,
             "--duration",
             &duration,
             "-b",

@@ -17,6 +17,8 @@
 import textwrap
 from validation_error import ValidationError
 
+ANDROID_SDK_VERSION_T = 33
+
 
 def create_ftrace_events_string(predefined_ftrace_events,
     excluded_ftrace_events, included_ftrace_events):
@@ -51,7 +53,7 @@ def create_ftrace_events_string(predefined_ftrace_events,
   return ftrace_events_string, None
 
 
-def build_default_config(command):
+def build_default_config(command, android_sdk_version):
   if command.dur_ms is None:
     # This is always defined because it has a default value that is always
     # set in torq.py.
@@ -91,6 +93,9 @@ def build_default_config(command):
       command.included_ftrace_events)
   if error is not None:
     return None, error
+  cpufreq_period_string = "cpufreq_period_ms: 500"
+  if android_sdk_version < ANDROID_SDK_VERSION_T:
+    cpufreq_period_string = ""
   config = f'''\
     <<EOF
 
@@ -164,8 +169,7 @@ def build_default_config(command):
           vmstat_counters: VMSTAT_PGSCAN_KSWAPD
           vmstat_counters: VMSTAT_PGSTEAL_KSWAPD
           vmstat_counters: VMSTAT_WORKINGSET_REFAULT
-          # Below field not available on < Android SC-V2 releases.
-          cpufreq_period_ms: 500
+          {cpufreq_period_string}
         }}
       }}
     }}
@@ -234,11 +238,11 @@ def build_default_config(command):
   return textwrap.dedent(config), None
 
 
-def build_lightweight_config(command):
+def build_lightweight_config(command, android_sdk_version):
   raise NotImplementedError
 
 
-def build_memory_config(command):
+def build_memory_config(command, android_sdk_version):
   raise NotImplementedError
 
 
@@ -275,4 +279,3 @@ def build_custom_config(command):
                                   % (command.perfetto_config, str(e))), None)
   config_string = f"<<EOF\n\n{file_content}\n{appended_duration}\n\nEOF"
   return config_string, None
-

@@ -170,7 +170,73 @@ struct LBRData {
 };
 
 bool LBRDataToString(const LBRData& data, std::string& s);
-bool ParseBranchListData(const std::string& s, ETMBinaryMap& etm_data, LBRData& lbr_data);
+
+namespace proto {
+class BranchList;
+class ETMBinary;
+class LBRData;
+}  // namespace proto
+
+class BranchListProtoWriter {
+ private:
+  // This value is choosen to prevent exceeding the 2GB size limit for a protobuf message.
+  static constexpr size_t kMaxBranchesPerMessage = 100000000;
+
+ public:
+  static std::unique_ptr<BranchListProtoWriter> CreateForFile(
+      const std::string& output_filename, bool compress,
+      size_t max_branches_per_message = kMaxBranchesPerMessage);
+  static std::unique_ptr<BranchListProtoWriter> CreateForString(
+      std::string* output_str, bool compress,
+      size_t max_branches_per_message = kMaxBranchesPerMessage);
+
+  bool Write(const ETMBinaryMap& etm_data);
+  bool Write(const LBRData& lbr_data);
+
+ private:
+  BranchListProtoWriter(const std::string& output_filename, std::string* output_str, bool compress,
+                        size_t max_branches_per_message)
+      : output_filename_(output_filename),
+        compress_(compress),
+        max_branches_per_message_(max_branches_per_message),
+        output_fp_(nullptr, fclose),
+        output_str_(output_str) {}
+
+  bool WriteHeader();
+  bool WriteProtoBranchList(proto::BranchList& branch_list);
+  bool WriteData(const void* data, size_t size);
+
+  const std::string output_filename_;
+  const bool compress_;
+  const size_t max_branches_per_message_;
+  std::unique_ptr<FILE, decltype(&fclose)> output_fp_;
+  std::string* output_str_;
+};
+
+class BranchListProtoReader {
+ public:
+  static std::unique_ptr<BranchListProtoReader> CreateForFile(const std::string& input_filename);
+  static std::unique_ptr<BranchListProtoReader> CreateForString(const std::string& input_str);
+  bool Read(ETMBinaryMap& etm_data, LBRData& lbr_data);
+
+ private:
+  BranchListProtoReader(const std::string& input_filename, const std::string& input_str)
+      : input_filename_(input_filename), input_fp_(nullptr, fclose), input_str_(input_str) {}
+  bool ReadProtoBranchList(uint32_t size, proto::BranchList& proto_branch_list);
+  bool AddETMBinary(const proto::ETMBinary& proto_binary, ETMBinaryMap& etm_data);
+  void AddLBRData(const proto::LBRData& proto_lbr_data, LBRData& lbr_data);
+  void Rewind();
+  bool ReadData(void* data, size_t size);
+  bool ReadOldFileFormat(ETMBinaryMap& etm_data, LBRData& lbr_data);
+
+  const std::string input_filename_;
+  std::unique_ptr<FILE, decltype(&fclose)> input_fp_;
+  const std::string& input_str_;
+  size_t input_str_pos_ = 0;
+  bool compress_ = false;
+};
+
+bool DumpBranchListFile(std::string filename);
 
 // for testing
 std::string ETMBranchToProtoString(const std::vector<bool>& branch);

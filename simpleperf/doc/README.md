@@ -263,6 +263,7 @@ disassembly for C++ code and fully compiled Java code. Simpleperf supports two w
    2) Generate binary_cache, containing elf files with debug information. Use -lib option to add
      libs with debug info. Do it with
      `binary_cache_builder.py -i perf.data -lib <dir_of_lib_with_debug_info>`.
+     For Android platform, we can add debug binaries as in [Android platform profiling](android_platform_profiling.md#general-tips).
    3) Use report_html.py to generate report.html with annotated source code and disassembly,
      as described [here](https://android.googlesource.com/platform/system/extras/+/main/simpleperf/doc/scripts_reference.md#report_html_py).
 
@@ -270,6 +271,11 @@ disassembly for C++ code and fully compiled Java code. Simpleperf supports two w
    1) Generate perf.data and binary_cache as above.
    2) Use pprof_proto_generator.py to generate pprof proto file. `pprof_proto_generator.py`.
    3) Use pprof to report a function with annotated source code, as described [here](https://android.googlesource.com/platform/system/extras/+/main/simpleperf/doc/scripts_reference.md#pprof_proto_generator_py).
+
+3. Through Continuous PProf UI.
+   1) Generate pprof proto file as above.
+   2) Upload pprof.profile to pprof/. It can show source file path and line numbers for each symbol.
+      An example is [here](https://pprof.corp.google.com/?id=f5588600d3a225737a1901cb28f3f5b1).
 
 
 ### Reduce lost samples and samples with truncated stack

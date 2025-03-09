@@ -225,16 +225,9 @@ $ pprof -http=:8080 pprof.profile
 
 Converts `perf.data` to [Gecko Profile
 Format](https://github.com/firefox-devtools/profiler/blob/main/docs-developer/gecko-profile-format.md),
-the format read by https://profiler.firefox.com/.
-
-Firefox Profiler is a powerful general-purpose profiler UI which runs locally in
-any browser (not just Firefox), with:
-
-- Per-thread tracks
-- Flamegraphs
-- Search, focus for specific stacks
-- A time series view for seeing your samples in timestamp order
-- Filtering by thread and duration
+a format readable by both the [Perfetto UI](https://ui.perfetto.dev/) and
+[Firefox Profiler](https://profiler.firefox.com/).
+[View the profile](view_the_profile.md) provides more information on both options.
 
 Usage:
 
@@ -246,7 +239,8 @@ $ ./app_profiler.py -p simpleperf.example.cpp
 $ ./gecko_profile_generator.py -i perf.data | gzip > gecko-profile.json.gz
 ```
 
-Then open `gecko-profile.json.gz` in https://profiler.firefox.com/.
+Then open `gecko-profile.json.gz` in https://ui.perfetto.dev/ or
+https://profiler.firefox.com/.
 
 ### report_sample.py
 
@@ -255,6 +249,7 @@ Then open `gecko-profile.json.gz` in https://profiler.firefox.com/.
 
 This format can be imported into:
 
+- [Perfetto](https://ui.perfetto.dev)
 - [FlameGraph](https://github.com/brendangregg/FlameGraph)
 - [Flamescope](https://github.com/Netflix/flamescope)
 - [Firefox

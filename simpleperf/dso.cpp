@@ -221,9 +221,12 @@ std::string DebugElfFileFinder::GetPathInSymFsDir(const std::string& path) {
   return add_symfs_prefix(elf_path);
 }
 
-std::optional<std::string> DebugElfFileFinder::SearchFileMapByPath(const std::string& path) {
-  std::string filename;
-  if (size_t pos = path.rfind('/'); pos != std::string::npos) {
+std::optional<std::string> DebugElfFileFinder::SearchFileMapByPath(std::string_view path) {
+  if (path == "[kernel.kallsyms]") {
+    path = "vmlinux";
+  }
+  std::string_view filename;
+  if (size_t pos = path.rfind('/'); pos != path.npos) {
     filename = path.substr(pos + 1);
   } else {
     filename = path;

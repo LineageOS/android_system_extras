@@ -48,7 +48,7 @@ class DebugElfFileFinder {
 
  private:
   void CollectBuildIdInDir(const std::string& dir);
-  std::optional<std::string> SearchFileMapByPath(const std::string& path);
+  std::optional<std::string> SearchFileMapByPath(std::string_view path);
   bool CheckDebugFilePath(const std::string& path, BuildId& build_id,
                           bool report_build_id_mismatch);
 

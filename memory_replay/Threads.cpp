@@ -26,6 +26,8 @@
 
 #include <new>
 
+#include <memory_trace/MemoryTrace.h>
+
 #include "Alloc.h"
 #include "Pointers.h"
 #include "Thread.h"
@@ -35,9 +37,9 @@ void* ThreadRunner(void* data) {
   Thread* thread = reinterpret_cast<Thread*>(data);
   while (true) {
     thread->WaitForPending();
-    const AllocEntry& entry = thread->GetAllocEntry();
+    const memory_trace::Entry& entry = thread->GetEntry();
     thread->AddTimeNsecs(AllocExecute(entry, thread->pointers()));
-    bool thread_done = entry.type == THREAD_DONE;
+    bool thread_done = entry.type == memory_trace::THREAD_DONE;
     thread->ClearPending();
     if (thread_done) {
       break;
@@ -143,10 +145,10 @@ void Threads::Finish(Thread* thread) {
 }
 
 void Threads::FinishAll() {
-  AllocEntry thread_done = {.type = THREAD_DONE};
+  memory_trace::Entry thread_done = {.type = memory_trace::THREAD_DONE};
   for (size_t i = 0; i < max_threads_; i++) {
     if (threads_[i].tid_ != 0) {
-      threads_[i].SetAllocEntry(&thread_done);
+      threads_[i].SetEntry(&thread_done);
       threads_[i].SetPending();
       Finish(threads_ + i);
     }

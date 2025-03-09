@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#pragma once
 #include <memory>
 #include <string_view>
 
@@ -49,5 +50,8 @@ class Decompressor {
 
 std::unique_ptr<Compressor> CreateZstdCompressor(size_t compression_level = 3);
 std::unique_ptr<Decompressor> CreateZstdDecompressor();
+
+bool ZstdCompress(const char* input_data, size_t input_size, std::string& output_data);
+bool ZstdDecompress(const char* input_data, size_t input_size, std::string& output_data);
 
 }  // namespace simpleperf

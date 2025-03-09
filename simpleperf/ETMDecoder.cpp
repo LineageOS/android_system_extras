@@ -937,50 +937,82 @@ class BranchDecoder {
 
 android::base::expected<void, std::string> ConvertETMBranchMapToInstrRanges(
     Dso* dso, const ETMBranchMap& branch_map, const ETMDecoder::InstrRangeCallbackFn& callback) {
-  ETMInstrRange instr_range;
-  instr_range.dso = dso;
-
   BranchDecoder decoder;
   if (auto result = decoder.Init(dso); !result.ok()) {
     return result;
   }
 
+  struct MapEntry {
+    bool valid = false;
+    bool end_with_branch = false;
+    bool end_with_direct_branch = false;
+    uint32_t end_instr_size = 0;
+    uint64_t end_addr = 0;
+    uint64_t branch_addr = 0;
+    uint64_t branch_taken_count = 0;
+    uint64_t branch_not_taken_count = 0;
+  };
+  std::unordered_map<uint64_t, MapEntry> cache;
+
   for (const auto& addr_p : branch_map) {
-    uint64_t start_addr = addr_p.first & ~1ULL;
-    bool is_thumb = addr_p.first & 1;
     for (const auto& branch_p : addr_p.second) {
       const std::vector<bool>& branch = branch_p.first;
       uint64_t count = branch_p.second;
-      decoder.SetAddr(start_addr, is_thumb);
-
+      uint64_t start_addr = addr_p.first & ~1ULL;
+      bool is_thumb = addr_p.first & 1;
       for (bool b : branch) {
-        ocsd_instr_info& instr = decoder.InstrInfo();
-        uint64_t from_addr = instr.instr_addr;
-        if (!decoder.FindNextBranch()) {
+        auto it = cache.find(start_addr);
+        if (it == cache.end()) {
+          MapEntry entry;
+          decoder.SetAddr(start_addr, is_thumb);
+          if (decoder.FindNextBranch()) {
+            ocsd_instr_info& instr = decoder.InstrInfo();
+            entry.valid = true;
+            entry.end_with_branch =
+                instr.type == OCSD_INSTR_BR || instr.type == OCSD_INSTR_BR_INDIRECT;
+            entry.end_with_direct_branch = instr.type == OCSD_INSTR_BR;
+            entry.end_addr = instr.instr_addr;
+            entry.end_instr_size = instr.instr_size;
+            // For OCSD_INSTR_BR_INDIRECT, instr.branch_addr points to old branch addresses.
+            // So only use instr.branch_addr for direct branch instructions.
+            entry.branch_addr = (entry.end_with_direct_branch ? instr.branch_addr : 0);
+          }
+          it = cache.emplace(start_addr, entry).first;
+        }
+        MapEntry& entry = it->second;
+        if (!entry.valid) {
           break;
         }
-        bool end_with_branch = instr.type == OCSD_INSTR_BR || instr.type == OCSD_INSTR_BR_INDIRECT;
-        bool branch_taken = end_with_branch && b;
-        instr_range.start_addr = from_addr;
-        instr_range.end_addr = instr.instr_addr;
-        if (instr.type == OCSD_INSTR_BR) {
-          instr_range.branch_to_addr = instr.branch_addr;
+        bool branch_taken = entry.end_with_branch && b;
+        // As in "Table D4-10 Meaning of Atom elements in AArch64 A64" of ARMv9 manual,
+        // for branch instructions, b == true means branch taken. But for other instructions
+        // (like ISB), CPU continus to execute following instructions.
+        if (branch_taken) {
+          entry.branch_taken_count += count;
+          start_addr = entry.branch_addr & ~1ULL;
+          is_thumb = entry.branch_addr & 1;
         } else {
-          instr_range.branch_to_addr = 0;
-        }
-        instr_range.branch_taken_count = branch_taken ? count : 0;
-        instr_range.branch_not_taken_count = branch_taken ? 0 : count;
-
-        callback(instr_range);
-
-        if (b) {
-          instr.instr_addr = instr.branch_addr;
-        } else {
-          instr.instr_addr += instr.instr_size;
+          entry.branch_not_taken_count += count;
+          start_addr = entry.end_addr + entry.end_instr_size;
         }
       }
     }
   }
+
+  for (auto& p : cache) {
+    uint64_t start_addr = p.first;
+    MapEntry& entry = p.second;
+    if (entry.valid) {
+      ETMInstrRange instr_range;
+      instr_range.start_addr = start_addr;
+      instr_range.end_addr = entry.end_addr;
+      instr_range.branch_to_addr = entry.branch_addr;
+      instr_range.branch_taken_count = entry.branch_taken_count;
+      instr_range.branch_not_taken_count = entry.branch_not_taken_count;
+      callback(instr_range);
+    }
+  }
+
   return {};
 }
 

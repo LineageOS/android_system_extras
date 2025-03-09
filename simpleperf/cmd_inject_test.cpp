@@ -108,6 +108,16 @@ TEST(cmd_inject, output_option) {
 }
 
 // @CddTest = 6.1/C-0-2
+TEST(cmd_inject, compress_option) {
+  TemporaryFile tmpfile;
+  close(tmpfile.release());
+  ASSERT_TRUE(RunInjectCmd({"--output", "branch-list", "-z", "-o", tmpfile.path}));
+  std::string autofdo_data;
+  ASSERT_TRUE(RunInjectCmd({"-i", tmpfile.path, "--output", "autofdo"}, &autofdo_data));
+  CheckMatchingExpectedData("perf_inject.data", autofdo_data);
+}
+
+// @CddTest = 6.1/C-0-2
 TEST(cmd_inject, skip_empty_output_file) {
   TemporaryFile tmpfile;
   close(tmpfile.release());
@@ -188,6 +198,13 @@ TEST(cmd_inject, merge_branch_list_files) {
   std::string autofdo_data;
   ASSERT_TRUE(RunInjectCmd({"-i", tmpfile2.path, "--output", "autofdo"}, &autofdo_data));
   ASSERT_NE(autofdo_data.find("106c->1074:200"), std::string::npos);
+
+  // Accept invalid branch list files.
+  TemporaryFile tmpfile3;
+  close(tmpfile3.release());
+  ASSERT_TRUE(android::base::WriteStringToFile("bad content", tmpfile3.path));
+  ASSERT_TRUE(RunInjectCmd({"-i", std::string(tmpfile.path) + "," + tmpfile3.path, "--output",
+                            "branch-list", "-o", tmpfile2.path}));
 }
 
 // @CddTest = 6.1/C-0-2
@@ -249,15 +266,13 @@ TEST(cmd_inject, read_lbr_data) {
 
   const std::string perf_data_path = GetTestData("lbr/perf_lbr.data");
   std::string data;
-  /*
   ASSERT_TRUE(get_autofdo_data({"-i", perf_data_path}, &data));
   data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
-  */
 
   std::string expected_data;
   ASSERT_TRUE(android::base::ReadFileToString(
       GetTestData(std::string("lbr") + OS_PATH_SEPARATOR + "inject_lbr.data"), &expected_data));
-  // ASSERT_EQ(data, expected_data);
+  ASSERT_EQ(data, expected_data);
 
   // Convert perf.data to branch_list.proto format.
   // Then convert branch_list.proto format to AutoFDO text format.
@@ -299,4 +314,59 @@ TEST(cmd_inject, inject_small_binary) {
 
   ASSERT_TRUE(RunInjectCmd({"-i", perf_data, "--output", "bolt"}, &data));
   CheckMatchingExpectedData("perf_inject_small_bolt.data", data);
+}
+
+// @CddTest = 6.1/C-0-2
+TEST(cmd_inject, j_option) {
+  TemporaryFile tmpfile;
+  close(tmpfile.release());
+  ASSERT_TRUE(RunInjectCmd({"--output", "branch-list", "-o", tmpfile.path}));
+  std::string autofdo_data;
+  ASSERT_TRUE(RunInjectCmd(
+      {"-i", std::string(tmpfile.path) + "," + tmpfile.path, "--output", "autofdo", "-j", "1"},
+      &autofdo_data));
+  ASSERT_NE(autofdo_data.find("106c->1074:200"), std::string::npos);
+
+  ASSERT_TRUE(RunInjectCmd(
+      {"-i", std::string(tmpfile.path) + "," + tmpfile.path, "--output", "autofdo", "-j", "2"},
+      &autofdo_data));
+  ASSERT_NE(autofdo_data.find("106c->1074:200"), std::string::npos);
+
+  // Invalid job count.
+  ASSERT_FALSE(RunInjectCmd(
+      {"-i", std::string(tmpfile.path) + "," + tmpfile.path, "--output", "autofdo", "-j", "0"},
+      &autofdo_data));
+}
+
+// @CddTest = 6.1/C-0-2
+TEST(cmd_inject, dump_option) {
+  TemporaryFile tmpfile;
+  close(tmpfile.release());
+  ASSERT_TRUE(RunInjectCmd({"--output", "branch-list", "-o", tmpfile.path}));
+
+  CaptureStdout capture;
+  ASSERT_TRUE(capture.Start());
+  ASSERT_TRUE(InjectCmd()->Run({"--dump", tmpfile.path}));
+  std::string data = capture.Finish();
+  ASSERT_NE(data.find("binary[0].build_id: 0x0c9a20bf9c009d0e4e8bbf9fad0300ae00000000"),
+            std::string::npos);
+
+  ASSERT_TRUE(RunInjectCmd(
+      {"--output", "branch-list", "-o", tmpfile.path, "-i", GetTestData("lbr/perf_lbr.data")}));
+
+  ASSERT_TRUE(capture.Start());
+  ASSERT_TRUE(InjectCmd()->Run({"--dump", tmpfile.path}));
+  data = capture.Finish();
+  ASSERT_NE(data.find("binary[0].path: /home/yabinc/lbr_test_loop"), std::string::npos);
+}
+
+// @CddTest = 6.1/C-0-2
+TEST(cmd_inject, exclude_process_name_option) {
+  TemporaryFile tmpfile;
+  close(tmpfile.release());
+  ASSERT_TRUE(RunInjectCmd(
+      {"--output", "branch-list", "--exclude-process-name", "etm_test_loop", "-o", tmpfile.path}));
+  struct stat st;
+  ASSERT_EQ(stat(tmpfile.path, &st), -1);
+  ASSERT_EQ(errno, ENOENT);
 }

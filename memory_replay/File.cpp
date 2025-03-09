@@ -28,8 +28,8 @@
 #include <android-base/strings.h>
 #include <ziparchive/zip_archive.h>
 
-#include "Alloc.h"
-#include "AllocParser.h"
+#include <memory_trace/MemoryTrace.h>
+
 #include "File.h"
 
 std::string ZipGetContents(const char* filename) {
@@ -77,7 +77,7 @@ static void WaitPid(pid_t pid) {
 
 // This function should not do any memory allocations in the main function.
 // Any true allocation should happen in fork'd code.
-void GetUnwindInfo(const char* filename, AllocEntry** entries, size_t* num_entries) {
+void GetUnwindInfo(const char* filename, memory_trace::Entry** entries, size_t* num_entries) {
   void* mem =
       mmap(nullptr, sizeof(size_t), PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1, 0);
   if (mem == MAP_FAILED) {
@@ -123,12 +123,13 @@ void GetUnwindInfo(const char* filename, AllocEntry** entries, size_t* num_entri
   *num_entries = *reinterpret_cast<size_t*>(mem);
   munmap(mem, sizeof(size_t));
 
-  mem = mmap(nullptr, *num_entries * sizeof(AllocEntry), PROT_READ | PROT_WRITE,
+  mem = mmap(nullptr, *num_entries * sizeof(memory_trace::Entry), PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_SHARED, -1, 0);
   if (mem == MAP_FAILED) {
-    err(1, "Unable to allocate a shared map of size %zu", *num_entries * sizeof(AllocEntry));
+    err(1, "Unable to allocate a shared map of size %zu",
+        *num_entries * sizeof(memory_trace::Entry));
   }
-  *entries = reinterpret_cast<AllocEntry*>(mem);
+  *entries = reinterpret_cast<memory_trace::Entry*>(mem);
 
   if ((pid = fork()) == 0) {
     std::string contents;
@@ -153,7 +154,11 @@ void GetUnwindInfo(const char* filename, AllocEntry** entries, size_t* num_entri
         errx(1, "Too many entries, stopped at entry %zu", entry_idx);
       }
       contents[end_str] = '\0';
-      AllocGetData(&contents[start_str], &(*entries)[entry_idx++]);
+      std::string error;
+      if (!memory_trace::FillInEntryFromString(&contents[start_str], (*entries)[entry_idx++],
+                                               error)) {
+        errx(1, "%s", error.c_str());
+      }
       start_str = end_str + 1;
     }
     if (entry_idx != *num_entries) {
@@ -167,6 +172,6 @@ void GetUnwindInfo(const char* filename, AllocEntry** entries, size_t* num_entri
   WaitPid(pid);
 }
 
-void FreeEntries(AllocEntry* entries, size_t num_entries) {
-  munmap(entries, num_entries * sizeof(AllocEntry));
+void FreeEntries(memory_trace::Entry* entries, size_t num_entries) {
+  munmap(entries, num_entries * sizeof(memory_trace::Entry));
 }

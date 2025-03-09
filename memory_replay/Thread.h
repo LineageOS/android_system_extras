@@ -21,7 +21,9 @@
 #include <sys/types.h>
 
 // Forward Declarations.
-struct AllocEntry;
+namespace memory_trace {
+struct Entry;
+}
 class Pointers;
 
 class Thread {
@@ -39,8 +41,8 @@ class Thread {
   void set_pointers(Pointers* pointers) { pointers_ = pointers; }
   Pointers* pointers() { return pointers_; }
 
-  void SetAllocEntry(const AllocEntry* entry) { entry_ = entry; }
-  const AllocEntry& GetAllocEntry() { return *entry_; }
+  void SetEntry(const memory_trace::Entry* entry) { entry_ = entry; }
+  const memory_trace::Entry& GetEntry() { return *entry_; }
 
  private:
   pthread_mutex_t mutex_ = PTHREAD_MUTEX_INITIALIZER;
@@ -53,7 +55,7 @@ class Thread {
 
   Pointers* pointers_ = nullptr;
 
-  const AllocEntry* entry_;
+  const memory_trace::Entry* entry_;
 
   friend class Threads;
 };

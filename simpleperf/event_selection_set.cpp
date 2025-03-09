@@ -40,7 +40,7 @@ namespace simpleperf {
 using android::base::StringPrintf;
 
 bool IsBranchSamplingSupported() {
-  const EventType* type = FindEventTypeByName("cpu-cycles");
+  const EventType* type = FindEventTypeByName("BR_INST_RETIRED.NEAR_TAKEN");
   if (type == nullptr) {
     return false;
   }

@@ -16,11 +16,12 @@
 
 #pragma once
 
-#include "AllocParser.h"
-
 // Forward Declarations.
+namespace memory_trace {
+struct Entry;
+}
 class Pointers;
 
-bool AllocDoesFree(const AllocEntry& entry);
+bool AllocDoesFree(const memory_trace::Entry& entry);
 
-uint64_t AllocExecute(const AllocEntry& entry, Pointers* pointers);
+uint64_t AllocExecute(const memory_trace::Entry& entry, Pointers* pointers);

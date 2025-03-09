@@ -153,11 +153,11 @@ TEST(environment, GetMemorySize) {
 }
 
 // @CddTest = 6.1/C-0-2
-TEST(environment, GetARMCpuModels) {
-#if defined(__aarch64__) && defined(__ANDROID__)
-  auto models = GetARMCpuModels();
+TEST(environment, GetCpuModels) {
+#if defined(__ANDROID__)
+  auto models = GetCpuModels();
   ASSERT_FALSE(models.empty());
   ASSERT_FALSE(models[0].cpus.empty());
   ASSERT_EQ(models[0].cpus[0], 0);
-#endif  // defined(__aarch64__) && defined(__ANDROID__)
+#endif  // defined(__ANDROID__)
 }

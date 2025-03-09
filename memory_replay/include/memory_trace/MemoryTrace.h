@@ -16,31 +16,40 @@
 
 #pragma once
 
-#include <sys/types.h>
+#include <stdint.h>
 
 #include <string>
 
-enum AllocEnum : uint8_t {
-    MALLOC = 0,
-    CALLOC,
-    MEMALIGN,
-    REALLOC,
-    FREE,
-    THREAD_DONE,
+namespace memory_trace {
+
+enum TypeEnum : uint8_t {
+  MALLOC = 0,
+  CALLOC,
+  MEMALIGN,
+  REALLOC,
+  FREE,
+  THREAD_DONE,
 };
 
-struct AllocEntry {
-    pid_t tid;
-    AllocEnum type;
-    uint64_t ptr = 0;
-    size_t size = 0;
-    union {
-        uint64_t old_ptr = 0;
-        uint64_t n_elements;
-        uint64_t align;
-    } u;
-    uint64_t st = 0;
-    uint64_t et = 0;
+struct Entry {
+  pid_t tid;
+  TypeEnum type;
+  uint64_t ptr = 0;
+  size_t size = 0;
+  union {
+    uint64_t old_ptr = 0;
+    uint64_t n_elements;
+    uint64_t align;
+  } u;
+  uint64_t start_ns = 0;
+  uint64_t end_ns = 0;
 };
 
-void AllocGetData(const std::string& line, AllocEntry* entry);
+bool FillInEntryFromString(const std::string& line, Entry& entry, std::string& error);
+
+std::string CreateStringFromEntry(const Entry& entry);
+
+// Guaranteed not to allocate.
+bool WriteEntryToFd(int fd, const Entry& entry);
+
+}  // namespace memory_trace

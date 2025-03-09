@@ -33,11 +33,23 @@ $ ./app_profiler.py -np surfaceflinger -r "--call-graph fp --duration 10"
 # Collect unstripped binaries from $ANDROID_PRODUCT_OUT/symbols to binary_cache/.
 $ ./binary_cache_builder.py -lib $ANDROID_PRODUCT_OUT/symbols
 
-# Report source code and disassembly. Disassembling all binaries is slow, so it's better to add
-# --binary_filter option to only disassemble selected binaries.
+# Collect unstripped binaries from symbol file downloaded from builder server to binary_cache/.
+$ unzip comet-symbols-12488474.zip
+$ ./binary_cache_builder.py -lib out
+
+# To verify that the binaries in binary_cache/ include debug sections, you can perform a manual
+# check.
+
+# Generate an HTML report with source code and disassembly.
+# Disassembling all binaries can be slow, so you can use the --binary_filter
+# option to disassemble only specific binaries, like surfaceflinger.so in this example.
 $ ./report_html.py --add_source_code --source_dirs $ANDROID_BUILD_TOP --add_disassembly \
   --binary_filter surfaceflinger.so
 ```
+
+For a comprehensive guide to displaying source code and disassembly, see
+[Show Annotated Source Code and Disassembly](README.md#show-annotated-source-code-and-disassembly).
+
 
 ## Start simpleperf from system_server process
 

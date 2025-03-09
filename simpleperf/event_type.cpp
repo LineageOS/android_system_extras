@@ -44,7 +44,7 @@ struct EventFormat {
   int shift;
 };
 
-extern std::set<EventType> builtin_event_types;
+void LoadBuiltinEventTypes(std::set<EventType>&);
 
 enum class EventFinderType {
   BUILTIN,
@@ -93,7 +93,7 @@ class BuiltinTypeFinder : public EventTypeFinder {
   BuiltinTypeFinder() : EventTypeFinder(EventFinderType::BUILTIN) {}
 
  protected:
-  void LoadTypes() override { types_ = std::move(builtin_event_types); }
+  void LoadTypes() override { LoadBuiltinEventTypes(types_); }
 };
 
 class TracepointStringFinder : public EventTypeFinder {

@@ -33,32 +33,46 @@ license {
 }
 
 cc_defaults {
-    name: "memory_flag_defaults",
-    host_supported: false,
+    name: "memory_replay_flag_defaults",
+
+    host_supported: true,
 
     cflags: [
         "-Wall",
         "-Wextra",
         "-Werror",
     ],
-
-    compile_multilib: "both",
-}
-
-cc_library_static {
-    name: "liballoc_parser",
-    host_supported: true,
-    defaults: ["memory_flag_defaults"],
-
-    export_include_dirs: ["."],
-    srcs: [
-        "AllocParser.cpp",
-    ],
 }
 
 cc_defaults {
     name: "memory_replay_defaults",
-    defaults: ["memory_flag_defaults"],
+    defaults: ["memory_replay_flag_defaults"],
+
+    shared_libs: [
+        "libbase",
+        "liblog",
+        "libziparchive",
+    ],
+}
+
+cc_library_static {
+    name: "libmemory_trace",
+    host_supported: true,
+    defaults: ["memory_replay_flag_defaults"],
+
+    export_include_dirs: ["include"],
+    shared_libs: ["libbase"],
+    srcs: ["MemoryTrace.cpp"],
+
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.runtime",
+    ],
+}
+
+cc_library_static {
+    name: "libmemory_replay",
+    defaults: ["memory_replay_defaults"],
 
     srcs: [
         "Alloc.cpp",
@@ -69,24 +83,23 @@ cc_defaults {
         "Threads.cpp",
     ],
 
-    shared_libs: [
-        "libbase",
-        "libziparchive",
-    ],
-
-    static_libs: [
-        "liballoc_parser",
+    whole_static_libs: [
+        "libmemory_trace",
     ],
 }
 
 cc_binary {
     name: "memory_replay",
     defaults: ["memory_replay_defaults"],
+    host_supported: false,
 
     srcs: ["main.cpp"],
 
-    static_libs: ["liblog"],
+    static_libs: [
+        "libmemory_replay",
+    ],
 
+    compile_multilib: "both",
     multilib: {
         lib32: {
             suffix: "32",
@@ -99,28 +112,40 @@ cc_binary {
 
 cc_binary_host {
     name: "filter_trace",
-
-    cflags: [
-        "-Wall",
-        "-Wextra",
-        "-Werror",
-    ],
-
-    shared_libs: [
-        "libziparchive",
-    ],
+    defaults: ["memory_replay_defaults"],
 
     static_libs: [
-        "liballoc_parser",
-        "libbase",
-        "liblog",
+        "libmemory_replay",
     ],
 
     srcs: [
-        "Alloc.cpp",
-        "File.cpp",
         "FilterTrace.cpp",
-        "Pointers.cpp",
+    ],
+}
+
+cc_binary_host {
+    name: "print_trace",
+    defaults: ["memory_replay_defaults"],
+
+    static_libs: [
+        "libmemory_replay",
+    ],
+
+    srcs: [
+        "PrintTrace.cpp",
+    ],
+}
+
+cc_binary_host {
+    name: "verify_trace",
+    defaults: ["memory_replay_defaults"],
+
+    static_libs: [
+        "libmemory_replay",
+    ],
+
+    srcs: [
+        "VerifyTrace.cpp",
     ],
 }
 
@@ -130,8 +155,8 @@ cc_test {
     isolated: true,
 
     srcs: [
-        "tests/AllocTest.cpp",
         "tests/FileTest.cpp",
+        "tests/MemoryTraceTest.cpp",
         "tests/NativeInfoTest.cpp",
         "tests/PointersTest.cpp",
         "tests/ThreadTest.cpp",
@@ -140,35 +165,28 @@ cc_test {
 
     local_include_dirs: ["tests"],
 
-    target: {
-        android: {
-            test_suites: ["device-tests"],
-        },
-    },
+    static_libs: [
+        "libmemory_replay",
+    ],
 
     data: [
         "tests/test.txt",
         "tests/test.zip",
     ],
+
+    test_suites: ["general-tests"],
 }
 
 cc_benchmark {
     name: "trace_benchmark",
-    defaults: ["memory_flag_defaults"],
+    defaults: ["memory_replay_defaults"],
 
     srcs: [
-        "Alloc.cpp",
         "TraceBenchmark.cpp",
-        "File.cpp",
-    ],
-
-    shared_libs: [
-        "libbase",
-        "libziparchive",
     ],
 
     static_libs: [
-        "liballoc_parser",
+        "libmemory_replay",
     ],
 
     data: [

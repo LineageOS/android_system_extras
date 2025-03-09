@@ -22,7 +22,8 @@
 #include <android-base/file.h>
 #include <gtest/gtest.h>
 
-#include "Alloc.h"
+#include <memory_trace/MemoryTrace.h>
+
 #include "File.h"
 
 static std::string GetTestDirectory() {
@@ -46,7 +47,7 @@ TEST(FileTest, get_unwind_info_from_zip_file) {
   std::string file_name = GetTestZip();
 
   size_t mallinfo_before = mallinfo().uordblks;
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   GetUnwindInfo(file_name.c_str(), &entries, &num_entries);
   size_t mallinfo_after = mallinfo().uordblks;
@@ -56,13 +57,13 @@ TEST(FileTest, get_unwind_info_from_zip_file) {
 
   ASSERT_EQ(2U, num_entries);
   EXPECT_EQ(12345, entries[0].tid);
-  EXPECT_EQ(MALLOC, entries[0].type);
+  EXPECT_EQ(memory_trace::MALLOC, entries[0].type);
   EXPECT_EQ(0x1000U, entries[0].ptr);
   EXPECT_EQ(16U, entries[0].size);
   EXPECT_EQ(0U, entries[0].u.old_ptr);
 
   EXPECT_EQ(12345, entries[1].tid);
-  EXPECT_EQ(FREE, entries[1].type);
+  EXPECT_EQ(memory_trace::FREE, entries[1].type);
   EXPECT_EQ(0x1000U, entries[1].ptr);
   EXPECT_EQ(0U, entries[1].size);
   EXPECT_EQ(0U, entries[1].u.old_ptr);
@@ -71,7 +72,7 @@ TEST(FileTest, get_unwind_info_from_zip_file) {
 }
 
 TEST(FileTest, get_unwind_info_bad_zip_file) {
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   EXPECT_DEATH(GetUnwindInfo("/does/not/exist.zip", &entries, &num_entries), "");
 }
@@ -81,7 +82,7 @@ TEST(FileTest, get_unwind_info_from_text_file) {
   std::string file_name = GetTestDirectory() + "/test.txt";
 
   size_t mallinfo_before = mallinfo().uordblks;
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   GetUnwindInfo(file_name.c_str(), &entries, &num_entries);
   size_t mallinfo_after = mallinfo().uordblks;
@@ -91,13 +92,13 @@ TEST(FileTest, get_unwind_info_from_text_file) {
 
   ASSERT_EQ(2U, num_entries);
   EXPECT_EQ(98765, entries[0].tid);
-  EXPECT_EQ(MEMALIGN, entries[0].type);
+  EXPECT_EQ(memory_trace::MEMALIGN, entries[0].type);
   EXPECT_EQ(0xa000U, entries[0].ptr);
   EXPECT_EQ(124U, entries[0].size);
   EXPECT_EQ(16U, entries[0].u.align);
 
   EXPECT_EQ(98765, entries[1].tid);
-  EXPECT_EQ(FREE, entries[1].type);
+  EXPECT_EQ(memory_trace::FREE, entries[1].type);
   EXPECT_EQ(0xa000U, entries[1].ptr);
   EXPECT_EQ(0U, entries[1].size);
   EXPECT_EQ(0U, entries[1].u.old_ptr);
@@ -106,7 +107,7 @@ TEST(FileTest, get_unwind_info_from_text_file) {
 }
 
 TEST(FileTest, get_unwind_info_bad_file) {
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   EXPECT_DEATH(GetUnwindInfo("/does/not/exist", &entries, &num_entries), "");
 }

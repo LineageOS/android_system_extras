@@ -27,6 +27,7 @@
 #include <android-base/logging.h>
 
 #include "ETMRecorder.h"
+#include "RegEx.h"
 #include "command.h"
 #include "environment.h"
 #include "event_attr.h"
@@ -39,8 +40,12 @@ namespace simpleperf {
 extern std::unordered_map<std::string, std::unordered_set<int>> cpu_supported_raw_events;
 
 #if defined(__aarch64__) || defined(__arm__)
-extern std::unordered_map<uint64_t, std::string> arm64_cpuid_to_name;
+extern std::unordered_map<uint64_t, std::string> cpuid_to_name;
 #endif  // defined(__aarch64__) || defined(__arm__)
+
+#if defined(__riscv)
+extern std::map<std::tuple<uint64_t, std::string, std::string>, std::string> cpuid_to_name;
+#endif  // defined(__riscv)
 
 namespace {
 
@@ -76,24 +81,50 @@ struct RawEventSupportStatus {
   std::vector<int> may_supported_cpus;
 };
 
+#if defined(__riscv)
+std::string to_hex_string(uint64_t value) {
+  std::stringstream stream;
+  stream << "0x" << std::hex << value;
+  return stream.str();
+}
+
+auto find_cpu_name(
+    const std::tuple<uint64_t, uint64_t, uint64_t>& cpu_id,
+    const std::map<std::tuple<uint64_t, std::string, std::string>, std::string>& cpuid_to_name) {
+  // cpu_id: mvendorid, marchid, mimpid
+  // cpuid_to_name: mvendorid, marchid regex, mimpid regex
+
+  std::string marchid_hex = to_hex_string(get<1>(cpu_id));
+  std::string mimpid_hex = to_hex_string(get<2>(cpu_id));
+  uint64_t mvendorid = std::get<0>(cpu_id);
+
+  // Search the first entry that matches mvendorid
+  auto it = cpuid_to_name.lower_bound({mvendorid, "", ""});
+
+  // Search the iterator of correct regex for current CPU from entries with same mvendorid
+  for (; it != cpuid_to_name.end() && std::get<0>(it->first) == mvendorid; ++it) {
+    const auto& [_, marchid_regex, mimpid_regex] = it->first;
+    if (RegEx::Create(marchid_regex)->Match(marchid_hex) &&
+        RegEx::Create(mimpid_regex)->Match(mimpid_hex)) {
+      break;
+    }
+  }
+
+  return it;
+}
+#endif  // defined(__riscv)
+
 class RawEventSupportChecker {
  public:
   bool Init() {
-#if defined(__aarch64__) || defined(__arm__)
-    cpu_models_ = GetARMCpuModels();
+    cpu_models_ = GetCpuModels();
     if (cpu_models_.empty()) {
       LOG(ERROR) << "can't get device cpu info";
       return false;
     }
     for (const auto& model : cpu_models_) {
-      uint64_t cpu_id = (static_cast<uint64_t>(model.implementer) << 32) | model.partnum;
-      if (auto it = arm64_cpuid_to_name.find(cpu_id); it != arm64_cpuid_to_name.end()) {
-        cpu_model_names_.push_back(it->second);
-      } else {
-        cpu_model_names_.push_back("");
-      }
+      cpu_model_names_.push_back(GetCpuModelName(model));
     }
-#endif  // defined(__aarch64__) || defined(__arm__)
     return true;
   }
 
@@ -106,19 +137,33 @@ class RawEventSupportChecker {
     }
 
     for (size_t i = 0; i < cpu_models_.size(); ++i) {
-      const ARMCpuModel& model = cpu_models_[i];
+      const CpuModel& model = cpu_models_[i];
       const std::string& model_name = cpu_model_names_[i];
+      bool got_status = false;
       bool supported = false;
       bool may_supported = false;
-      if (!required_cpu_model.empty()) {
-        // This is a cpu model specific event, only supported on required_cpu_model.
-        supported = model_name == required_cpu_model;
-      } else if (!model_name.empty()) {
-        // We know events supported on this cpu model.
-        auto it = cpu_supported_raw_events.find(model_name);
-        CHECK(it != cpu_supported_raw_events.end()) << "no events configuration for " << model_name;
-        supported = it->second.count(event_type.config) > 0;
-      } else {
+
+      if (model.arch == "arm") {
+        if (!required_cpu_model.empty()) {
+          // This is a cpu model specific event, only supported on required_cpu_model.
+          supported = model_name == required_cpu_model;
+          got_status = true;
+        } else if (!model_name.empty()) {
+          // We know events supported on this cpu model.
+          auto it = cpu_supported_raw_events.find(model_name);
+          CHECK(it != cpu_supported_raw_events.end())
+              << "no events configuration for " << model_name;
+          supported = it->second.count(event_type.config) > 0;
+          got_status = true;
+        }
+      } else if (model.arch == "x86") {
+        if (event_type.limited_arch != model_name) {
+          supported = false;
+          got_status = true;
+        }
+      }
+
+      if (!got_status) {
         // We need to test the event support status.
         TestEventSupportOnCpu(event_type, model.cpus[0], supported, may_supported);
       }
@@ -135,6 +180,32 @@ class RawEventSupportChecker {
   }
 
  private:
+  std::string GetCpuModelName(const CpuModel& model) {
+#if defined(__aarch64__) || defined(__arm__)
+    uint64_t cpu_id =
+        (static_cast<uint64_t>(model.arm_data.implementer) << 32) | model.arm_data.partnum;
+    auto it = cpuid_to_name.find(cpu_id);
+    if (it != cpuid_to_name.end()) {
+      return it->second;
+    }
+#elif defined(__riscv)
+    std::tuple<uint64_t, uint64_t, uint64_t> cpu_id = {
+        model.riscv_data.mvendorid, model.riscv_data.marchid, model.riscv_data.mimpid};
+    auto it = find_cpu_name(cpu_id, cpuid_to_name);
+    if (it != cpuid_to_name.end()) {
+      return it->second;
+    }
+#elif defined(__i386__) || defined(__x86_64__)
+    if (model.x86_data.vendor_id == "GenuineIntel") {
+      return "x86-intel";
+    }
+    if (model.x86_data.vendor_id == "AuthenticAMD") {
+      return "x86-amd";
+    }
+#endif  // defined(__i386__) || defined(__x86_64__)
+    return "";
+  }
+
   void TestEventSupportOnCpu(const EventType& event_type, int cpu, bool& supported,
                              bool& may_supported) {
     // Because the kernel may not check whether the raw event is supported by the cpu pmu.
@@ -171,7 +242,8 @@ class RawEventSupportChecker {
     }
   }
 
-  std::vector<ARMCpuModel> cpu_models_;
+  std::vector<CpuModel> cpu_models_;
+
   std::vector<std::string> cpu_model_names_;
 };
 
@@ -318,22 +390,28 @@ bool ListCommand::Run(const std::vector<std::string>& args) {
   }
 
   static std::map<std::string, std::pair<std::string, std::function<bool(const EventType&)>>>
-      type_map =
-  { {"hw", {"hardware events", [](const EventType& e) { return e.type == PERF_TYPE_HARDWARE; }}},
-    {"sw", {"software events", [](const EventType& e) { return e.type == PERF_TYPE_SOFTWARE; }}},
-    {"cache", {"hw-cache events", [](const EventType& e) { return e.type == PERF_TYPE_HW_CACHE; }}},
-    {"raw",
-     {"raw events provided by cpu pmu",
-      [](const EventType& e) { return e.type == PERF_TYPE_RAW; }}},
-    {"tracepoint",
-     {"tracepoint events", [](const EventType& e) { return e.type == PERF_TYPE_TRACEPOINT; }}},
+      type_map = {
+          {"hw",
+           {"hardware events", [](const EventType& e) { return e.type == PERF_TYPE_HARDWARE; }}},
+          {"sw",
+           {"software events", [](const EventType& e) { return e.type == PERF_TYPE_SOFTWARE; }}},
+          {"cache",
+           {"hw-cache events", [](const EventType& e) { return e.type == PERF_TYPE_HW_CACHE; }}},
+          {"raw",
+           {"raw events provided by cpu pmu",
+            [](const EventType& e) { return e.type == PERF_TYPE_RAW; }}},
+          {"tracepoint",
+           {"tracepoint events",
+            [](const EventType& e) { return e.type == PERF_TYPE_TRACEPOINT; }}},
 #if defined(__arm__) || defined(__aarch64__)
-    {"cs-etm",
-     {"coresight etm events",
-      [](const EventType& e) { return e.type == ETMRecorder::GetInstance().GetEtmEventType(); }}},
+          {"cs-etm",
+           {"coresight etm events",
+            [](const EventType& e) {
+              return e.type == ETMRecorder::GetInstance().GetEtmEventType();
+            }}},
 #endif
-    {"pmu", {"pmu events", [](const EventType& e) { return e.IsPmuEvent(); }}},
-  };
+          {"pmu", {"pmu events", [](const EventType& e) { return e.IsPmuEvent(); }}},
+      };
 
   std::vector<std::string> names;
   if (args.empty()) {

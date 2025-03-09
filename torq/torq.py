@@ -16,10 +16,12 @@
 
 import argparse
 import os
-from command import ProfilerCommand, HWCommand, ConfigCommand
+from command import ProfilerCommand, ConfigCommand, OpenCommand
 from device import AdbDevice
 from validation_error import ValidationError
 from config_builder import PREDEFINED_PERFETTO_CONFIGS
+from utils import path_exists
+from validate_simpleperf import verify_simpleperf_args
 
 DEFAULT_DUR_MS = 10000
 MIN_DURATION_MS = 3000
@@ -71,31 +73,9 @@ def create_parser():
   parser.add_argument('--serial',
                       help=(('Specifies serial of the device that will be'
                              ' used.')))
+  parser.add_argument('--symbols',
+                      help='Specifies path to symbols library.')
   subparsers = parser.add_subparsers(dest='subcommands', help='Subcommands')
-  hw_parser = subparsers.add_parser('hw',
-                                    help=('The hardware subcommand used to'
-                                          ' change the H/W configuration of'
-                                          ' the device.'))
-  hw_subparsers = hw_parser.add_subparsers(dest='hw_subcommand',
-                                           help='torq hw subcommands')
-  hw_set_parser = hw_subparsers.add_parser('set',
-                                           help=('Command to set a new'
-                                                 ' hardware configuration'))
-  hw_set_parser.add_argument('hw_set_config', nargs='?',
-                             choices=['seahawk', 'seaturtle'],
-                             help='Pre-defined hardware configuration')
-  hw_set_parser.add_argument('-n', '--num-cpus', type=int,
-                             help='The amount of active cores in the hardware.')
-  hw_set_parser.add_argument('-m', '--memory',
-                             help=('The memory limit the device would have.'
-                                   ' E.g. 4G'))
-  hw_subparsers.add_parser('get',
-                           help=('Command to get the current hardware'
-                                 ' configuration. Will provide the number of'
-                                 ' cpus and memory available.'))
-  hw_subparsers.add_parser('list',
-                           help=('Command to list the supported HW'
-                                 ' configurations.'))
   config_parser = subparsers.add_parser('config',
                                         help=('The config subcommand used'
                                               ' to list and show the'
@@ -126,6 +106,11 @@ def create_parser():
   config_pull_parser.add_argument('file_path', nargs='?',
                                   help=('File path to copy the predefined'
                                         ' config to'))
+  open_parser = subparsers.add_parser('open',
+                                      help=('The open subcommand is used '
+                                            'to open trace files in the '
+                                            'perfetto ui.'))
+  open_parser.add_argument('file_path', help='Path to trace file.')
   return parser
 
 
@@ -151,9 +136,9 @@ def verify_args(args):
   if (args.subcommands is not None and
       user_changed_default_arguments(args)):
     return None, ValidationError(
-        ("Command is invalid because profiler command is followed by a hw"
-         " or config command."),
-        "Remove the 'hw' or 'config' subcommand to profile the device instead.")
+        ("Command is invalid because profiler command is followed by a config"
+         " command."),
+        "Remove the 'config' subcommand to profile the device instead.")
 
   if args.out_dir != DEFAULT_OUT_DIR and not os.path.isdir(args.out_dir):
     return None, ValidationError(
@@ -186,6 +171,13 @@ def verify_args(args):
         "Command is invalid because --to-user is not passed.",
         ("Set --event %s --to-user <user-id> to perform a %s."
          % (args.event, args.event)))
+
+  # TODO(b/374313202): Support for simpleperf boot event will
+  #                    be added in the future
+  if args.event == "boot" and args.profiler == "simpleperf":
+    return None, ValidationError(
+        "Boot event is not yet implemented for simpleperf.",
+        "Please try another event.")
 
   if args.app is not None and args.event != "app-startup":
     return None, ValidationError(
@@ -308,74 +300,6 @@ def verify_args(args):
                         % (event, event, event, event)
                         for event in ftrace_event_intersection)))
 
-  if args.subcommands == "hw" and args.hw_subcommand is None:
-    return None, ValidationError(
-        ("Command is invalid because torq hw cannot be called without"
-         " a subcommand."),
-        ("Use one of the following subcommands:\n"
-         "\t torq hw set <config-name>\n"
-         "\t torq hw get\n"
-         "\t torq hw list"))
-
-  if (args.subcommands == "hw" and args.hw_subcommand == "set" and
-      args.hw_set_config is not None and args.num_cpus is not None):
-    return None, ValidationError(
-        ("Command is invalid because torq hw --num-cpus cannot be passed if a"
-         " new hardware configuration is also set at the same time"),
-        ("Set torq hw --num-cpus 2 by itself to set 2 active"
-         " cores in the hardware."))
-
-  if (args.subcommands == "hw" and args.hw_subcommand == "set" and
-      args.hw_set_config is not None and args.memory is not None):
-    return None, ValidationError(
-        ("Command is invalid because torq hw --memory cannot be passed if a"
-         " new hardware configuration is also set at the same time"),
-        ("Set torq hw --memory 4G by itself to limit the memory"
-         " of the device to 4 gigabytes."))
-
-  if (args.subcommands == "hw" and args.hw_subcommand == "set" and
-      args.num_cpus is not None and args.num_cpus < 1):
-    return None, ValidationError(
-        ("Command is invalid because hw set --num-cpus cannot be set to"
-         " smaller than 1."),
-        ("Set hw set --num-cpus 1 to set 1 active core in"
-         " hardware."))
-
-  if (args.subcommands == "hw" and args.hw_subcommand == "set" and
-      args.memory is not None):
-    index = args.memory.find("G")
-    if index == -1 or args.memory[-1] != "G" or len(args.memory) == 1:
-      return None, ValidationError(
-          ("Command is invalid because the argument for hw set --memory does"
-           " not match the <int>G format."),
-          ("Set hw set --memory 4G to limit the memory of the"
-           " device to 4 gigabytes."))
-    for i in range(index):
-      if not args.memory[i].isdigit():
-        return None, ValidationError(
-            ("Command is invalid because the argument for hw set --memory"
-             " does not match the <int>G format."),
-            ("Set hw set --memory 4G to limit the memory of"
-             " the device to 4 gigabytes."))
-    if args.memory[0] == "0":
-      return None, ValidationError(
-          ("Command is invalid because hw set --memory cannot be set to"
-           " smaller than 1."),
-          ("Set hw set --memory 4G to limit the memory of"
-           " the device to 4 gigabytes."))
-
-  if (args.subcommands == "hw" and args.hw_subcommand == "set" and
-      args.hw_set_config is None and args.num_cpus is None and
-      args.memory is None):
-    return None, ValidationError(
-        ("Command is invalid because torq hw set cannot be called without"
-         " a subcommand."),
-        ("Use one of the following subcommands:\n"
-         "\t (torq hw set <config>, torq hw set --num-cpus <int>,\n"
-         "\t torq hw set --memory <int>G,\n"
-         "\t torq hw set --num-cpus <int> --memory <int>G,\n"
-         "\t torq hw set --memory <int>G --num-cpus <int>)"))
-
   if args.subcommands == "config" and args.config_subcommand is None:
     return None, ValidationError(
         ("Command is invalid because torq config cannot be called"
@@ -391,9 +315,29 @@ def verify_args(args):
   if args.ui is None:
     args.ui = args.runs == 1
 
-  if (args.subcommands == "config" and args.config_subcommand == "pull" and
-      args.file_path is None):
-    args.file_path = "./" + args.config_name + ".pbtxt"
+  if args.subcommands == "config" and args.config_subcommand == "pull":
+    if args.file_path is None:
+      args.file_path = "./" + args.config_name + ".pbtxt"
+    elif not os.path.isfile(args.file_path):
+      return None, ValidationError(
+          ("Command is invalid because %s is not a valid filepath."
+           % args.file_path),
+          ("A default filepath can be used if you do not specify a file-path:\n"
+           "\t torq pull default to copy to ./default.pbtxt\n"
+           "\t torq pull lightweight to copy to ./lightweight.pbtxt\n"
+           "\t torq pull memory to copy to ./memory.pbtxt"))
+
+  if args.subcommands == "open" and not path_exists(args.file_path):
+    return None, ValidationError(
+        "Command is invalid because %s is an invalid file path."
+        % args.file_path, "Make sure your file exists.")
+
+  if args.profiler == "simpleperf":
+    args, error = verify_simpleperf_args(args)
+    if error is not None:
+      return None, error
+  else:
+    args.scripts_path = None
 
   return args, None
 
@@ -408,26 +352,23 @@ def create_profiler_command(args):
                          args.to_user)
 
 
-def create_hw_command(args):
-  command = None
-  type = "hw " + args.hw_subcommand
-  if args.hw_subcommand == "set":
-    command = HWCommand(type, args.hw_set_config, args.num_cpus,
-                        args.memory)
-  else:
-    command = HWCommand(type, None, None, None)
-  return command
-
-
 def create_config_command(args):
-  command = None
   type = "config " + args.config_subcommand
-  if args.config_subcommand == "pull":
-    command = ConfigCommand(type, args.config_name, args.file_path)
-  if args.config_subcommand == "show":
-    command = ConfigCommand(type, args.config_name, None)
-  if args.config_subcommand == "list":
-    command = ConfigCommand(type, None, None)
+  config_name = None
+  file_path = None
+  dur_ms = None
+  excluded_ftrace_events = None
+  included_ftrace_events = None
+  if args.config_subcommand == "pull" or args.config_subcommand == "show":
+    config_name = args.config_name
+    dur_ms = args.dur_ms
+    excluded_ftrace_events = args.excluded_ftrace_events
+    included_ftrace_events = args.included_ftrace_events
+    if args.config_subcommand == "pull":
+      file_path = args.file_path
+
+  command = ConfigCommand(type, config_name, file_path, dur_ms,
+      excluded_ftrace_events, included_ftrace_events)
   return command
 
 
@@ -435,10 +376,10 @@ def get_command_type(args):
   command = None
   if args.subcommands is None:
     command = create_profiler_command(args)
-  if args.subcommands == "hw":
-    command = create_hw_command(args)
   if args.subcommands == "config":
     command = create_config_command(args)
+  if args.subcommands == "open":
+    command = OpenCommand(args.file_path)
   return command
 
 

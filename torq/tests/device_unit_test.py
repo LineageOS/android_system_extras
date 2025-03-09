@@ -18,6 +18,7 @@ import unittest
 import os
 import subprocess
 from unittest import mock
+from command import ProfilerCommand
 from device import AdbDevice
 
 TEST_DEVICE_SERIAL = "test-device-serial"
@@ -35,7 +36,7 @@ TEST_PROP = "test-prop"
 TEST_PROP_VALUE = "test-prop-value"
 TEST_PID_OUTPUT = b"8241\n"
 BOOT_COMPLETE_OUTPUT = b"1\n"
-
+ANDROID_SDK_VERSION_T = 33
 
 class DeviceUnitTest(unittest.TestCase):
 
@@ -346,6 +347,34 @@ class DeviceUnitTest(unittest.TestCase):
       adbDevice.start_perfetto_trace(None)
 
     self.assertEqual(str(e.exception), TEST_FAILURE_MSG)
+
+  @mock.patch.object(subprocess, "Popen", autospec=True)
+  def test_start_simpleperf_trace_success(self, mock_subprocess_popen):
+    # Mocking the return value of subprocess.Popen to ensure it's
+    # not modified and returned by AdbDevice.start_simpleperf_trace
+    mock_subprocess_popen.return_value = mock.Mock()
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+    command = ProfilerCommand("profiler", "custom", None, None,
+                              10000, None, None, ["cpu-cycles"], None, None,
+                              None, None, None, None, None)
+    mock_process = adbDevice.start_simpleperf_trace(command)
+
+    # No exception is expected to be thrown
+    self.assertEqual(mock_process, mock_subprocess_popen.return_value)
+
+  @mock.patch.object(subprocess, "Popen", autospec=True)
+  def test_start_simpleperf_trace_failure(self, mock_subprocess_popen):
+    mock_subprocess_popen.side_effect = TEST_EXCEPTION
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    command = ProfilerCommand("profiler", "custom", None, None,
+                              10000, None, None, ["cpu-cycles"], None, None,
+                              None, None, None, None, None)
+    with self.assertRaises(Exception) as e:
+      adbDevice.start_simpleperf_trace(command)
+
+    self.assertEqual(str(e.exception), TEST_FAILURE_MSG)
+
 
   @mock.patch.object(subprocess, "run", autospec=True)
   def test_pull_file_success(self, mock_subprocess_run):
@@ -742,6 +771,91 @@ class DeviceUnitTest(unittest.TestCase):
       adbDevice.force_stop_package(TEST_PACKAGE_1)
 
     self.assertEqual(str(e.exception), TEST_FAILURE_MSG)
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_get_prop_success(self, mock_subprocess_run):
+    test_prop_value = ANDROID_SDK_VERSION_T
+    mock_subprocess_run.return_value = self.generate_mock_completed_process(
+        stdout_string=b'%d\n' % test_prop_value)
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    prop_value = int(adbDevice.get_prop(TEST_PROP))
+
+    self.assertEqual(prop_value, test_prop_value)
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_get_prop_package_failure(self, mock_subprocess_run):
+    mock_subprocess_run.side_effect = TEST_EXCEPTION
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    with self.assertRaises(Exception) as e:
+      adbDevice.get_prop(TEST_PROP)
+
+    self.assertEqual(str(e.exception), TEST_FAILURE_MSG)
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_get_android_sdk_version_success(self, mock_subprocess_run):
+    mock_subprocess_run.return_value = self.generate_mock_completed_process(
+        stdout_string=b'%d\n' % ANDROID_SDK_VERSION_T)
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    prop_value = adbDevice.get_android_sdk_version()
+
+    self.assertEqual(prop_value, ANDROID_SDK_VERSION_T)
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_get_android_sdk_version_failure(self, mock_subprocess_run):
+    mock_subprocess_run.side_effect = TEST_EXCEPTION
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    with self.assertRaises(Exception) as e:
+      adbDevice.get_android_sdk_version()
+
+    self.assertEqual(str(e.exception), TEST_FAILURE_MSG)
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_simpleperf_event_exists_success(self, mock_subprocess_run):
+    mock_subprocess_run.return_value = (
+        self.generate_mock_completed_process(b'List of software events:\n  '
+                                             b'alignment-faults\n  '
+                                             b'context-switches\n  '
+                                             b'cpu-clock\n  '
+                                             b'cpu-migrations\n  '
+                                             b'emulation-faults\n  '
+                                             b'major-faults\n  '
+                                             b'minor-faults\n  page-faults\n  '
+                                             b'task-clock'))
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    events = ["cpu-clock", "minor-faults"]
+    # No exception is expected to be thrown
+    error = adbDevice.simpleperf_event_exists(events)
+
+    self.assertEqual(error, None)
+    # Check that the list passed to the function is unchanged
+    self.assertEqual(events, ["cpu-clock", "minor-faults"])
+
+  @mock.patch.object(subprocess, "run", autospec=True)
+  def test_simpleperf_event_exists_failure(self, mock_subprocess_run):
+    mock_subprocess_run.return_value = (
+        self.generate_mock_completed_process(b'List of software events:\n  '
+                                             b'alignment-faults\n  '
+                                             b'context-switches\n  '
+                                             b'cpu-clock\n  '
+                                             b'cpu-migrations\n  '
+                                             b'emulation-faults\n  '
+                                             b'major-faults\n  '
+                                             b'minor-faults\n  page-faults\n  '
+                                             b'task-clock'))
+    adbDevice = AdbDevice(TEST_DEVICE_SERIAL)
+
+    error = adbDevice.simpleperf_event_exists(["cpu-clock", "minor-faults",
+                                               "List"])
+
+    self.assertEqual(error.message, "The following simpleperf event(s) are "
+                                    "invalid: ['List'].")
+    self.assertEqual(error.suggestion, "Run adb shell simpleperf list to"
+                                       " see valid simpleperf events.")
 
 
 if __name__ == '__main__':

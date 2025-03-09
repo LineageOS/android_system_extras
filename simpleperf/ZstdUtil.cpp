@@ -183,5 +183,31 @@ std::unique_ptr<Decompressor> CreateZstdDecompressor() {
   }
   return std::unique_ptr<Decompressor>(new ZstdDecompressor(std::move(dctx)));
 }
+bool ZstdCompress(const char* input_data, size_t input_size, std::string& output_data) {
+  std::unique_ptr<Compressor> compressor = CreateZstdCompressor();
+  CHECK(compressor != nullptr);
+  if (!compressor->AddInputData(input_data, input_size)) {
+    return false;
+  }
+  if (!compressor->FlushOutputData()) {
+    return false;
+  }
+  std::string_view output = compressor->GetOutputData();
+  output_data.clear();
+  output_data.insert(0, output.data(), output.size());
+  return true;
+}
+
+bool ZstdDecompress(const char* input_data, size_t input_size, std::string& output_data) {
+  std::unique_ptr<Decompressor> decompressor = CreateZstdDecompressor();
+  CHECK(decompressor != nullptr);
+  if (!decompressor->AddInputData(input_data, input_size)) {
+    return false;
+  }
+  std::string_view output = decompressor->GetOutputData();
+  output_data.clear();
+  output_data.insert(0, output.data(), output.size());
+  return true;
+}
 
 }  // namespace simpleperf

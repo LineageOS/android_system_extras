@@ -27,6 +27,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <memory_trace/MemoryTrace.h>
+
 #include "Alloc.h"
 #include "File.h"
 #include "NativeInfo.h"
@@ -39,28 +41,28 @@
 
 constexpr size_t kDefaultMaxThreads = 512;
 
-static size_t GetMaxAllocs(const AllocEntry* entries, size_t num_entries) {
+static size_t GetMaxAllocs(const memory_trace::Entry* entries, size_t num_entries) {
   size_t max_allocs = 0;
   size_t num_allocs = 0;
   for (size_t i = 0; i < num_entries; i++) {
     switch (entries[i].type) {
-      case THREAD_DONE:
+      case memory_trace::THREAD_DONE:
         break;
-      case MALLOC:
-      case CALLOC:
-      case MEMALIGN:
+      case memory_trace::MALLOC:
+      case memory_trace::CALLOC:
+      case memory_trace::MEMALIGN:
         if (entries[i].ptr != 0) {
           num_allocs++;
         }
         break;
-      case REALLOC:
+      case memory_trace::REALLOC:
         if (entries[i].ptr == 0 && entries[i].u.old_ptr != 0) {
           num_allocs--;
         } else if (entries[i].ptr != 0 && entries[i].u.old_ptr == 0) {
           num_allocs++;
         }
         break;
-      case FREE:
+      case memory_trace::FREE:
         if (entries[i].ptr != 0) {
           num_allocs--;
         }
@@ -109,7 +111,8 @@ static void PrintLogStats(const char* log_name) {
   android_logger_list_close(list);
 }
 
-static void ProcessDump(const AllocEntry* entries, size_t num_entries, size_t max_threads) {
+static void ProcessDump(const memory_trace::Entry* entries, size_t num_entries,
+                        size_t max_threads) {
   // Do a pass to get the maximum number of allocations used at one
   // time to allow a single mmap that can hold the maximum number of
   // pointers needed at once.
@@ -128,7 +131,7 @@ static void ProcessDump(const AllocEntry* entries, size_t num_entries, size_t ma
       dprintf(STDOUT_FILENO, "  At line %zu:\n", i + 1);
       NativePrintInfo("    ");
     }
-    const AllocEntry& entry = entries[i];
+    const memory_trace::Entry& entry = entries[i];
     Thread* thread = threads.FindThread(entry.tid);
     if (thread == nullptr) {
       thread = threads.CreateThread(entry.tid);
@@ -138,7 +141,7 @@ static void ProcessDump(const AllocEntry* entries, size_t num_entries, size_t ma
     // the next action.
     thread->WaitForReady();
 
-    thread->SetAllocEntry(&entry);
+    thread->SetEntry(&entry);
 
     bool does_free = AllocDoesFree(entry);
     if (does_free) {
@@ -151,7 +154,7 @@ static void ProcessDump(const AllocEntry* entries, size_t num_entries, size_t ma
     // Tell the thread to execute the action.
     thread->SetPending();
 
-    if (entries[i].type == THREAD_DONE) {
+    if (entries[i].type == memory_trace::THREAD_DONE) {
       // Wait for the thread to finish and clear the thread entry.
       threads.Finish(thread);
     }
@@ -223,7 +226,7 @@ int main(int argc, char** argv) {
     max_threads = atoi(argv[2]);
   }
 
-  AllocEntry* entries;
+  memory_trace::Entry* entries;
   size_t num_entries;
   GetUnwindInfo(argv[1], &entries, &num_entries);
 
