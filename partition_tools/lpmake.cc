@@ -249,6 +249,7 @@ int main(int argc, char* argv[]) {
     std::map<std::string, std::string> images;
     bool output_sparse = false;
     bool has_implied_super = false;
+    bool auto_slot_suffixing = false;
     bool force_full_image = false;
     bool virtual_ab = false;
     bool auto_blockdevice_size = false;
@@ -364,8 +365,8 @@ int main(int argc, char* argv[]) {
                 break;
             }
             case Option::kAutoSlotSuffixing:
-                fprintf(stderr, "Auto slot suffixing is no longer supported.\n");
-                return EX_USAGE;
+                auto_slot_suffixing = true;
+                break;
             case Option::kForceFullImage:
                 force_full_image = true;
                 break;
@@ -435,6 +436,9 @@ int main(int argc, char* argv[]) {
         return EX_USAGE;
     }
 
+    if (auto_slot_suffixing) {
+        builder->SetAutoSlotSuffixing();
+    }
     if (virtual_ab) {
         builder->SetVirtualABDeviceFlag();
     }
